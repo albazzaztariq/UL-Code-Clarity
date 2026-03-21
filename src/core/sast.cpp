@@ -14,8 +14,10 @@ int StaticAnalyzer::resolveLevel(int level)
 // ── Public entry point ───────────────────────────────────────────────────────
 QList<SecurityFinding> StaticAnalyzer::analyzeCode(const QString& code,
                                                     const QString& language,
+                                                    const QString& filePath,
                                                     int level) const
 {
+    Q_UNUSED(filePath);
     int lvl = resolveLevel(level);
     QStringList lines = code.split('\n');
     QList<SecurityFinding> findings;
