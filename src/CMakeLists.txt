@@ -41,6 +41,7 @@ set(SOURCES
     core/tutorial.cpp
     core/memoryanalysis.cpp
     core/dependencyanalysis.cpp
+    core/codehealth.cpp
 )
 
 set(HEADERS
@@ -74,6 +75,7 @@ set(HEADERS
     core/tutorial.h
     core/memoryanalysis.h
     core/dependencyanalysis.h
+    core/codehealth.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────

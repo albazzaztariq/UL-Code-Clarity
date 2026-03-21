@@ -27,6 +27,7 @@ class SecurityLabWidget;
 class RuntimeAnalysisFrame;
 class MemoryAnalysisFrame;
 class DependencyAnalysisFrame;
+class CodeHealthFrame;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -81,6 +82,7 @@ private:
     RuntimeAnalysisFrame* m_runtimeAnalysis = nullptr;
     MemoryAnalysisFrame*  m_memoryAnalysis  = nullptr;
     DependencyAnalysisFrame* m_depAnalysis  = nullptr;
+    CodeHealthFrame*      m_codeHealth    = nullptr;
 
     // Recent Workspaces submenu
     QMenu* m_recentMenu = nullptr;

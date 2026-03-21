@@ -548,3 +548,123 @@ TutorialDialog* TutorialDialog::security(QWidget* parent)
 
     return new TutorialDialog("Security — Full Tutorial", pages, parent);
 }
+
+// ============================================================================
+// Factory: Code Health Tutorial
+// ============================================================================
+TutorialDialog* TutorialDialog::codeHealth(QWidget* parent)
+{
+    QVector<Page> pages;
+
+    pages.append(Page{
+        "What Is Code Health?",
+        "<p><b>Code health</b> describes how easy your code is to understand, change, and test. "
+        "Healthy code has low complexity, clear names, no repeated blocks, and no unused code. "
+        "Unhealthy code grows slowly harder to work with — every change risks breaking something "
+        "because the code is tangled, repeated, or opaque.</p>"
+        "<p>Code health doesn't mean the code is wrong — it can produce correct results "
+        "and still be difficult to maintain. The problems show up when you try to add a feature, "
+        "fix a bug, or onboard someone new.</p>"
+        "<p>The five metrics in Code Clarity's health check — Complexity, Readability, "
+        "Duplication, Dead Code, and Naming — cover the main dimensions of code quality "
+        "recognised by the industry.</p>"
+    });
+
+    pages.append(Page{
+        "Cyclomatic Complexity",
+        "<p><b>Cyclomatic complexity</b> measures how many independent execution paths run through "
+        "a function. It was defined by Thomas McCabe in 1976 and remains the standard metric today.</p>"
+        "<p>Every time your code branches — <code>if</code>, <code>else if</code>, "
+        "<code>for</code>, <code>while</code>, <code>case</code>, <code>&amp;&amp;</code>, "
+        "<code>||</code>, <code>catch</code> — the count goes up by 1. "
+        "Start at 1 and add 1 per decision point. That's the cyclomatic complexity.</p>"
+        "<p><b>Score 1–9:</b> simple, easy to test. Each path through the function can be covered "
+        "with a handful of tests.</p>"
+        "<p><b>Score 10–15:</b> moderately complex. Testing becomes effort-intensive. "
+        "Consider splitting the function.</p>"
+        "<p><b>Score &gt;15:</b> high complexity. The function is almost certainly doing too much. "
+        "Refactor into smaller functions with single responsibilities.</p>"
+        "<p>High complexity is the single strongest predictor of defect density in code.</p>"
+    });
+
+    pages.append(Page{
+        "Readability — Length and Nesting",
+        "<p><b>Function length</b> is the simplest readability measure. "
+        "A function that fits on one screen (roughly 30 lines) is easy to understand at a glance. "
+        "A function that spans multiple screens forces you to scroll back and forth to understand it. "
+        "Long functions usually violate the Single Responsibility Principle — they do too many things.</p>"
+        "<p><b>Nesting depth</b> is how many levels of <code>if</code>/<code>for</code>/<code>while</code> "
+        "blocks are nested inside each other. Deep nesting forces readers to track multiple conditions "
+        "simultaneously. A common refactoring technique is the <b>early return</b>: "
+        "instead of <code>if (valid) { ... }</code>, return early on invalid: "
+        "<code>if (!valid) return;</code>. This flattens the code.</p>"
+        "<p><b>Parameter count:</b> functions with more than 5 parameters are hard to call correctly — "
+        "it's easy to pass arguments in the wrong order. Group related parameters into a struct or class.</p>"
+    });
+
+    pages.append(Page{
+        "Code Duplication",
+        "<p><b>Code duplication</b> (or copy-paste code) is when the same sequence of lines appears "
+        "in multiple places. It accumulates when developers copy a working block rather than "
+        "extracting it into a reusable function.</p>"
+        "<p><b>Why it's dangerous:</b> when a bug is found in the duplicated code, "
+        "it must be fixed in every copy. Often, some copies are forgotten — "
+        "so the bug persists in the forgotten copies. The same applies to improvements: "
+        "add a feature to one copy, and the others fall behind.</p>"
+        "<p><b>The fix:</b> extract the duplicated block into a function and call it from all sites. "
+        "Now there's one place to fix, one place to improve.</p>"
+        "<p><b>3% duplication</b> is acceptable (small files, short similar setup blocks). "
+        "<b>3–10%</b> warrants attention. <b>&gt;10%</b> means significant technical debt.</p>"
+    });
+
+    pages.append(Page{
+        "Dead Code",
+        "<p><b>Dead code</b> is code that is present but never executed. "
+        "It accumulates over a project's life as features are removed, refactored, or replaced.</p>"
+        "<p>Three forms:</p>"
+        "<p><b>Unreachable code</b> — code after a <code>return</code>, <code>break</code>, "
+        "or <code>throw</code> that can never execute.</p>"
+        "<p><b>Unused variables</b> — variables assigned a value that is never read.</p>"
+        "<p><b>Unused functions</b> — functions defined but never called.</p>"
+        "<p>Dead code is harmful because it confuses readers (\"why is this here? does it do something "
+        "I'm missing?\"), increases binary size, and must be maintained for no benefit. "
+        "When a reader finds dead code they don't understand, they often leave it in case "
+        "it's needed — making the problem worse.</p>"
+        "<p>When you remove dead code, the codebase shrinks and becomes clearer. "
+        "Version control preserves the history if you ever need it back.</p>"
+    });
+
+    pages.append(Page{
+        "Naming Conventions",
+        "<p>Good names make code self-documenting. Bad names force readers to look up definitions "
+        "and track meaning externally. The conventions below are widely agreed upon.</p>"
+        "<p><b>Functions</b> should be verbs or verb-noun pairs: "
+        "<code>calculateTotal</code>, <code>save_file</code>, <code>isValid</code>. "
+        "A function name should say what it does.</p>"
+        "<p><b>Classes and types</b> should be nouns: "
+        "<code>UserAccount</code>, <code>FileParser</code>, <code>Rectangle</code>.</p>"
+        "<p><b>Constants</b> should be UPPER_CASE: "
+        "<code>MAX_RETRIES</code>, <code>DEFAULT_TIMEOUT</code>.</p>"
+        "<p><b>Python:</b> functions and variables use snake_case (<code>my_function</code>). "
+        "<b>C++/Java:</b> functions use camelCase (<code>myFunction</code>). "
+        "Mixing styles within a single file is confusing — pick one and be consistent.</p>"
+        "<p>Single-letter variable names (except loop counters <code>i, j, k</code> "
+        "and coordinates <code>x, y</code>) obscure intent. "
+        "<code>d</code> tells you nothing; <code>duration</code> tells you everything.</p>"
+    });
+
+    pages.append(Page{
+        "Overall Grade",
+        "<p>The overall grade (A–F) combines all five metrics:</p>"
+        "<p><b>A</b> — all five metrics green. Your code is in excellent shape.</p>"
+        "<p><b>B</b> — no red metrics, up to two yellow. Good code with minor rough edges.</p>"
+        "<p><b>C</b> — up to one red or several yellows. Attention needed; maintainability is declining.</p>"
+        "<p><b>D</b> — two or more red metrics. Significant issues; refactoring recommended before adding more features.</p>"
+        "<p><b>F</b> — three or more red metrics. The codebase is fragile; new work is high-risk until health improves.</p>"
+        "<p>The grade is a snapshot, not a judgment on you as a developer. "
+        "All codebases accumulate debt over time. The health check helps you see "
+        "where to focus your next cleanup effort.</p>"
+    });
+
+    return new TutorialDialog("Code Health — Full Tutorial", pages, parent);
+}

@@ -36,6 +36,7 @@ public:
     static TutorialDialog* buildTarget(QWidget* parent = nullptr);
     static TutorialDialog* memory(QWidget* parent = nullptr);
     static TutorialDialog* security(QWidget* parent = nullptr);
+    static TutorialDialog* codeHealth(QWidget* parent = nullptr);
 
 private slots:
     void goNext();

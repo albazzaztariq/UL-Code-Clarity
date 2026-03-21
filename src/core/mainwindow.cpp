@@ -4,6 +4,7 @@
 #include "core/runtimeanalysis.h"
 #include "core/memoryanalysis.h"
 #include "core/dependencyanalysis.h"
+#include "core/codehealth.h"
 #include "core/theme.h"
 #include "core/buildbar.h"
 #include "core/buildsystem.h"
@@ -481,6 +482,26 @@ void MainWindow::createMenuBar()
         dlg->deleteLater();
     });
 
+    toolsMenu->addSeparator();
+
+    auto* codeHealthAction = toolsMenu->addAction("Code Health");
+    codeHealthAction->setShortcut(QKeySequence("Ctrl+Shift+H"));
+    connect(codeHealthAction, &QAction::triggered, this, [this]() {
+        if (!m_codeHealth) return;
+        QString code, lang;
+        if (m_editor) {
+            code = m_editor->currentContent();
+            lang = currentLangKey();
+        }
+        m_codeHealth->setCode(code, lang);
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame)    m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+        m_codeHealth->setVisible(true);
+    });
+
     // Help
     auto* helpMenu = mb->addMenu("&Help");
 
@@ -731,6 +752,11 @@ void MainWindow::setupCentralLayout()
     m_depAnalysis = new DependencyAnalysisFrame;
     m_depAnalysis->setVisible(false);
     mainLayout->addWidget(m_depAnalysis);
+
+    // Code Health Frame — hidden by default
+    m_codeHealth = new CodeHealthFrame;
+    m_codeHealth->setVisible(false);
+    mainLayout->addWidget(m_codeHealth);
 
     // Security Lab Widget — swapped in per lab, hidden by default
     // Created lazily in openSecurityLab(); placeholder registered here
@@ -1137,6 +1163,12 @@ void MainWindow::wireSignals()
     // Dependency Analysis Frame signals
     connect(m_depAnalysis, &DependencyAnalysisFrame::backToEditor, this, [this]() {
         m_depAnalysis->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+
+    // Code Health Frame signals
+    connect(m_codeHealth, &CodeHealthFrame::backToEditor, this, [this]() {
+        m_codeHealth->setVisible(false);
         m_mainSplitter->setVisible(true);
     });
 
