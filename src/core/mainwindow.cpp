@@ -5,6 +5,7 @@
 #include "core/memoryanalysis.h"
 #include "core/dependencyanalysis.h"
 #include "core/codehealth.h"
+#include "core/debugger.h"
 #include "core/theme.h"
 #include "core/buildbar.h"
 #include "core/buildsystem.h"
@@ -17,6 +18,7 @@
 #include "panels/aichat.h"
 #include "panels/langguide.h"
 #include "panels/basics.h"
+#include "core/interactivebasics.h"
 #include "panels/expander.h"
 #include "panels/levels.h"
 
@@ -300,7 +302,16 @@ void MainWindow::createMenuBar()
         }
     });
 
-    auto* basicsAction = toolsMenu->addAction("Tutorials && Examples");
+    auto* interactiveTutAction = toolsMenu->addAction("Interactive Basics Tutorial");
+    interactiveTutAction->setShortcut(QKeySequence("Ctrl+Shift+B"));
+    connect(interactiveTutAction, &QAction::triggered, this, [this]() {
+        if (!m_interactiveBasics) {
+            m_interactiveBasics = new InteractiveBasicsDialog(this);
+        }
+        m_interactiveBasics->exec();
+    });
+
+    auto* basicsAction = toolsMenu->addAction("Quick Reference");
     connect(basicsAction, &QAction::triggered, this, [this]() {
         if (m_basicsOverlay) {
             m_basicsOverlay->goToPage(0);
@@ -500,6 +511,30 @@ void MainWindow::createMenuBar()
         if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
         if (m_depAnalysis)      m_depAnalysis->setVisible(false);
         m_codeHealth->setVisible(true);
+    });
+
+    toolsMenu->addSeparator();
+
+    auto* debugAction = toolsMenu->addAction("Debugger");
+    debugAction->setShortcut(QKeySequence("F5"));
+    connect(debugAction, &QAction::triggered, this, [this]() {
+        if (!m_debugFrame || !m_editor) return;
+        QString filePath = m_editor->currentFilePath();
+        if (filePath.isEmpty()) {
+            QMessageBox::information(this, "Save First",
+                "Please save your file before debugging.");
+            return;
+        }
+        m_editor->saveCurrentFile();
+        m_debugFrame->setTargetFile(filePath, currentLangKey());
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame)    m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+        if (m_codeHealth)       m_codeHealth->setVisible(false);
+        m_debugFrame->setVisible(true);
+        m_debugFrame->startDebugging();
     });
 
     // Help
@@ -757,6 +792,11 @@ void MainWindow::setupCentralLayout()
     m_codeHealth = new CodeHealthFrame;
     m_codeHealth->setVisible(false);
     mainLayout->addWidget(m_codeHealth);
+
+    // Debug Frame — hidden by default
+    m_debugFrame = new DebugFrame;
+    m_debugFrame->setVisible(false);
+    mainLayout->addWidget(m_debugFrame);
 
     // Security Lab Widget — swapped in per lab, hidden by default
     // Created lazily in openSecurityLab(); placeholder registered here
@@ -1170,6 +1210,34 @@ void MainWindow::wireSignals()
     connect(m_codeHealth, &CodeHealthFrame::backToEditor, this, [this]() {
         m_codeHealth->setVisible(false);
         m_mainSplitter->setVisible(true);
+    });
+
+    // Debug Frame signals
+    connect(m_debugFrame, &DebugFrame::closeRequested, this, [this]() {
+        m_debugFrame->stopDebugging();
+        m_debugFrame->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+
+    // Build bar debug button
+    connect(m_buildBar, &BuildBar::debugRequested, this, [this]() {
+        if (!m_editor) return;
+        QString filePath = m_editor->currentFilePath();
+        if (filePath.isEmpty()) {
+            QMessageBox::information(this, "Save First",
+                "Please save your file before debugging.");
+            return;
+        }
+        m_editor->saveCurrentFile();
+        m_debugFrame->setTargetFile(filePath, currentLangKey());
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame)    m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+        if (m_codeHealth)       m_codeHealth->setVisible(false);
+        m_debugFrame->setVisible(true);
+        m_debugFrame->startDebugging();
     });
 
     // AI Chat: keep editor context in sync so the AI knows the current file

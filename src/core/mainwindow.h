@@ -28,6 +28,8 @@ class RuntimeAnalysisFrame;
 class MemoryAnalysisFrame;
 class DependencyAnalysisFrame;
 class CodeHealthFrame;
+class InteractiveBasicsDialog;
+class DebugFrame;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -83,6 +85,8 @@ private:
     MemoryAnalysisFrame*  m_memoryAnalysis  = nullptr;
     DependencyAnalysisFrame* m_depAnalysis  = nullptr;
     CodeHealthFrame*      m_codeHealth    = nullptr;
+    InteractiveBasicsDialog* m_interactiveBasics = nullptr;
+    DebugFrame*           m_debugFrame    = nullptr;
 
     // Recent Workspaces submenu
     QMenu* m_recentMenu = nullptr;

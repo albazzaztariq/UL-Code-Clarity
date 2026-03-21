@@ -30,10 +30,12 @@ signals:
     void runRequested();
     void buildRequested();
     void memCheckRequested();
+    void debugRequested();
 
 private:
     QPushButton* m_runBtn;
     QPushButton* m_buildBtn;
+    QPushButton* m_debugBtn;
     QPushButton* m_memCheckBtn;
     QComboBox*   m_targetCombo;
     QPushButton* m_outputToggle;

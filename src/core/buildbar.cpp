@@ -89,6 +89,17 @@ BuildBar::BuildBar(QWidget* parent)
         "QPushButton:pressed { background: #45475a; }");
     barLayout->addWidget(m_buildBtn);
 
+    // Debug button
+    m_debugBtn = new QPushButton(QString::fromUtf8("\xf0\x9f\x90\x9b") + "  Debug");
+    m_debugBtn->setFixedHeight(26);
+    m_debugBtn->setStyleSheet(
+        "QPushButton { background: rgba(137,180,250,0.15); color: #89b4fa;"
+        " font-weight: 600; font-size: 11px; padding: 0 14px; border-radius: 6px;"
+        " border: 1px solid rgba(137,180,250,0.35); }"
+        "QPushButton:hover { background: rgba(137,180,250,0.28); }"
+        "QPushButton:pressed { background: rgba(137,180,250,0.4); }");
+    barLayout->addWidget(m_debugBtn);
+
     // MemCheck button (only for C, hidden by default)
     m_memCheckBtn = new QPushButton("Mem Check");
     m_memCheckBtn->setFixedHeight(26);
@@ -202,6 +213,7 @@ BuildBar::BuildBar(QWidget* parent)
     // Connections
     connect(m_runBtn, &QPushButton::clicked, this, &BuildBar::runRequested);
     connect(m_buildBtn, &QPushButton::clicked, this, &BuildBar::buildRequested);
+    connect(m_debugBtn, &QPushButton::clicked, this, &BuildBar::debugRequested);
     connect(m_memCheckBtn, &QPushButton::clicked, this, &BuildBar::memCheckRequested);
     connect(m_outputToggle, &QPushButton::clicked, this, &BuildBar::toggleResults);
     connect(m_resultsClose, &QPushButton::clicked, this, [this]() {

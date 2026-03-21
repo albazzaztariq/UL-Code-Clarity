@@ -42,7 +42,13 @@ set(SOURCES
     core/memoryanalysis.cpp
     core/dependencyanalysis.cpp
     core/codehealth.cpp
+    core/interactivebasics.cpp
+    core/debugger.cpp
+    core/debugbackend.cpp
+    core/executionrecorder.cpp
+    core/whatswrong.cpp
 )
+
 
 set(HEADERS
     core/theme.h
@@ -76,6 +82,11 @@ set(HEADERS
     core/memoryanalysis.h
     core/dependencyanalysis.h
     core/codehealth.h
+    core/interactivebasics.h
+    core/debugger.h
+    core/debugbackend.h
+    core/executionrecorder.h
+    core/whatswrong.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────
