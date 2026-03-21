@@ -793,7 +793,11 @@ void MainWindow::wireSignals()
     connect(m_levelSelector, &LevelSelector::levelChanged, this, [this](int level) {
         m_clarityPanel->setLevel(level);
         if (m_aiChatPanel) m_aiChatPanel->setAssistLevel(level);
+        if (m_runtimeAnalysis) m_runtimeAnalysis->setAssistLevel(level);
     });
+    // Sync level on open
+    if (m_runtimeAnalysis && m_levelSelector)
+        m_runtimeAnalysis->setAssistLevel(m_levelSelector->currentLevel());
 
     // Level selector -> progressive disclosure on build bar
     connect(m_levelSelector, &LevelSelector::showBuildButton, this, [this](bool show) {

@@ -35,11 +35,13 @@ public:
 
     // Generates a cross-language comparison note when Python is compared to C/C++/Rust
     // speedRatio: how many times slower Python was (e.g. 47.0 means 47x slower)
-    static QString crossLanguageNote(const QString& fasterLang, double speedRatio);
+    // level: 1-2 = beginner-friendly prose, 3-4 = technical
+    static QString crossLanguageNote(const QString& fasterLang, double speedRatio,
+                                     int level = 1);
 
 private:
-    QList<OptimizationEntry> analyzePython(const QStringList& lines) const;
-    QList<OptimizationEntry> analyzeCpp(const QStringList& lines, bool isCpp) const;
+    QList<OptimizationEntry> analyzePython(const QStringList& lines, int level) const;
+    QList<OptimizationEntry> analyzeCpp(const QStringList& lines, bool isCpp, int level) const;
 
     // Helper: check if a name appears outside its definition line
     bool nameUsedAfterLine(const QStringList& lines, const QString& name, int defLine) const;

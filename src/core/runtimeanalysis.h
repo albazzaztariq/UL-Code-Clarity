@@ -33,6 +33,9 @@ class RuntimeAnalysisFrame : public QWidget {
 public:
     explicit RuntimeAnalysisFrame(QWidget* parent = nullptr);
 
+    // Set the assist level (1-4) so results and suggestions match verbosity
+    void setAssistLevel(int level) { m_assistLevel = level; }
+
 signals:
     // Emitted when user wants to go back to the IDE
     void backToEditor();
@@ -105,4 +108,7 @@ private:
 
     // ── Temp exe tracking ────────────────────────────────────────────────
     QStringList              m_tempExes;   // paths to clean up after benchmark
+
+    // ── Assist level (1-4) ───────────────────────────────────────────────
+    int                      m_assistLevel = 1;
 };

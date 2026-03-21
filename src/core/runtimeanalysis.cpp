@@ -87,28 +87,30 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
 
     connect(this, &RuntimeAnalysisFrame::profileRequested, this,
         [this](const QString& filePath, const QString& language) {
-            // Open profile dialog
             QString code;
             QFile f(filePath);
             if (f.open(QIODevice::ReadOnly | QIODevice::Text))
                 code = QTextStream(&f).readAll();
 
             CodeOptimizer optimizer;
-            QList<OptimizationEntry> entries = optimizer.analyzeFile(code, language);
+            QList<OptimizationEntry> entries = optimizer.analyzeFile(code, language, m_assistLevel);
 
             if (entries.isEmpty()) {
-                // Show "no issues" dialog
                 auto* dlg = new QDialog(this);
                 dlg->setWindowTitle("Profile Results");
                 dlg->setAttribute(Qt::WA_DeleteOnClose);
-                dlg->resize(400, 200);
+                dlg->resize(440, 220);
                 auto* lay = new QVBoxLayout(dlg);
+                lay->setSpacing(12);
+                lay->setContentsMargins(24, 24, 24, 24);
                 auto* lbl = new QLabel(
-                    "No common issues detected in this file.\n\n"
-                    "The code looks clean for the patterns we check!", dlg);
+                    "<b>No common issues detected.</b><br><br>"
+                    "The patterns we check for weren\xe2\x80\x99t found in this file. "
+                    "That\xe2\x80\x99s a good sign \xe2\x80\x94 the code looks clean for the "
+                    "beginner pitfalls we look for.", dlg);
                 lbl->setWordWrap(true);
-                lbl->setStyleSheet("color: #a6e3a1; font-size: 13px;");
-                lbl->setAlignment(Qt::AlignCenter);
+                lbl->setTextFormat(Qt::RichText);
+                lbl->setStyleSheet("color: #a6e3a1; font-size: 13px; background: transparent;");
                 lay->addWidget(lbl);
                 auto* btn = new QPushButton("Close", dlg);
                 connect(btn, &QPushButton::clicked, dlg, &QDialog::accept);
@@ -117,31 +119,66 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
                 return;
             }
 
-            // Show each entry one at a time via SideBySideDiffWidget in a dialog
+            // Show each suggestion in sequence
             for (int idx = 0; idx < entries.size(); ++idx) {
                 const OptimizationEntry& entry = entries[idx];
 
                 auto* dlg = new QDialog(this);
-                dlg->setWindowTitle(QString("Suggestion %1 of %2 — %3")
+                dlg->setWindowTitle(QString("Suggestion %1 of %2 \xe2\x80\x94 %3")
                     .arg(idx + 1).arg(entries.size()).arg(entry.title));
                 dlg->setAttribute(Qt::WA_DeleteOnClose);
-                dlg->resize(860, 520);
+                dlg->resize(880, 580);
 
                 auto* lay = new QVBoxLayout(dlg);
                 lay->setContentsMargins(0, 0, 0, 0);
+                lay->setSpacing(0);
 
-                // Description label
-                auto* descLabel = new QLabel(dlg);
-                descLabel->setText(entry.description);
-                descLabel->setWordWrap(true);
-                descLabel->setStyleSheet(
-                    "QLabel { color: #cdd6f4; font-size: 12px; padding: 12px 16px; "
-                    "background: #2a2a3c; border-bottom: 1px solid #313244; }");
-                lay->addWidget(descLabel);
+                // ── Teaching header ──────────────────────────────────────
+                auto* headerWidget = new QWidget(dlg);
+                headerWidget->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
+                auto* headerLayout = new QVBoxLayout(headerWidget);
+                headerLayout->setContentsMargins(16, 14, 16, 14);
+                headerLayout->setSpacing(6);
 
+                auto* titleRow = new QHBoxLayout;
+                auto* titleLbl = new QLabel(entry.title, headerWidget);
+                titleLbl->setStyleSheet(
+                    "QLabel { color: #cdd6f4; font-size: 14px; font-weight: bold; background: transparent; }");
+                titleRow->addWidget(titleLbl);
+                titleRow->addStretch();
+                if (entry.lineNumber > 0) {
+                    auto* lineLbl = new QLabel(
+                        QString("Line %1").arg(entry.lineNumber), headerWidget);
+                    lineLbl->setStyleSheet(
+                        "QLabel { color: #89b4fa; font-size: 11px; background: #313244;"
+                        " border-radius: 3px; padding: 2px 8px; }");
+                    titleRow->addWidget(lineLbl);
+                }
+                headerLayout->addLayout(titleRow);
+
+                // One-sentence summary
+                auto* summaryLbl = new QLabel(entry.description, headerWidget);
+                summaryLbl->setWordWrap(true);
+                summaryLbl->setStyleSheet(
+                    "QLabel { color: #a6adc8; font-size: 12px; background: transparent; }");
+                headerLayout->addWidget(summaryLbl);
+
+                // Teaching paragraph (why it matters)
+                if (!entry.whyItMatters.isEmpty()) {
+                    auto* whyLbl = new QLabel(entry.whyItMatters, headerWidget);
+                    whyLbl->setWordWrap(true);
+                    whyLbl->setStyleSheet(
+                        "QLabel { color: #cdd6f4; font-size: 12px; background: transparent;"
+                        " padding-top: 6px; }");
+                    headerLayout->addWidget(whyLbl);
+                }
+
+                lay->addWidget(headerWidget);
+
+                // ── Side-by-side diff ────────────────────────────────────
                 auto* diffView = new SideBySideDiffWidget(dlg);
                 diffView->setContent(
-                    QString("Line %1 — %2").arg(entry.lineNumber).arg(entry.title),
+                    QString("Line %1 \xe2\x80\x94 %2").arg(entry.lineNumber).arg(entry.title),
                     entry.originalCode,
                     entry.suggestedCode);
                 lay->addWidget(diffView, 1);
@@ -154,7 +191,7 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
                 connect(diffView, &SideBySideDiffWidget::skipped, dlg, &QDialog::reject);
 
                 dlg->exec();
-                Q_UNUSED(applied); // In a full implementation you'd patch the file
+                Q_UNUSED(applied);
             }
         });
 }
@@ -568,10 +605,41 @@ void RuntimeAnalysisFrame::renderResults()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(12);
 
-    auto* heading = new QLabel("Results — fastest to slowest:", m_resultsContent);
+    auto* heading = new QLabel("Results \xe2\x80\x94 fastest to slowest:", m_resultsContent);
     heading->setStyleSheet(
         "QLabel { color: #cdd6f4; font-size: 14px; font-weight: bold; background: transparent; }");
     layout->addWidget(heading);
+
+    // Plain-English summary line (level 1-2 only)
+    if (m_assistLevel <= 2 && m_results.size() >= 2) {
+        const BenchmarkResult& fastest = m_results.first();
+        const BenchmarkResult& slowest = m_results.last();
+        QString fastName = QFileInfo(fastest.filePath).fileName();
+        QString slowName = QFileInfo(slowest.filePath).fileName();
+        QString summaryText;
+        if (fastest.medianMs == 0 || slowest.medianMs == 0) {
+            summaryText = QString("%1 finished fastest in this test.").arg(fastName);
+        } else {
+            double ratio = double(slowest.medianMs) / double(fastest.medianMs);
+            if (ratio < 1.5) {
+                summaryText = QString(
+                    "%1 and %2 ran at almost the same speed \xe2\x80\x94 the difference is tiny.")
+                    .arg(fastName, slowName);
+            } else {
+                summaryText = QString(
+                    "%1 ran %2x faster than %3. "
+                    "Click \"Profile for Improvements\" next to any file to see what could be sped up.")
+                    .arg(fastName)
+                    .arg(ratio, 0, 'f', 1)
+                    .arg(slowName);
+            }
+        }
+        auto* summaryLbl = new QLabel(summaryText, m_resultsContent);
+        summaryLbl->setWordWrap(true);
+        summaryLbl->setStyleSheet(
+            "QLabel { color: #a6adc8; font-size: 12px; background: transparent; padding-bottom: 4px; }");
+        layout->addWidget(summaryLbl);
+    }
 
     // Check if Python is in the mix with a compiled language
     bool hasPython = false;
@@ -626,13 +694,39 @@ void RuntimeAnalysisFrame::renderResults()
 
         topLine->addStretch();
 
+        // Format time — plain English at lower assist levels
         QString timeStr;
-        if (res.medianMs < 1000)
+        if (res.medianMs == 0) {
+            timeStr = "< 1 ms";
+        } else if (res.medianMs < 1000) {
             timeStr = QString("%1 ms").arg(res.medianMs);
-        else
+        } else {
             timeStr = QString("%1 s").arg(res.medianMs / 1000.0, 0, 'f', 2);
+        }
+        // For beginners, add a human-scale hint as a tooltip
+        QString timeTooltip;
+        if (m_assistLevel <= 2) {
+            if (res.medianMs < 10)
+                timeTooltip = "Very fast \xe2\x80\x94 finished in under 10 milliseconds";
+            else if (res.medianMs < 100)
+                timeTooltip = QString("Fast \xe2\x80\x94 about %1 milliseconds "
+                    "(a millisecond is 1/1000th of a second)").arg(res.medianMs);
+            else if (res.medianMs < 1000)
+                timeTooltip = QString("%1 milliseconds \xe2\x80\x94 most programs finish "
+                    "in under 1000 ms (1 second)").arg(res.medianMs);
+            else
+                timeTooltip = QString("%1 seconds \xe2\x80\x94 this is slow for a simple program")
+                    .arg(res.medianMs / 1000.0, 0, 'f', 2);
+        }
+        // Clarify this is the median of 3 runs (invisible detail — no tool names)
+        QString timeDetail = QString("Median of 3 runs: %1 ms / %2 ms / %3 ms")
+            .arg(res.runs[0]).arg(res.runs[1]).arg(res.runs[2]);
 
         auto* timeLabel = new QLabel(timeStr, row);
+        if (!timeTooltip.isEmpty())
+            timeLabel->setToolTip(timeTooltip + "\n\n" + timeDetail);
+        else
+            timeLabel->setToolTip(timeDetail);
         timeLabel->setStyleSheet(
             QString("QLabel { color: %1; font-size: 14px; font-weight: bold;"
                     " background: transparent; }").arg(rankColor));
@@ -709,7 +803,7 @@ void RuntimeAnalysisFrame::renderResults()
             auto* noteLayout = new QVBoxLayout(noteWidget);
             noteLayout->setContentsMargins(14, 10, 14, 10);
             auto* noteLabel = new QLabel(
-                CodeOptimizer::crossLanguageNote(fasterLang, ratio), noteWidget);
+                CodeOptimizer::crossLanguageNote(fasterLang, ratio, m_assistLevel), noteWidget);
             noteLabel->setWordWrap(true);
             noteLabel->setStyleSheet(
                 "QLabel { color: #f9e2af; font-size: 12px; background: transparent; }");
@@ -719,6 +813,19 @@ void RuntimeAnalysisFrame::renderResults()
     }
 
     layout->addStretch();
+
+    // Attribution footer — small, unobtrusive, tool names kept internal
+    auto* footer = new QLabel(
+        "Timing: each file was run 3 times; the middle result (median) is shown to "
+        "reduce variance from system load.  \xe2\x80\xa2  "
+        "Static analysis powered by Code Clarity's built-in pattern scanner.",
+        m_resultsContent);
+    footer->setWordWrap(true);
+    footer->setStyleSheet(
+        "QLabel { color: #45475a; font-size: 10px; background: transparent;"
+        " padding: 8px 0 4px 0; }");
+    layout->addWidget(footer);
+
     m_resultsContent->setVisible(true);
 }
 
