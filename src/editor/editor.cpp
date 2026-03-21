@@ -23,15 +23,15 @@ CodeEditor::CodeEditor(QWidget* parent)
     m_lineNumberArea = new LineNumberArea(this);
 
     setStyleSheet(
-        "QPlainTextEdit {"
-        "  background: #1e1e2e;"
-        "  color: #cdd6f4;"
+        QString("QPlainTextEdit {"
+        "  background: %1;"
+        "  color: %2;"
         "  font-family: 'Cascadia Code', 'Consolas', monospace;"
         "  font-size: 12px;"
         "  border: none;"
-        "  selection-background-color: #45475a;"
-        "  selection-color: #cdd6f4;"
-        "}"
+        "  selection-background-color: %3;"
+        "  selection-color: %2;"
+        "}").arg(Theme::Colors::bg(), Theme::Colors::fg(), Theme::Colors::border())
     );
 
     setTabStopDistance(fontMetrics().horizontalAdvance(' ') * 4);
@@ -181,31 +181,7 @@ void CodeEditor::contextMenuEvent(QContextMenuEvent* event)
 void CodeEditor::applyTheme(bool isDark)
 {
     m_isDark = isDark;
-    if (isDark) {
-        setStyleSheet(
-            "QPlainTextEdit {"
-            "  background: #1e1e2e;"
-            "  color: #cdd6f4;"
-            "  font-family: 'Cascadia Code', 'Consolas', monospace;"
-            "  font-size: 12px;"
-            "  border: none;"
-            "  selection-background-color: #45475a;"
-            "  selection-color: #cdd6f4;"
-            "}"
-        );
-    } else {
-        setStyleSheet(
-            "QPlainTextEdit {"
-            "  background: #ffffff;"
-            "  color: #1e1e2e;"
-            "  font-family: 'Cascadia Code', 'Consolas', monospace;"
-            "  font-size: 12px;"
-            "  border: none;"
-            "  selection-background-color: #bfdbfe;"
-            "  selection-color: #1e1e2e;"
-            "}"
-        );
-    }
+    // Theme::Colors auto-switches; no inline color swapping needed here.
     highlightCurrentLine();
     m_lineNumberArea->update();
 }
@@ -226,7 +202,8 @@ EditorWidget::EditorWidget(QWidget* parent)
     auto* tabLayout = new QHBoxLayout(tabRow);
     tabLayout->setContentsMargins(0, 0, 0, 0);
     tabLayout->setSpacing(0);
-    tabRow->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
+    tabRow->setStyleSheet(QString("background: %1; border-bottom: 1px solid #313244;")
+        .arg(Theme::Colors::bg2()));
 
     m_tabBar = new QTabBar;
     m_tabBar->setTabsClosable(false);  // we place our own styled close buttons
@@ -251,9 +228,9 @@ EditorWidget::EditorWidget(QWidget* parent)
     explainBtn->setCursor(Qt::PointingHandCursor);
     explainBtn->setToolTip("Explain the current code in plain language");
     explainBtn->setStyleSheet(
-        "QPushButton { background: #f9e2af; color: #1e1e2e; font-weight: 600;"
+        QString("QPushButton { background: %1; color: #1e1e2e; font-weight: 600;"
         " font-size: 10px; padding: 0 10px; border-radius: 4px; border: none; margin-right: 4px; }"
-        "QPushButton:hover { background: #fae3b0; }");
+        "QPushButton:hover { background: #fae3b0; }").arg(Theme::Colors::yellow()));
     tabLayout->addWidget(explainBtn);
 
     // Walk Me Through button
@@ -262,9 +239,9 @@ EditorWidget::EditorWidget(QWidget* parent)
     walkBtn->setCursor(Qt::PointingHandCursor);
     walkBtn->setToolTip("Get a step-by-step walkthrough of this code");
     walkBtn->setStyleSheet(
-        "QPushButton { background: #f9e2af; color: #1e1e2e; font-weight: 600;"
+        QString("QPushButton { background: %1; color: #1e1e2e; font-weight: 600;"
         " font-size: 10px; padding: 0 10px; border-radius: 4px; border: none; margin-right: 8px; }"
-        "QPushButton:hover { background: #fae3b0; }");
+        "QPushButton:hover { background: #fae3b0; }").arg(Theme::Colors::yellow()));
     tabLayout->addWidget(walkBtn);
 
     // Clear Explanations button — hidden until Explain is active
@@ -273,9 +250,9 @@ EditorWidget::EditorWidget(QWidget* parent)
     m_clearExplainBtn->setCursor(Qt::PointingHandCursor);
     m_clearExplainBtn->setToolTip("Remove inline comments added by Explain");
     m_clearExplainBtn->setStyleSheet(
-        "QPushButton { background: #f38ba8; color: #1e1e2e; font-weight: 600;"
+        QString("QPushButton { background: %1; color: #1e1e2e; font-weight: 600;"
         " font-size: 10px; padding: 0 10px; border-radius: 4px; border: none; margin-right: 8px; }"
-        "QPushButton:hover { background: #f5a0b5; }");
+        "QPushButton:hover { background: #f5a0b5; }").arg(Theme::Colors::red()));
     m_clearExplainBtn->hide();
     tabLayout->addWidget(m_clearExplainBtn);
 
@@ -286,20 +263,22 @@ EditorWidget::EditorWidget(QWidget* parent)
 
     // ── Welcome page (index 0) ──
     m_welcomePage = new QWidget;
-    m_welcomePage->setStyleSheet("background: #1e1e2e;");
+    m_welcomePage->setStyleSheet(QString("background: %1;").arg(Theme::Colors::bg()));
     auto* welcomeLayout = new QVBoxLayout(m_welcomePage);
     welcomeLayout->setContentsMargins(40, 40, 40, 40);
     welcomeLayout->setSpacing(16);
 
     auto* welcomeTitle = new QLabel("Welcome to Code Clarity");
     welcomeTitle->setStyleSheet(
-        "QLabel { color: #cdd6f4; font-size: 18px; font-weight: 700; background: transparent; }");
+        QString("QLabel { color: %1; font-size: 18px; font-weight: 700; background: transparent; }")
+        .arg(Theme::Colors::fg()));
     welcomeTitle->setAlignment(Qt::AlignCenter);
     welcomeLayout->addWidget(welcomeTitle);
 
     auto* welcomeSubtitle = new QLabel("Open a workspace or try the example below");
     welcomeSubtitle->setStyleSheet(
-        "QLabel { color: #a6adc8; font-size: 12px; background: transparent; }");
+        QString("QLabel { color: %1; font-size: 12px; background: transparent; }")
+        .arg(Theme::Colors::fg2()));
     welcomeSubtitle->setAlignment(Qt::AlignCenter);
     welcomeLayout->addWidget(welcomeSubtitle);
 
@@ -309,12 +288,12 @@ EditorWidget::EditorWidget(QWidget* parent)
     codeBlock->setReadOnly(true);
     codeBlock->setMaximumHeight(180);
     codeBlock->setStyleSheet(
-        "QPlainTextEdit {"
-        "  background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
+        QString("QPlainTextEdit {"
+        "  background: %1; color: %2; border: 1px solid %3;"
         "  border-radius: 6px; padding: 12px;"
         "  font-family: 'Cascadia Code', 'Consolas', monospace;"
         "  font-size: 13px;"
-        "}");
+        "}").arg(Theme::Colors::bg2(), Theme::Colors::fg(), Theme::Colors::border()));
     codeBlock->setObjectName("welcomeCodeBlock");
     welcomeLayout->addWidget(codeBlock);
 
@@ -328,19 +307,19 @@ EditorWidget::EditorWidget(QWidget* parent)
 
     auto* openFileBtn = new QPushButton("Open File");
     openFileBtn->setStyleSheet(
-        "QPushButton { color: #cdd6f4; background: #45475a;"
+        QString("QPushButton { color: %1; background: %2;"
         "  border: 1px solid #585b70; border-radius: 4px; padding: 6px 16px;"
         "  font-size: 11px; font-weight: 600; }"
-        "QPushButton:hover { background: #585b70; }");
+        "QPushButton:hover { background: #585b70; }").arg(Theme::Colors::fg(), Theme::Colors::border()));
     openFileBtn->setCursor(Qt::PointingHandCursor);
     openBtnLayout->addWidget(openFileBtn);
 
     auto* openFolderBtn = new QPushButton("Open a Folder to View All Files Inside");
     openFolderBtn->setStyleSheet(
-        "QPushButton { color: #cdd6f4; background: #45475a;"
+        QString("QPushButton { color: %1; background: %2;"
         "  border: 1px solid #585b70; border-radius: 4px; padding: 6px 16px;"
         "  font-size: 11px; font-weight: 600; }"
-        "QPushButton:hover { background: #585b70; }");
+        "QPushButton:hover { background: #585b70; }").arg(Theme::Colors::fg(), Theme::Colors::border()));
     openFolderBtn->setCursor(Qt::PointingHandCursor);
     openBtnLayout->addWidget(openFolderBtn);
 
@@ -377,10 +356,10 @@ EditorWidget::EditorWidget(QWidget* parent)
 
     auto* ulBtn = new QPushButton("Switch to UniLogic");
     ulBtn->setStyleSheet(
-        "QPushButton { color: #89b4fa; background: rgba(137,180,250,0.15);"
-        "  border: 1px solid #89b4fa; border-radius: 4px; padding: 4px 14px;"
+        QString("QPushButton { color: %1; background: rgba(137,180,250,0.15);"
+        "  border: 1px solid %1; border-radius: 4px; padding: 4px 14px;"
         "  font-size: 11px; font-weight: 600; }"
-        "QPushButton:hover { background: rgba(137,180,250,0.3); }");
+        "QPushButton:hover { background: rgba(137,180,250,0.3); }").arg(Theme::Colors::accent()));
     ulBtn->setCursor(Qt::PointingHandCursor);
     switchBtnLayout->addWidget(ulBtn);
 
@@ -684,8 +663,9 @@ void EditorWidget::updateLanguageBadge()
             " padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-right: 8px; }");
     } else {
         m_langBadge->setStyleSheet(
-            "QLabel { color: #a6adc8; background: rgba(166,173,200,0.1);"
-            " padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-right: 8px; }");
+            QString("QLabel { color: %1; background: rgba(166,173,200,0.1);"
+            " padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-right: 8px; }")
+            .arg(Theme::Colors::fg2()));
     }
 }
 
@@ -723,19 +703,13 @@ void EditorWidget::hideWelcome()
     m_editorStack->setCurrentIndex(1);
 }
 
-void EditorWidget::applyCloseButtonStyle(QPushButton* btn, bool isDark) const
+void EditorWidget::applyCloseButtonStyle(QPushButton* btn, bool /*isDark*/) const
 {
-    if (isDark) {
-        btn->setStyleSheet(
-            "QPushButton { background: transparent; color: #6c7086;"
-            " border: none; font-size: 11px; padding: 0; border-radius: 2px; }"
-            "QPushButton:hover { color: #f38ba8; background: rgba(243,139,168,0.15); }");
-    } else {
-        btn->setStyleSheet(
-            "QPushButton { background: transparent; color: #999999;"
-            " border: none; font-size: 11px; padding: 0; border-radius: 2px; }"
-            "QPushButton:hover { color: #cc0000; background: rgba(204,0,0,0.08); }");
-    }
+    btn->setStyleSheet(
+        QString("QPushButton { background: transparent; color: %1;"
+        " border: none; font-size: 11px; padding: 0; border-radius: 2px; }"
+        "QPushButton:hover { color: %2; background: rgba(243,139,168,0.15); }")
+        .arg(Theme::Colors::fg3(), Theme::Colors::red()));
 }
 
 QPushButton* EditorWidget::makeCloseButton(int tabIdx)
@@ -760,75 +734,7 @@ void EditorWidget::applyTheme(bool isDark)
 {
     m_isDark = isDark;
     m_codeEditor->applyTheme(isDark);
-
-    if (isDark) {
-        // Tab row
-        auto* tabRow = m_tabBar->parentWidget();
-        if (tabRow)
-            tabRow->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
-
-        // Welcome page
-        m_welcomePage->setStyleSheet("background: #1e1e2e;");
-
-        // Welcome page labels
-        auto* title = m_welcomePage->findChild<QLabel*>();
-        if (title)
-            title->setStyleSheet(
-                "QLabel { color: #cdd6f4; font-size: 18px; font-weight: 700; background: transparent; }");
-
-        // Code block in welcome page
-        auto* codeBlock = m_welcomePage->findChild<QPlainTextEdit*>("welcomeCodeBlock");
-        if (codeBlock)
-            codeBlock->setStyleSheet(
-                "QPlainTextEdit {"
-                "  background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
-                "  border-radius: 6px; padding: 12px;"
-                "  font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px;"
-                "}");
-
-        // Language badge
-        m_langBadge->setStyleSheet(
-            "QLabel { color: #94e2d5; background: rgba(148,226,213,0.1);"
-            " padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;"
-            " margin-right: 4px; }");
-    } else {
-        // Tab row
-        auto* tabRow = m_tabBar->parentWidget();
-        if (tabRow)
-            tabRow->setStyleSheet("background: #f0f0f0; border-bottom: 1px solid #d0d0d0;");
-
-        // Welcome page
-        m_welcomePage->setStyleSheet("background: #ffffff;");
-
-        // Welcome page labels
-        auto* title = m_welcomePage->findChild<QLabel*>();
-        if (title)
-            title->setStyleSheet(
-                "QLabel { color: #1e1e2e; font-size: 18px; font-weight: 700; background: transparent; }");
-
-        // Code block in welcome page
-        auto* codeBlock = m_welcomePage->findChild<QPlainTextEdit*>("welcomeCodeBlock");
-        if (codeBlock)
-            codeBlock->setStyleSheet(
-                "QPlainTextEdit {"
-                "  background: #f8f8f8; color: #1e1e2e; border: 1px solid #d0d0d0;"
-                "  border-radius: 6px; padding: 12px;"
-                "  font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px;"
-                "}");
-
-        // Language badge
-        m_langBadge->setStyleSheet(
-            "QLabel { color: #2563eb; background: rgba(37,99,235,0.1);"
-            " padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;"
-            " margin-right: 4px; }");
-    }
-
-    // Re-style all existing close buttons
-    for (int i = 0; i < m_tabBar->count(); ++i) {
-        auto* btn = qobject_cast<QPushButton*>(m_tabBar->tabButton(i, QTabBar::RightSide));
-        if (btn)
-            applyCloseButtonStyle(btn, isDark);
-    }
+    // Theme::Colors auto-switches; no inline color swapping needed here.
 }
 
 void EditorWidget::setWelcomeCode(const QString& lang)

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QPushButton>
 #include <QLabel>
 #include <QLineEdit>
-#include <QScrollArea>
-#include <QVBoxLayout>
 #include <QList>
 #include <QString>
 #include <QProcess>
@@ -51,7 +49,7 @@ private:
 };
 
 // ── Main frame ────────────────────────────────────────────────────────────────
-class DataTraceFrame : public QWidget {
+class DataTraceFrame : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -62,10 +60,6 @@ public:
 
     // Pre-fill the variable name (e.g. from editor selection)
     void setVariable(const QString& varName);
-
-signals:
-    void backToEditor();
-    void jumpToLine(int line);   // editor should scroll to this line
 
 private slots:
     void onTrace();
@@ -87,14 +81,8 @@ private:
     QLineEdit*   m_varInput     = nullptr;
     QPushButton* m_traceBtn     = nullptr;
     QPushButton* m_liveTraceBtn = nullptr;
-    QLabel*      m_statusLabel  = nullptr;
-    QScrollArea* m_scroll       = nullptr;
-    QWidget*     m_cardsArea    = nullptr;
-    QVBoxLayout* m_cardsLayout  = nullptr;
 
     // ── State ─────────────────────────────────────────────────────────────────
-    QString m_code;
-    QString m_language;
     QString m_filePath;
 
     QProcess* m_liveProcess = nullptr;

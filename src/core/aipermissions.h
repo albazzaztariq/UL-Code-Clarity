@@ -43,3 +43,27 @@ public:
 private:
     QString m_workspaceRoot;
 };
+
+// ── PermissionGuard ───────────────────────────────────────────────────────
+// Legacy static helper — workspace-scoped file access guard with modal prompt.
+// Prefer AIPermissions for new code.
+//
+// Rules:
+//  1. filePath MUST be under workspaceRoot (canonical path comparison).
+//  2. If QSettings permissions/disablePrompts == true, access is granted silently.
+//  3. Otherwise a modal dialog: Allow / Deny / Go to Settings.
+
+class PermissionGuard {
+public:
+    // True only when filePath is a descendant of workspaceRoot.
+    static bool canAccess(const QString &filePath, const QString &workspaceRoot);
+
+    // Reads QSettings("CodeClarity","CodeClarity") permissions/disablePrompts.
+    static bool shouldPrompt();
+
+    // Show a prompt dialog "The AI wants to [action] [filePath]. Allow?"
+    // Returns true if the user clicks Allow (or prompts are disabled).
+    static bool requestPermission(QWidget *parent,
+                                  const QString &action,
+                                  const QString &filePath);
+};

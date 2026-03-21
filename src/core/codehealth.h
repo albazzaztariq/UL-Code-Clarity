@@ -1,10 +1,9 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QPushButton>
 #include <QLabel>
 #include <QScrollArea>
-#include <QVBoxLayout>
 #include <QList>
 #include <QString>
 
@@ -76,7 +75,7 @@ private:
 };
 
 // ── Main frame ───────────────────────────────────────────────────────────────
-class CodeHealthFrame : public QWidget {
+class CodeHealthFrame : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -87,9 +86,6 @@ public:
 
     // Public for use by FullReportFrame via healthBuildReport()
     static HealthReport buildReport(const QStringList& lines, const QString& lang);
-
-signals:
-    void backToEditor();
 
 private slots:
     void onRunHealth();
@@ -116,7 +112,6 @@ private:
     QLabel*      m_gradeLabel   = nullptr;
     QLabel*      m_gradeCaption = nullptr;
     QPushButton* m_runBtn       = nullptr;
-    QLabel*      m_statusLabel  = nullptr;
 
     // Card grid area
     QWidget*     m_cardGrid     = nullptr;
@@ -125,8 +120,4 @@ private:
     QScrollArea* m_findingsScroll  = nullptr;
     QWidget*     m_findingsContent = nullptr;
     QLabel*      m_findingsTitle   = nullptr;
-
-    // ── State ────────────────────────────────────────────────────────────────
-    QString m_code;
-    QString m_language;
 };

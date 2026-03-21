@@ -1,5 +1,8 @@
 #include "core/securitylab.h"
 #include "core/jsonloader.h"
+#include "core/theme.h"
+
+using C = Theme::Colors;
 
 #include <QJsonArray>
 #include <QVBoxLayout>
@@ -25,14 +28,15 @@
 // ── Shared style helpers ──────────────────────────────────────────────────────
 
 static QString btnStyle(const QString& bg, const QString& hoverBg,
-                        const QString& fg = "#1e1e2e")
+                        const QString& fg = QString())
 {
+    QString fgFinal = fg.isEmpty() ? QString(C::bg()) : fg;
     return QString(
         "QPushButton { background: %1; color: %3; border: none;"
         " border-radius: 4px; padding: 0 14px; font-size: 13px; font-weight: bold; }"
         "QPushButton:hover { background: %2; }"
-        "QPushButton:disabled { background: #313244; color: #6c7086; }")
-        .arg(bg, hoverBg, fg);
+        "QPushButton:disabled { background: %4; color: %5; }")
+        .arg(bg, hoverBg, fgFinal, C::bg2(), C::fg3());
 }
 
 // ── Lab program paths ─────────────────────────────────────────────────────────
@@ -95,46 +99,8 @@ SecurityLabWidget* SecurityLabWidget::forVulnType(const QString& vulnType, QWidg
 // ── Constructor ───────────────────────────────────────────────────────────────
 
 SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
-    : QWidget(parent), m_lab(lab)
+    : AnalysisFrame(QString("Security Labs — %1").arg(lab.name), parent), m_lab(lab)
 {
-    setStyleSheet("background: #1e1e2e; color: #cdd6f4;");
-
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(12, 10, 12, 10);
-    root->setSpacing(8);
-
-    // ── Top bar ──────────────────────────────────────────────────────────────
-    auto* topBar = new QHBoxLayout;
-
-    auto* closeBtn = new QPushButton("Back");
-    closeBtn->setFixedHeight(28);
-    closeBtn->setCursor(Qt::PointingHandCursor);
-    closeBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; padding: 0 12px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; }");
-    connect(closeBtn, &QPushButton::clicked, this, &SecurityLabWidget::closeRequested);
-    topBar->addWidget(closeBtn);
-
-    topBar->addSpacing(10);
-
-    auto* titleLabel = new QLabel(QString("Lab: %1").arg(lab.name));
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 16px; font-weight: bold;");
-    topBar->addWidget(titleLabel);
-
-    topBar->addStretch(1);
-
-    m_statusLabel = new QLabel;
-    m_statusLabel->setStyleSheet("color: #a6adc8; font-size: 12px;");
-    topBar->addWidget(m_statusLabel);
-
-    root->addLayout(topBar);
-
-    auto* sep = new QFrame;
-    sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet("color: #313244;");
-    root->addWidget(sep);
-
     // ── Action buttons ───────────────────────────────────────────────────────
     auto* btnBar = new QHBoxLayout;
     btnBar->setSpacing(8);
@@ -142,42 +108,43 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
     m_runNormalBtn = new QPushButton("Run Normal Input");
     m_runNormalBtn->setFixedHeight(30);
     m_runNormalBtn->setCursor(Qt::PointingHandCursor);
-    m_runNormalBtn->setStyleSheet(btnStyle("#a6e3a1", "#c3f5bf"));
+    m_runNormalBtn->setStyleSheet(btnStyle(C::green(), C::green()));
     connect(m_runNormalBtn, &QPushButton::clicked, this, &SecurityLabWidget::runNormal);
     btnBar->addWidget(m_runNormalBtn);
 
     m_runAttackBtn = new QPushButton("Run Attack Input");
     m_runAttackBtn->setFixedHeight(30);
     m_runAttackBtn->setCursor(Qt::PointingHandCursor);
-    m_runAttackBtn->setStyleSheet(btnStyle("#f38ba8", "#f5a9bc"));
+    m_runAttackBtn->setStyleSheet(btnStyle(C::red(), C::red()));
     connect(m_runAttackBtn, &QPushButton::clicked, this, &SecurityLabWidget::runAttack);
     btnBar->addWidget(m_runAttackBtn);
 
     m_fixBtn = new QPushButton("Show the Fix");
     m_fixBtn->setFixedHeight(30);
     m_fixBtn->setCursor(Qt::PointingHandCursor);
-    m_fixBtn->setStyleSheet(btnStyle("#89b4fa", "#b4d0fb"));
+    m_fixBtn->setStyleSheet(btnStyle(C::accent(), C::accent()));
     connect(m_fixBtn, &QPushButton::clicked, this, &SecurityLabWidget::showFix);
     btnBar->addWidget(m_fixBtn);
 
     m_whyBtn = new QPushButton("Why This Matters");
     m_whyBtn->setFixedHeight(30);
     m_whyBtn->setCursor(Qt::PointingHandCursor);
-    m_whyBtn->setStyleSheet(btnStyle("#f9e2af", "#fbefc5"));
+    m_whyBtn->setStyleSheet(btnStyle(C::yellow(), C::yellow()));
     connect(m_whyBtn, &QPushButton::clicked, this, &SecurityLabWidget::showWhyItMatters);
     btnBar->addWidget(m_whyBtn);
 
     btnBar->addStretch(1);
-    root->addLayout(btnBar);
+    auto* btnBarWidget = new QWidget;
+    btnBarWidget->setLayout(btnBar);
 
     // ── 3-pane splitter ──────────────────────────────────────────────────────
     auto* splitter = new QSplitter(Qt::Horizontal);
     splitter->setHandleWidth(2);
-    splitter->setStyleSheet("QSplitter::handle { background: #313244; }");
+    splitter->setStyleSheet(QString("QSplitter::handle { background: %1; }").arg(C::bg2()));
 
     // ── LEFT: Code pane ──────────────────────────────────────────────────────
     auto* codeContainer = new QWidget;
-    codeContainer->setStyleSheet("background: #181825;");
+    codeContainer->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* codeLayout = new QVBoxLayout(codeContainer);
     codeLayout->setContentsMargins(0, 0, 0, 0);
     codeLayout->setSpacing(0);
@@ -185,8 +152,9 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
     auto* codeHeader = new QLabel("  Code");
     codeHeader->setFixedHeight(24);
     codeHeader->setStyleSheet(
-        "background: #313244; color: #a6adc8; font-size: 11px; font-weight: bold;"
-        " border-bottom: 1px solid #45475a; padding-left: 6px;");
+        QString("background: %1; color: %2; font-size: 11px; font-weight: bold;"
+        " border-bottom: 1px solid %3; padding-left: 6px;")
+        .arg(C::bg2(), C::fg2(), C::border()));
     codeLayout->addWidget(codeHeader);
 
     m_codeStack = new QStackedWidget;
@@ -199,9 +167,10 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
     m_codePaneVuln->setFont(monoFont);
     m_codePaneVuln->setPlainText(lab.vulnCode);
     m_codePaneVuln->setStyleSheet(
-        "QPlainTextEdit { background: #181825; color: #cdd6f4; border: none; padding: 6px; }"
-        "QScrollBar:vertical { background: #1e1e2e; width: 8px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 3px; }");
+        QString("QPlainTextEdit { background: %1; color: %2; border: none; padding: 6px; }"
+        "QScrollBar:vertical { background: %1; width: 8px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 3px; }")
+        .arg(C::bg(), C::fg(), C::border()));
     m_codeStack->addWidget(m_codePaneVuln);
 
     m_codePaneFix = new QPlainTextEdit;
@@ -209,9 +178,10 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
     m_codePaneFix->setFont(monoFont);
     m_codePaneFix->setPlainText(lab.fixedCode);
     m_codePaneFix->setStyleSheet(
-        "QPlainTextEdit { background: #1a2b1a; color: #a6e3a1; border: none; padding: 6px; }"
-        "QScrollBar:vertical { background: #1e1e2e; width: 8px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 3px; }");
+        QString("QPlainTextEdit { background: %1; color: %2; border: none; padding: 6px; }"
+        "QScrollBar:vertical { background: %1; width: 8px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 3px; }")
+        .arg(C::bg(), C::green(), C::border()));
     m_codeStack->addWidget(m_codePaneFix);
 
     m_codeStack->setCurrentIndex(0);
@@ -221,14 +191,14 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
 
     // ── CENTER: Input pane ───────────────────────────────────────────────────
     auto* inputContainer = new QWidget;
-    inputContainer->setStyleSheet("background: #1e1e2e;");
+    inputContainer->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* inputLayout = new QVBoxLayout(inputContainer);
     inputLayout->setContentsMargins(8, 8, 8, 8);
     inputLayout->setSpacing(8);
 
     auto* inputHeader = new QLabel("Input");
     inputHeader->setStyleSheet(
-        "color: #a6adc8; font-size: 11px; font-weight: bold; padding: 0;");
+        QString("color: %1; font-size: 11px; font-weight: bold; padding: 0;").arg(C::fg2()));
     inputLayout->addWidget(inputHeader);
 
     // SQL and XSS get a mock webpage UI; others get a plain text field
@@ -242,21 +212,22 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
     } else {
         // Generic input field
         auto* inputLabel = new QLabel("Program input:");
-        inputLabel->setStyleSheet("color: #a6adc8; font-size: 12px;");
+        inputLabel->setStyleSheet(QString("color: %1; font-size: 12px;").arg(C::fg2()));
         inputLayout->addWidget(inputLabel);
 
         m_inputField = new QLineEdit;
         m_inputField->setText(lab.normalInput);
         m_inputField->setFont(monoFont);
         m_inputField->setStyleSheet(
-            "QLineEdit { background: #181825; color: #cdd6f4; border: 1px solid #45475a;"
-            " border-radius: 4px; padding: 6px; font-size: 13px; }");
+            QString("QLineEdit { background: %1; color: %2; border: 1px solid %3;"
+            " border-radius: 4px; padding: 6px; font-size: 13px; }")
+            .arg(C::bg(), C::fg(), C::border()));
         inputLayout->addWidget(m_inputField);
 
         auto* hint = new QLabel(
             QString("Normal: %1\nAttack: %2")
             .arg(lab.normalInput, lab.attackInput));
-        hint->setStyleSheet("color: #6c7086; font-size: 11px;");
+        hint->setStyleSheet(QString("color: %1; font-size: 11px;").arg(C::fg3()));
         hint->setWordWrap(true);
         inputLayout->addWidget(hint);
     }
@@ -266,7 +237,7 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
 
     // ── RIGHT: Output pane ───────────────────────────────────────────────────
     auto* outputContainer = new QWidget;
-    outputContainer->setStyleSheet("background: #181825;");
+    outputContainer->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* outputLayout = new QVBoxLayout(outputContainer);
     outputLayout->setContentsMargins(0, 0, 0, 0);
     outputLayout->setSpacing(0);
@@ -274,27 +245,31 @@ SecurityLabWidget::SecurityLabWidget(const LabDefinition& lab, QWidget* parent)
     auto* outputHeader = new QLabel("  Output / Shell");
     outputHeader->setFixedHeight(24);
     outputHeader->setStyleSheet(
-        "background: #313244; color: #a6adc8; font-size: 11px; font-weight: bold;"
-        " border-bottom: 1px solid #45475a; padding-left: 6px;");
+        QString("background: %1; color: %2; font-size: 11px; font-weight: bold;"
+        " border-bottom: 1px solid %3; padding-left: 6px;")
+        .arg(C::bg2(), C::fg2(), C::border()));
     outputLayout->addWidget(outputHeader);
 
     m_outputPane = new QTextEdit;
     m_outputPane->setReadOnly(true);
     m_outputPane->setFont(monoFont);
     m_outputPane->setStyleSheet(
-        "QTextEdit { background: #181825; color: #cdd6f4; border: none; padding: 6px; }"
-        "QScrollBar:vertical { background: #1e1e2e; width: 8px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 3px; }");
+        QString("QTextEdit { background: %1; color: %2; border: none; padding: 6px; }"
+        "QScrollBar:vertical { background: %1; width: 8px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 3px; }")
+        .arg(C::bg(), C::fg(), C::border()));
     outputLayout->addWidget(m_outputPane, 1);
 
     splitter->addWidget(outputContainer);
 
     splitter->setSizes({380, 260, 360});
-    root->addWidget(splitter, 1);
 
-    // ── Fix explanation label ─────────────────────────────────────────────────
-    // (shown below the splitter when fix mode is active — initially hidden)
-    m_statusLabel->setText("Press a Run button to see what happens.");
+    // Add controls into the inherited results area
+    addResultWidget(btnBarWidget);
+    addResultWidget(splitter);
+
+    // ── Initial status ────────────────────────────────────────────────────────
+    setStatus("Press a Run button to see what happens.");
 }
 
 // ── SQL mock UI ───────────────────────────────────────────────────────────────
@@ -304,43 +279,46 @@ void SecurityLabWidget::buildSqlMockUi(QWidget* /*parent*/, QVBoxLayout* layout)
     // Styled box that looks like a login form
     auto* frame = new QFrame;
     frame->setStyleSheet(
-        "QFrame { background: #2a2a3c; border: 1px solid #45475a; border-radius: 6px; }");
+        QString("QFrame { background: %1; border: 1px solid %2; border-radius: 6px; }")
+        .arg(C::bg2(), C::border()));
     auto* fl = new QVBoxLayout(frame);
     fl->setContentsMargins(14, 12, 14, 12);
     fl->setSpacing(10);
 
     auto* siteTitle = new QLabel("Login");
     siteTitle->setStyleSheet(
-        "color: #cdd6f4; font-size: 15px; font-weight: bold; border: none;");
+        QString("color: %1; font-size: 15px; font-weight: bold; border: none;").arg(C::fg()));
     fl->addWidget(siteTitle);
 
     auto* unLabel = new QLabel("Username");
-    unLabel->setStyleSheet("color: #a6adc8; font-size: 12px; border: none;");
+    unLabel->setStyleSheet(QString("color: %1; font-size: 12px; border: none;").arg(C::fg2()));
     fl->addWidget(unLabel);
 
     m_sqlUsername = new QLineEdit;
     m_sqlUsername->setText(m_lab.normalInput.split('\n').value(0));
     m_sqlUsername->setStyleSheet(
-        "QLineEdit { background: #181825; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; padding: 6px; font-size: 13px; }");
+        QString("QLineEdit { background: %1; color: %2; border: 1px solid %3;"
+        " border-radius: 4px; padding: 6px; font-size: 13px; }")
+        .arg(C::bg(), C::fg(), C::border()));
     fl->addWidget(m_sqlUsername);
 
     auto* pwLabel = new QLabel("Password");
-    pwLabel->setStyleSheet("color: #a6adc8; font-size: 12px; border: none;");
+    pwLabel->setStyleSheet(QString("color: %1; font-size: 12px; border: none;").arg(C::fg2()));
     fl->addWidget(pwLabel);
 
     m_sqlPassword = new QLineEdit;
     m_sqlPassword->setEchoMode(QLineEdit::Password);
     m_sqlPassword->setText(m_lab.normalInput.split('\n').value(1, "password123"));
     m_sqlPassword->setStyleSheet(
-        "QLineEdit { background: #181825; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; padding: 6px; font-size: 13px; }");
+        QString("QLineEdit { background: %1; color: %2; border: 1px solid %3;"
+        " border-radius: 4px; padding: 6px; font-size: 13px; }")
+        .arg(C::bg(), C::fg(), C::border()));
     fl->addWidget(m_sqlPassword);
 
     auto* loginBtn = new QPushButton("Login");
     loginBtn->setFixedHeight(32);
     loginBtn->setCursor(Qt::PointingHandCursor);
-    loginBtn->setStyleSheet(btnStyle("#89b4fa", "#b4d0fb"));
+    loginBtn->setStyleSheet(btnStyle(C::accent(), C::accent()));
     connect(loginBtn, &QPushButton::clicked, this, [this]() {
         QString input = m_sqlUsername->text() + "\n" + m_sqlPassword->text();
         runWithInput(input);
@@ -351,7 +329,7 @@ void SecurityLabWidget::buildSqlMockUi(QWidget* /*parent*/, QVBoxLayout* layout)
 
     auto* hint = new QLabel(
         "Try injecting:  ' OR '1'='1\ninto the Username field, then press Login");
-    hint->setStyleSheet("color: #6c7086; font-size: 11px;");
+    hint->setStyleSheet(QString("color: %1; font-size: 11px;").arg(C::fg3()));
     hint->setWordWrap(true);
     layout->addWidget(hint);
 }
@@ -362,32 +340,34 @@ void SecurityLabWidget::buildXssMockUi(QWidget* /*parent*/, QVBoxLayout* layout)
 {
     auto* frame = new QFrame;
     frame->setStyleSheet(
-        "QFrame { background: #2a2a3c; border: 1px solid #45475a; border-radius: 6px; }");
+        QString("QFrame { background: %1; border: 1px solid %2; border-radius: 6px; }")
+        .arg(C::bg2(), C::border()));
     auto* fl = new QVBoxLayout(frame);
     fl->setContentsMargins(14, 12, 14, 12);
     fl->setSpacing(10);
 
     auto* siteTitle = new QLabel("Post a Comment");
     siteTitle->setStyleSheet(
-        "color: #cdd6f4; font-size: 15px; font-weight: bold; border: none;");
+        QString("color: %1; font-size: 15px; font-weight: bold; border: none;").arg(C::fg()));
     fl->addWidget(siteTitle);
 
     auto* cmtLabel = new QLabel("Your comment:");
-    cmtLabel->setStyleSheet("color: #a6adc8; font-size: 12px; border: none;");
+    cmtLabel->setStyleSheet(QString("color: %1; font-size: 12px; border: none;").arg(C::fg2()));
     fl->addWidget(cmtLabel);
 
     m_xssComment = new QTextEdit;
     m_xssComment->setFixedHeight(80);
     m_xssComment->setText(m_lab.normalInput);
     m_xssComment->setStyleSheet(
-        "QTextEdit { background: #181825; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; padding: 6px; font-size: 13px; }");
+        QString("QTextEdit { background: %1; color: %2; border: 1px solid %3;"
+        " border-radius: 4px; padding: 6px; font-size: 13px; }")
+        .arg(C::bg(), C::fg(), C::border()));
     fl->addWidget(m_xssComment);
 
     auto* postBtn = new QPushButton("Post Comment");
     postBtn->setFixedHeight(32);
     postBtn->setCursor(Qt::PointingHandCursor);
-    postBtn->setStyleSheet(btnStyle("#89b4fa", "#b4d0fb"));
+    postBtn->setStyleSheet(btnStyle(C::accent(), C::accent()));
     connect(postBtn, &QPushButton::clicked, this, [this]() {
         runWithInput(m_xssComment->toPlainText());
     });
@@ -397,7 +377,7 @@ void SecurityLabWidget::buildXssMockUi(QWidget* /*parent*/, QVBoxLayout* layout)
 
     auto* hint = new QLabel(
         "Try injecting:  <script>document.cookie</script>\ninto the comment box");
-    hint->setStyleSheet("color: #6c7086; font-size: 11px;");
+    hint->setStyleSheet(QString("color: %1; font-size: 11px;").arg(C::fg3()));
     hint->setWordWrap(true);
     layout->addWidget(hint);
 }
@@ -464,7 +444,7 @@ void SecurityLabWidget::runWithInput(const QString& input)
                 appendOutput(QString::fromLocal8Bit(m_process->readAllStandardOutput()));
             });
             connect(m_process, &QProcess::readyReadStandardError, this, [this]() {
-                appendOutput(QString::fromLocal8Bit(m_process->readAllStandardError()), "#f38ba8");
+                appendOutput(QString::fromLocal8Bit(m_process->readAllStandardError()), C::red());
             });
             connect(m_process,
                     QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
@@ -507,17 +487,17 @@ void SecurityLabWidget::runWithInput(const QString& input)
             else
                 srcPath = program + ".c";
 #endif
-            appendOutput("Compiling " + QFileInfo(srcPath).fileName() + "...\n", "#f9e2af");
+            appendOutput("Compiling " + QFileInfo(srcPath).fileName() + "...\n", C::yellow());
             QProcess compiler;
             compiler.start("gcc", {srcPath, "-o", exePath, "-w"});
             compiler.waitForFinished(10000);
             if (compiler.exitCode() != 0) {
-                appendOutput("Compilation failed:\n", "#f38ba8");
-                appendOutput(QString::fromLocal8Bit(compiler.readAllStandardError()), "#f38ba8");
+                appendOutput("Compilation failed:\n", C::red());
+                appendOutput(QString::fromLocal8Bit(compiler.readAllStandardError()), C::red());
                 m_statusLabel->setText("Compilation failed.");
                 return;
             }
-            appendOutput("Compiled OK.\n\n", "#a6e3a1");
+            appendOutput("Compiled OK.\n\n", C::green());
         }
 
         if (!m_process) {
@@ -526,7 +506,7 @@ void SecurityLabWidget::runWithInput(const QString& input)
                 appendOutput(QString::fromLocal8Bit(m_process->readAllStandardOutput()));
             });
             connect(m_process, &QProcess::readyReadStandardError, this, [this]() {
-                appendOutput(QString::fromLocal8Bit(m_process->readAllStandardError()), "#f38ba8");
+                appendOutput(QString::fromLocal8Bit(m_process->readAllStandardError()), C::red());
             });
             connect(m_process,
                     QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
@@ -548,7 +528,7 @@ void SecurityLabWidget::runWithInput(const QString& input)
     QTimer::singleShot(10000, this, [this]() {
         if (m_process && m_process->state() != QProcess::NotRunning) {
             m_process->kill();
-            appendOutput("\n[Process killed — exceeded 10 second timeout]\n", "#f38ba8");
+            appendOutput("\n[Process killed — exceeded 10 second timeout]\n", C::red());
         }
     });
 }
@@ -559,10 +539,10 @@ void SecurityLabWidget::onProcessFinished(int exitCode, QProcess::ExitStatus sta
     m_runAttackBtn->setEnabled(true);
 
     if (status == QProcess::CrashExit) {
-        appendOutput("\n[Process crashed or was killed by OS]\n", "#f38ba8");
+        appendOutput("\n[Process crashed or was killed by OS]\n", C::red());
         m_statusLabel->setText("Process crashed.");
     } else if (exitCode != 0) {
-        appendOutput(QString("\n[Process exited with code %1]\n").arg(exitCode), "#f9e2af");
+        appendOutput(QString("\n[Process exited with code %1]\n").arg(exitCode), C::yellow());
         m_statusLabel->setText(QString("Exited: code %1").arg(exitCode));
     } else {
         m_statusLabel->setText("Done.");
@@ -586,7 +566,7 @@ void SecurityLabWidget::onProcessError(QProcess::ProcessError err)
         msg = "Process error.";
         break;
     }
-    appendOutput("\n[ERROR] " + msg + "\n", "#f38ba8");
+    appendOutput("\n[ERROR] " + msg + "\n", C::red());
     m_statusLabel->setText(msg);
 }
 
@@ -599,13 +579,13 @@ void SecurityLabWidget::showFix()
 
     if (m_showingFix) {
         m_fixBtn->setText("Show Vulnerable Code");
-        m_fixBtn->setStyleSheet(btnStyle("#a6e3a1", "#c3f5bf"));
-        appendOutput("\n--- FIXED VERSION ---\n", "#a6e3a1");
-        appendOutput(m_lab.fixExplanation + "\n", "#a6e3a1");
+        m_fixBtn->setStyleSheet(btnStyle(C::green(), C::green()));
+        appendOutput("\n--- FIXED VERSION ---\n", C::green());
+        appendOutput(m_lab.fixExplanation + "\n", C::green());
     } else {
         m_fixBtn->setText("Show the Fix");
-        m_fixBtn->setStyleSheet(btnStyle("#89b4fa", "#b4d0fb"));
-        appendOutput("\n--- VULNERABLE VERSION ---\n", "#f38ba8");
+        m_fixBtn->setStyleSheet(btnStyle(C::accent(), C::accent()));
+        appendOutput("\n--- VULNERABLE VERSION ---\n", C::red());
     }
 }
 
@@ -617,26 +597,27 @@ void SecurityLabWidget::showWhyItMatters()
     dlg->setWindowTitle("Why This Matters");
     dlg->setModal(true);
     dlg->setMinimumWidth(460);
-    dlg->setStyleSheet("background: #1e1e2e;");
+    dlg->setStyleSheet(QString("background: %1;").arg(C::bg()));
 
     auto* lay = new QVBoxLayout(dlg);
     lay->setContentsMargins(22, 18, 22, 18);
     lay->setSpacing(14);
 
     auto* title = new QLabel(m_lab.name);
-    title->setStyleSheet("color: #f38ba8; font-size: 16px; font-weight: bold;");
+    title->setStyleSheet(QString("color: %1; font-size: 16px; font-weight: bold;").arg(C::red()));
     lay->addWidget(title);
 
     auto* body = new QLabel(m_lab.explanation);
     body->setWordWrap(true);
-    body->setStyleSheet("color: #cdd6f4; font-size: 13px; line-height: 150%;");
+    body->setStyleSheet(QString("color: %1; font-size: 13px; line-height: 150%;").arg(C::fg()));
     lay->addWidget(body);
 
     auto* closeBtn = new QPushButton("Close");
     closeBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+        QString("QPushButton { background: %1; color: %2; border: 1px solid %3;"
         " border-radius: 6px; padding: 0 18px; font-size: 13px; min-height: 30px; }"
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %3; }")
+        .arg(C::bg2(), C::fg(), C::border()));
     closeBtn->setCursor(Qt::PointingHandCursor);
     connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
 
@@ -653,7 +634,7 @@ void SecurityLabWidget::showWhyItMatters()
 
 void SecurityLabWidget::appendOutput(const QString& text, const QString& color)
 {
-    if (color == "#cdd6f4") {
+    if (color.isEmpty() || color == C::fg()) {
         m_outputPane->moveCursor(QTextCursor::End);
         m_outputPane->insertPlainText(text);
     } else {

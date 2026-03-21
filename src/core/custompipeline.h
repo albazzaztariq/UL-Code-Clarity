@@ -1,4 +1,5 @@
 #pragma once
+// custompipeline.h — types now defined here; implementation merged into buildchain.cpp
 
 #include <QDialog>
 #include <QWidget>
@@ -10,15 +11,12 @@
 #include <QMap>
 
 // ── PipelineConfig ────────────────────────────────────────────────────────
-// Holds the list of check names that belong to a saved pipeline.
 struct PipelineConfig {
     QString     name;
-    QStringList checks;  // e.g. {"Security", "Code Quality", "Memory", "Dependencies", "Runtime"}
+    QStringList checks;
 
-    // Available check IDs
     static QStringList availableChecks();
 
-    // Persistence — stored in QSettings under "pipelines/<name>"
     void save() const;
     static PipelineConfig load(const QString& name);
     static QStringList savedPipelineNames();
@@ -33,8 +31,6 @@ struct PipelineResult {
 };
 
 // ── PipelineRunner ────────────────────────────────────────────────────────
-// Runs each selected check in sequence against the provided code/file.
-// Emits finished() when all checks have run.
 class PipelineRunner : public QObject {
     Q_OBJECT
 public:
@@ -58,8 +54,6 @@ private:
 };
 
 // ── CustomPipelineDialog ─────────────────────────────────────────────────
-// Dialog with checkboxes for each available analysis.
-// "Save Pipeline" saves config. "Run Now" runs immediately.
 class CustomPipelineDialog : public QDialog {
     Q_OBJECT
 public:

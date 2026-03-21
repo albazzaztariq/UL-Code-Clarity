@@ -2,6 +2,9 @@
 #include "core/sast.h"
 #include "core/dast.h"
 #include "core/tutorial.h"
+#include "core/theme.h"
+
+using C = Theme::Colors;
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -18,65 +21,20 @@
 
 // ── Constructor ──────────────────────────────────────────────────────────────
 SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Security Testing", parent)
 {
-    setStyleSheet("background: #1e1e2e; color: #cdd6f4;");
-
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(16, 12, 16, 12);
-    root->setSpacing(10);
-
-    // ── Top bar ──────────────────────────────────────────────────────────────
-    auto* topBar = new QHBoxLayout;
-    topBar->setSpacing(8);
-
-    auto* backBtn = new QPushButton("Back to Editor");
-    backBtn->setFixedHeight(30);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    backBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; padding: 0 14px; font-size: 13px; }"
-        "QPushButton:hover { background: #45475a; }");
-    connect(backBtn, &QPushButton::clicked, this, &SecurityTestingFrame::backToEditor);
-    topBar->addWidget(backBtn);
-
-    topBar->addStretch(1);
-
-    auto* titleLabel = new QLabel("Security Testing");
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 18px; font-weight: bold;");
-    topBar->addWidget(titleLabel);
-
-    topBar->addStretch(1);
-
-    auto* helpBtn = new QPushButton("?");
-    helpBtn->setFixedSize(36, 36);
-    helpBtn->setCursor(Qt::PointingHandCursor);
-    helpBtn->setToolTip("What are SAST and DAST?");
-    helpBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
-        " border-radius: 18px; font-size: 18px; font-weight: bold; }"
-        "QPushButton:hover { background: #b4d0fb; }");
-    connect(helpBtn, &QPushButton::clicked, this, &SecurityTestingFrame::onHelpClicked);
-    topBar->addWidget(helpBtn);
-
-    root->addLayout(topBar);
-
-    auto* sep = new QFrame;
-    sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet("color: #313244;");
-    root->addWidget(sep);
-
     // ── Tabs ─────────────────────────────────────────────────────────────────
     m_tabs = new QTabWidget;
     m_tabs->setStyleSheet(
-        "QTabWidget::pane { border: 1px solid #313244; background: #181825; border-radius: 4px; }"
-        "QTabBar::tab { background: #313244; color: #a6adc8; padding: 6px 18px;"
+        QString("QTabWidget::pane { border: 1px solid %1; background: %2; border-radius: 4px; }"
+        "QTabBar::tab { background: %1; color: %3; padding: 6px 18px;"
         " border-radius: 4px 4px 0 0; margin-right: 2px; font-size: 13px; }"
-        "QTabBar::tab:selected { background: #45475a; color: #cdd6f4; }");
+        "QTabBar::tab:selected { background: %4; color: %5; }")
+        .arg(C::bg2(), C::bg(), C::fg2(), C::border(), C::fg()));
 
     // ── SAST Tab ─────────────────────────────────────────────────────────────
     m_sastTab = new QWidget;
-    m_sastTab->setStyleSheet("background: #181825;");
+    m_sastTab->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* sastLayout = new QVBoxLayout(m_sastTab);
     sastLayout->setContentsMargins(12, 12, 12, 12);
     sastLayout->setSpacing(8);
@@ -86,28 +44,30 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
     m_runSastBtn->setFixedHeight(32);
     m_runSastBtn->setCursor(Qt::PointingHandCursor);
     m_runSastBtn->setStyleSheet(
-        "QPushButton { background: #a6e3a1; color: #1e1e2e; border: none;"
+        QString("QPushButton { background: %1; color: %2; border: none;"
         " border-radius: 4px; padding: 0 18px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background: #c3f5bf; }"
-        "QPushButton:disabled { background: #313244; color: #6c7086; }");
+        "QPushButton:hover { background: %1; }"
+        "QPushButton:disabled { background: %3; color: %4; }")
+        .arg(C::green(), C::bg(), C::bg2(), C::fg3()));
     connect(m_runSastBtn, &QPushButton::clicked, this, &SecurityTestingFrame::onRunSast);
     sastHeader->addWidget(m_runSastBtn);
 
     m_sastStatus = new QLabel("Press Run to scan your code for security issues.");
-    m_sastStatus->setStyleSheet("color: #a6adc8; font-size: 12px; padding-left: 10px;");
+    m_sastStatus->setStyleSheet(QString("color: %1; font-size: 12px; padding-left: 10px;").arg(C::fg2()));
     sastHeader->addWidget(m_sastStatus, 1);
     sastLayout->addLayout(sastHeader);
 
     m_sastScroll = new QScrollArea;
     m_sastScroll->setWidgetResizable(true);
     m_sastScroll->setStyleSheet(
-        "QScrollArea { border: none; background: #181825; }"
-        "QScrollBar:vertical { background: #1e1e2e; width: 8px; border-radius: 4px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+        QString("QScrollArea { border: none; background: %1; }"
+        "QScrollBar:vertical { background: %2; width: 8px; border-radius: 4px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 4px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }")
+        .arg(C::bg(), C::bg(), C::border()));
     auto* sastPlaceholder = new QLabel("No analysis run yet.");
     sastPlaceholder->setAlignment(Qt::AlignCenter);
-    sastPlaceholder->setStyleSheet("color: #6c7086; font-size: 13px;");
+    sastPlaceholder->setStyleSheet(QString("color: %1; font-size: 13px;").arg(C::fg3()));
     m_sastScroll->setWidget(sastPlaceholder);
     sastLayout->addWidget(m_sastScroll, 1);
 
@@ -115,7 +75,7 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
 
     // ── DAST Tab ─────────────────────────────────────────────────────────────
     m_dastTab = new QWidget;
-    m_dastTab->setStyleSheet("background: #181825;");
+    m_dastTab->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* dastLayout = new QVBoxLayout(m_dastTab);
     dastLayout->setContentsMargins(12, 12, 12, 12);
     dastLayout->setSpacing(8);
@@ -125,28 +85,30 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
     m_runDastBtn->setFixedHeight(32);
     m_runDastBtn->setCursor(Qt::PointingHandCursor);
     m_runDastBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
+        QString("QPushButton { background: %1; color: %2; border: none;"
         " border-radius: 4px; padding: 0 18px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background: #b4d0fb; }"
-        "QPushButton:disabled { background: #313244; color: #6c7086; }");
+        "QPushButton:hover { background: %1; }"
+        "QPushButton:disabled { background: %3; color: %4; }")
+        .arg(C::accent(), C::bg(), C::bg2(), C::fg3()));
     connect(m_runDastBtn, &QPushButton::clicked, this, &SecurityTestingFrame::onRunDast);
     dastHeader->addWidget(m_runDastBtn);
 
     m_dastStatus = new QLabel("Requires a compiled executable. Build your program first.");
-    m_dastStatus->setStyleSheet("color: #a6adc8; font-size: 12px; padding-left: 10px;");
+    m_dastStatus->setStyleSheet(QString("color: %1; font-size: 12px; padding-left: 10px;").arg(C::fg2()));
     dastHeader->addWidget(m_dastStatus, 1);
     dastLayout->addLayout(dastHeader);
 
     m_dastScroll = new QScrollArea;
     m_dastScroll->setWidgetResizable(true);
     m_dastScroll->setStyleSheet(
-        "QScrollArea { border: none; background: #181825; }"
-        "QScrollBar:vertical { background: #1e1e2e; width: 8px; border-radius: 4px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+        QString("QScrollArea { border: none; background: %1; }"
+        "QScrollBar:vertical { background: %2; width: 8px; border-radius: 4px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 4px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }")
+        .arg(C::bg(), C::bg(), C::border()));
     auto* dastPlaceholder = new QLabel("No tests run yet.");
     dastPlaceholder->setAlignment(Qt::AlignCenter);
-    dastPlaceholder->setStyleSheet("color: #6c7086; font-size: 13px;");
+    dastPlaceholder->setStyleSheet(QString("color: %1; font-size: 13px;").arg(C::fg3()));
     m_dastScroll->setWidget(dastPlaceholder);
     dastLayout->addWidget(m_dastScroll, 1);
 
@@ -154,37 +116,38 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
 
     // ── CVE Auto-Check Tab ────────────────────────────────────────────────────
     m_cveTab = new QWidget;
-    m_cveTab->setStyleSheet("background: #181825;");
+    m_cveTab->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* cveLayout = new QVBoxLayout(m_cveTab);
     cveLayout->setContentsMargins(16, 16, 16, 16);
     cveLayout->setSpacing(12);
 
     // Section title
     auto* cveTitleLbl = new QLabel("CVE Vulnerability Monitoring");
-    cveTitleLbl->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;"
-                               " background: transparent;");
+    cveTitleLbl->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: bold;"
+                               " background: transparent;").arg(C::fg()));
     cveLayout->addWidget(cveTitleLbl);
 
     auto* cveDescLbl = new QLabel(
         "Runs pip-audit in the background to check your Python dependencies for "
         "known CVEs (Common Vulnerabilities and Exposures). Only runs when enabled.");
     cveDescLbl->setWordWrap(true);
-    cveDescLbl->setStyleSheet("color: #a6adc8; font-size: 12px; background: transparent;");
+    cveDescLbl->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(C::fg2()));
     cveLayout->addWidget(cveDescLbl);
 
     // Separator
     auto* cveSep = new QFrame;
     cveSep->setFrameShape(QFrame::HLine);
-    cveSep->setStyleSheet("color: #313244; background: #313244;");
+    cveSep->setStyleSheet(QString("color: %1; background: %1;").arg(C::bg2()));
     cveLayout->addWidget(cveSep);
 
     // Enable toggle
     m_cveEnabledChk = new QCheckBox("Enable Auto CVE Check");
     m_cveEnabledChk->setStyleSheet(
-        "QCheckBox { color: #cdd6f4; font-size: 13px; background: transparent; }"
+        QString("QCheckBox { color: %1; font-size: 13px; background: transparent; }"
         "QCheckBox::indicator { width: 16px; height: 16px; border-radius: 3px;"
-        " border: 1px solid #45475a; background: #313244; }"
-        "QCheckBox::indicator:checked { background: #89b4fa; border-color: #89b4fa; }");
+        " border: 1px solid %2; background: %3; }"
+        "QCheckBox::indicator:checked { background: %4; border-color: %4; }")
+        .arg(C::fg(), C::border(), C::bg2(), C::accent()));
     m_cveEnabledChk->setChecked(CVEMonitor::loadEnabled());
     connect(m_cveEnabledChk, &QCheckBox::toggled, this, &SecurityTestingFrame::onCVEToggled);
     cveLayout->addWidget(m_cveEnabledChk);
@@ -193,7 +156,7 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
     auto* freqRow = new QHBoxLayout;
     freqRow->setSpacing(10);
     auto* freqLabel = new QLabel("Check Frequency:");
-    freqLabel->setStyleSheet("color: #cdd6f4; font-size: 12px; background: transparent;");
+    freqLabel->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(C::fg()));
     freqRow->addWidget(freqLabel);
 
     m_cveFreqCombo = new QComboBox;
@@ -203,11 +166,12 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
     m_cveFreqCombo->addItem("Daily (Default)",   static_cast<int>(CVEMonitor::Daily));
     m_cveFreqCombo->addItem("Weekly",            static_cast<int>(CVEMonitor::Weekly));
     m_cveFreqCombo->setStyleSheet(
-        "QComboBox { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+        QString("QComboBox { background: %1; color: %2; border: 1px solid %3;"
         " border-radius: 4px; padding: 4px 10px; font-size: 12px; }"
         "QComboBox::drop-down { border: none; }"
-        "QComboBox QAbstractItemView { background: #313244; color: #cdd6f4;"
-        " selection-background-color: #45475a; }");
+        "QComboBox QAbstractItemView { background: %1; color: %2;"
+        " selection-background-color: %3; }")
+        .arg(C::bg2(), C::fg(), C::border()));
     // Select saved frequency
     {
         int savedMs = CVEMonitor::loadFrequencyMs();
@@ -232,16 +196,17 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
     m_cveRunNowBtn->setFixedWidth(120);
     m_cveRunNowBtn->setCursor(Qt::PointingHandCursor);
     m_cveRunNowBtn->setStyleSheet(
-        "QPushButton { background: #f38ba8; color: #1e1e2e; border: none;"
+        QString("QPushButton { background: %1; color: %2; border: none;"
         " border-radius: 4px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background: #f5a3b7; }"
-        "QPushButton:disabled { background: #313244; color: #6c7086; }");
+        "QPushButton:hover { background: %1; }"
+        "QPushButton:disabled { background: %3; color: %4; }")
+        .arg(C::red(), C::bg(), C::bg2(), C::fg3()));
     connect(m_cveRunNowBtn, &QPushButton::clicked, this, &SecurityTestingFrame::onRunCVENow);
     cveLayout->addWidget(m_cveRunNowBtn);
 
     // Status label
     m_cveStatusLabel = new QLabel("Not checked yet.");
-    m_cveStatusLabel->setStyleSheet("color: #a6adc8; font-size: 12px; background: transparent;");
+    m_cveStatusLabel->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(C::fg2()));
     m_cveStatusLabel->setWordWrap(true);
     cveLayout->addWidget(m_cveStatusLabel);
 
@@ -252,21 +217,20 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
         "Requires pip-audit to be installed: pip install pip-audit\n"
         "Results also appear in the Dependency Analysis frame.");
     noteLabel->setWordWrap(true);
-    noteLabel->setStyleSheet("color: #585b70; font-size: 11px; font-style: italic;"
-                             " background: transparent;");
+    noteLabel->setStyleSheet(QString("color: %1; font-size: 11px; font-style: italic;"
+                             " background: transparent;").arg(C::fg3()));
     cveLayout->addWidget(noteLabel);
 
     m_tabs->addTab(m_cveTab, "CVE Auto-Check");
 
-    root->addWidget(m_tabs, 1);
+    addResultWidget(m_tabs);
 }
 
 // ── Public setters ───────────────────────────────────────────────────────────
 void SecurityTestingFrame::setCode(const QString& code, const QString& language,
                                    const QString& filePath)
 {
-    m_code     = code;
-    m_language = language;
+    AnalysisFrame::setCode(code, language);
     m_filePath = filePath;
 }
 
@@ -279,13 +243,13 @@ void SecurityTestingFrame::setExePath(const QString& exePath)
 }
 
 // ── Help dialog ──────────────────────────────────────────────────────────────
-void SecurityTestingFrame::onHelpClicked()
+void SecurityTestingFrame::showHelp()
 {
     auto* dlg = new QDialog(this);
     dlg->setWindowTitle("Security Testing");
     dlg->setModal(true);
     dlg->setMinimumWidth(420);
-    dlg->setStyleSheet("background: #1e1e2e;");
+    dlg->setStyleSheet(QString("background: %1;").arg(C::bg()));
 
     auto* lay = new QVBoxLayout(dlg);
     lay->setContentsMargins(22, 18, 22, 18);
@@ -297,7 +261,7 @@ void SecurityTestingFrame::onHelpClicked()
         "SAST scans your source code without running it. "
         "DAST runs your program and attacks it with bad inputs.");
     desc->setWordWrap(true);
-    desc->setStyleSheet("QLabel { color: #cdd6f4; font-size: 13px; }");
+    desc->setStyleSheet(QString("QLabel { color: %1; font-size: 13px; }").arg(C::fg()));
     lay->addWidget(desc);
 
     auto* btnRow = new QHBoxLayout;
@@ -305,9 +269,10 @@ void SecurityTestingFrame::onHelpClicked()
 
     auto* launchBtn = new QPushButton("Launch Tutorial");
     launchBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
+        QString("QPushButton { background: %1; color: %2; border: none;"
         " border-radius: 6px; padding: 0 18px; font-size: 13px; font-weight: bold; min-height: 30px; }"
-        "QPushButton:hover { background: #b4d0fb; }");
+        "QPushButton:hover { background: %1; }")
+        .arg(C::accent(), C::bg()));
     launchBtn->setCursor(Qt::PointingHandCursor);
     connect(launchBtn, &QPushButton::clicked, dlg, [dlg, this]() {
         dlg->accept();
@@ -321,9 +286,10 @@ void SecurityTestingFrame::onHelpClicked()
 
     auto* closeBtn = new QPushButton("Close");
     closeBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+        QString("QPushButton { background: %1; color: %2; border: 1px solid %3;"
         " border-radius: 6px; padding: 0 14px; font-size: 13px; min-height: 30px; }"
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %3; }")
+        .arg(C::bg2(), C::fg(), C::border()));
     closeBtn->setCursor(Qt::PointingHandCursor);
     connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
     btnRow->addWidget(closeBtn);
@@ -403,7 +369,7 @@ void SecurityTestingFrame::populateResults(QScrollArea* area,
                                            const QString& attributionUrl)
 {
     auto* container = new QWidget;
-    container->setStyleSheet("background: #181825;");
+    container->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* layout = new QVBoxLayout(container);
     layout->setContentsMargins(4, 4, 4, 4);
     layout->setSpacing(8);
@@ -412,7 +378,7 @@ void SecurityTestingFrame::populateResults(QScrollArea* area,
         auto* noIssues = new QLabel("No security issues found.");
         noIssues->setAlignment(Qt::AlignCenter);
         noIssues->setStyleSheet(
-            "color: #a6e3a1; font-size: 14px; font-weight: bold; padding: 30px;");
+            QString("color: %1; font-size: 14px; font-weight: bold; padding: 30px;").arg(C::green()));
         layout->addWidget(noIssues);
     } else {
         QList<SecurityFinding> sorted = findings;
@@ -432,16 +398,17 @@ void SecurityTestingFrame::populateResults(QScrollArea* area,
         attrRow->addStretch(1);
 
         auto* attrLabel = new QLabel("Analysis powered by ");
-        attrLabel->setStyleSheet("color: #6c7086; font-size: 11px;");
+        attrLabel->setStyleSheet(QString("color: %1; font-size: 11px;").arg(C::fg3()));
         attrRow->addWidget(attrLabel);
 
         auto* attrLink = new QPushButton(attributionName);
         attrLink->setFlat(true);
         attrLink->setCursor(Qt::PointingHandCursor);
         attrLink->setStyleSheet(
-            "QPushButton { background: none; color: #89b4fa; font-size: 11px;"
+            QString("QPushButton { background: none; color: %1; font-size: 11px;"
             " border: none; padding: 0; text-decoration: underline; }"
-            "QPushButton:hover { color: #b4d0fb; }");
+            "QPushButton:hover { color: %1; }")
+            .arg(C::accent()));
         QString url = attributionUrl;
         connect(attrLink, &QPushButton::clicked, this, [url]() {
             QDesktopServices::openUrl(QUrl(url));
@@ -463,8 +430,8 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
 
     auto* card = new QFrame;
     card->setStyleSheet(QString(
-        "QFrame { background: #1e1e2e; border: 1px solid %1;"
-        " border-left: 4px solid %1; border-radius: 6px; }").arg(color));
+        "QFrame { background: %2; border: 1px solid %1;"
+        " border-left: 4px solid %1; border-radius: 6px; }").arg(color, C::bg()));
 
     auto* cardLayout = new QVBoxLayout(card);
     cardLayout->setContentsMargins(12, 10, 12, 10);
@@ -476,13 +443,13 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
 
     auto* sevBadge = new QLabel(label);
     sevBadge->setStyleSheet(QString(
-        "QLabel { background: %1; color: #1e1e2e; font-size: 11px; font-weight: bold;"
-        " border-radius: 3px; padding: 2px 7px; }").arg(color));
+        "QLabel { background: %1; color: %2; font-size: 11px; font-weight: bold;"
+        " border-radius: 3px; padding: 2px 7px; }").arg(color, C::bg()));
     sevBadge->setFixedHeight(20);
     headerRow->addWidget(sevBadge);
 
     auto* titleLabel = new QLabel(f.title);
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;");
+    titleLabel->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: bold;").arg(C::fg()));
     headerRow->addWidget(titleLabel, 1);
 
     if (f.lineNumber > 0) {
@@ -490,17 +457,18 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
         lineBtn->setFixedHeight(22);
         lineBtn->setCursor(Qt::PointingHandCursor);
         lineBtn->setStyleSheet(
-            "QPushButton { background: #313244; color: #89b4fa; border: 1px solid #45475a;"
+            QString("QPushButton { background: %1; color: %2; border: 1px solid %3;"
             " border-radius: 3px; padding: 0 8px; font-size: 12px; }"
-            "QPushButton:hover { background: #45475a; color: #b4d0fb; }");
+            "QPushButton:hover { background: %3; color: %2; }")
+            .arg(C::bg2(), C::accent(), C::border()));
         int ln = f.lineNumber;
         connect(lineBtn, &QPushButton::clicked, this, [this, ln]() {
-            emit jumpToLine(ln);
+            emit jumpToLine(QString(), ln);
         });
         headerRow->addWidget(lineBtn);
     } else if (!f.matchedText.isEmpty()) {
         auto* inputLabel = new QLabel(f.matchedText.left(50));
-        inputLabel->setStyleSheet("color: #6c7086; font-size: 11px;");
+        inputLabel->setStyleSheet(QString("color: %1; font-size: 11px;").arg(C::fg3()));
         headerRow->addWidget(inputLabel);
     }
 
@@ -515,7 +483,7 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
     // ── Description ──────────────────────────────────────────────────────────
     auto* descLabel = new QLabel(f.description);
     descLabel->setWordWrap(true);
-    descLabel->setStyleSheet("color: #cdd6f4; font-size: 13px;");
+    descLabel->setStyleSheet(QString("color: %1; font-size: 13px;").arg(C::fg()));
     cardLayout->addWidget(descLabel);
 
     // ── Why This Matters ─────────────────────────────────────────────────────
@@ -525,13 +493,13 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
 
         auto* whyIcon = new QLabel("Why this matters:");
         whyIcon->setStyleSheet(
-            "color: #f9e2af; font-size: 12px; font-weight: bold;");
+            QString("color: %1; font-size: 12px; font-weight: bold;").arg(C::yellow()));
         whyIcon->setFixedWidth(110);
         whyRow->addWidget(whyIcon);
 
         auto* whyLabel = new QLabel(f.whyItMatters);
         whyLabel->setWordWrap(true);
-        whyLabel->setStyleSheet("color: #cdd6f4; font-size: 12px; font-style: italic;");
+        whyLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-style: italic;").arg(C::fg()));
         whyRow->addWidget(whyLabel, 1);
 
         cardLayout->addLayout(whyRow);
@@ -550,7 +518,7 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
 
         auto* fixLabel = new QLabel(f.fixSuggestion);
         fixLabel->setWordWrap(true);
-        fixLabel->setStyleSheet("color: #a6adc8; font-size: 12px;");
+        fixLabel->setStyleSheet(QString("color: %1; font-size: 12px;").arg(C::fg2()));
         fixRow->addWidget(fixLabel, 1);
 
         cardLayout->addLayout(fixRow);
@@ -565,9 +533,10 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
         tryBtn->setFixedHeight(24);
         tryBtn->setCursor(Qt::PointingHandCursor);
         tryBtn->setStyleSheet(
-            "QPushButton { background: none; color: #89b4fa; border: 1px solid #45475a;"
+            QString("QPushButton { background: none; color: %1; border: 1px solid %2;"
             " border-radius: 4px; padding: 0 10px; font-size: 12px; }"
-            "QPushButton:hover { background: #313244; color: #b4d0fb; }");
+            "QPushButton:hover { background: %3; color: %1; }")
+            .arg(C::accent(), C::border(), C::bg2()));
         QString vt = f.vulnType;
         connect(tryBtn, &QPushButton::clicked, this, [this, vt]() {
             emit openLab(vt);
@@ -583,12 +552,12 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
 QString SecurityTestingFrame::severityColor(SecurityFinding::Severity sev)
 {
     switch (sev) {
-    case SecurityFinding::CRITICAL: return "#f38ba8";
-    case SecurityFinding::HIGH:     return "#fab387";
-    case SecurityFinding::MEDIUM:   return "#f9e2af";
-    case SecurityFinding::LOW:      return "#89b4fa";
+    case SecurityFinding::CRITICAL: return C::red();
+    case SecurityFinding::HIGH:     return "#fab387";  // Peach — not in Colors struct
+    case SecurityFinding::MEDIUM:   return C::yellow();
+    case SecurityFinding::LOW:      return C::accent();
     }
-    return "#89b4fa";
+    return C::accent();
 }
 
 QString SecurityTestingFrame::severityLabel(SecurityFinding::Severity sev)
@@ -669,12 +638,12 @@ void SecurityTestingFrame::onCVEAuditCompleted(int count, const QStringList& pac
     m_cveRunNowBtn->setEnabled(true);
     if (count == 0) {
         m_cveStatusLabel->setText("Last check: No vulnerabilities found.");
-        m_cveStatusLabel->setStyleSheet("color: #a6e3a1; font-size: 12px; background: transparent;");
+        m_cveStatusLabel->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(C::green()));
     } else {
         m_cveStatusLabel->setText(
             QString("Last check: %1 CVE(s) found in: %2")
                 .arg(count)
                 .arg(packages.join(", ")));
-        m_cveStatusLabel->setStyleSheet("color: #f38ba8; font-size: 12px; background: transparent;");
+        m_cveStatusLabel->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(C::red()));
     }
 }

@@ -1,4 +1,5 @@
 #include "core/datatrace.h"
+#include "core/theme.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -10,7 +11,6 @@
 #include <QJsonObject>
 #include <QTemporaryFile>
 #include <QDir>
-#include <QScrollBar>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -33,17 +33,17 @@ TraceCard::TraceCard(const TraceStep& step, QWidget* parent)
     setCursor(Qt::PointingHandCursor);
     setFixedHeight(54);
 
-    QString bg    = step.isError ? "#3d1f1f" : "#2a2a3c";
-    QString border = step.isError ? "#f38ba8" : "#45475a";
-    QString lineColor = "#89b4fa";
-    QString actionColor = step.isError ? "#f38ba8" : "#cdd6f4";
-    QString valueColor = step.isError ? "#f38ba8" : "#a6e3a1";
+    QString bg    = step.isError ? "#3d1f1f" : Theme::Colors::bg2();
+    QString border = step.isError ? Theme::Colors::red() : Theme::Colors::border();
+    QString lineColor = Theme::Colors::accent();
+    QString actionColor = step.isError ? Theme::Colors::red() : Theme::Colors::fg();
+    QString valueColor = step.isError ? Theme::Colors::red() : Theme::Colors::green();
 
     setStyleSheet(QString(
         "TraceCard { background: %1; border: 1px solid %2;"
         " border-radius: 6px; }"
-        "TraceCard:hover { border-color: #89b4fa; }"
-    ).arg(bg, border));
+        "TraceCard:hover { border-color: %3; }"
+    ).arg(bg, border, Theme::Colors::accent()));
 
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(12, 8, 12, 8);
@@ -56,13 +56,13 @@ TraceCard::TraceCard(const TraceStep& step, QWidget* parent)
     lineBadge->setStyleSheet(QString(
         "QLabel { background: #313244; color: %1; border-radius: 4px;"
         " font-size: 11px; font-weight: bold; padding: 2px 4px; }"
-    ).arg(lineColor));
+    ).arg(lineColor));  // #313244 = Catppuccin surface0 (no Colors method)
     layout->addWidget(lineBadge);
 
     // Separator
     auto* sep = new QFrame;
     sep->setFrameShape(QFrame::VLine);
-    sep->setStyleSheet("color: #45475a;");
+    sep->setStyleSheet(QString("color: %1;").arg(Theme::Colors::border()));
     layout->addWidget(sep);
 
     // Action description
@@ -77,7 +77,7 @@ TraceCard::TraceCard(const TraceStep& step, QWidget* parent)
     if (!step.value.isEmpty()) {
         auto* valueSep = new QFrame;
         valueSep->setFrameShape(QFrame::VLine);
-        valueSep->setStyleSheet("color: #45475a;");
+        valueSep->setStyleSheet(QString("color: %1;").arg(Theme::Colors::border()));
         layout->addWidget(valueSep);
 
         auto* valueLabel = new QLabel(step.value);
@@ -103,55 +103,9 @@ void TraceCard::mousePressEvent(QMouseEvent* event)
 // ============================================================================
 
 DataTraceFrame::DataTraceFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Trace Variable", parent)
 {
-    auto* outerLayout = new QVBoxLayout(this);
-    outerLayout->setContentsMargins(0, 0, 0, 0);
-    outerLayout->setSpacing(0);
-
-    setStyleSheet("background: #1e1e2e; color: #cdd6f4;");
-
-    // ── Title bar ─────────────────────────────────────────────────────────────
-    auto* titleBar = new QWidget;
-    titleBar->setFixedHeight(44);
-    titleBar->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
-    auto* titleLayout = new QHBoxLayout(titleBar);
-    titleLayout->setContentsMargins(12, 0, 12, 0);
-    titleLayout->setSpacing(8);
-
-    auto* backBtn = new QPushButton("← Back to Editor");
-    backBtn->setFixedHeight(28);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    backBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; font-size: 12px; padding: 0 12px; }"
-        "QPushButton:hover { background: #45475a; }");
-    connect(backBtn, &QPushButton::clicked, this, &DataTraceFrame::backToEditor);
-    titleLayout->addWidget(backBtn);
-
-    titleLayout->addStretch();
-
-    auto* titleLabel = new QLabel("Trace the Data");
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;");
-    titleLayout->addWidget(titleLabel);
-
-    titleLayout->addStretch();
-
-    m_liveTraceBtn = new QPushButton("Run Live Trace");
-    m_liveTraceBtn->setFixedHeight(28);
-    m_liveTraceBtn->setCursor(Qt::PointingHandCursor);
-    m_liveTraceBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; font-weight: bold;"
-        " border-radius: 4px; font-size: 12px; padding: 0 14px; }"
-        "QPushButton:hover { background: #a0c4fb; }"
-        "QPushButton:disabled { background: #45475a; color: #6c7086; }");
-    m_liveTraceBtn->setEnabled(false);
-    connect(m_liveTraceBtn, &QPushButton::clicked, this, &DataTraceFrame::onRunLiveTrace);
-    titleLayout->addWidget(m_liveTraceBtn);
-
-    outerLayout->addWidget(titleBar);
-
-    // ── Variable input bar ────────────────────────────────────────────────────
+    // ── Variable input bar (unique control) ───────────────────────────────────
     auto* inputBar = new QWidget;
     inputBar->setFixedHeight(46);
     inputBar->setStyleSheet("background: #181825; border-bottom: 1px solid #313244;");
@@ -160,56 +114,49 @@ DataTraceFrame::DataTraceFrame(QWidget* parent)
     inputLayout->setSpacing(8);
 
     auto* varLabel = new QLabel("Variable:");
-    varLabel->setStyleSheet("color: #a6adc8; font-size: 12px;");
+    varLabel->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::fg2()));
     inputLayout->addWidget(varLabel);
 
     m_varInput = new QLineEdit;
     m_varInput->setPlaceholderText("e.g. total, user_input, result ...");
     m_varInput->setFixedHeight(28);
-    m_varInput->setStyleSheet(
-        "QLineEdit { background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
+    m_varInput->setStyleSheet(QString(
+        "QLineEdit { background: %1; color: %2; border: 1px solid %3;"
         " border-radius: 4px; font-size: 12px; padding: 0 8px; }"
-        "QLineEdit:focus { border-color: #89b4fa; }");
+        "QLineEdit:focus { border-color: %4; }")
+        .arg(Theme::Colors::bg2(), Theme::Colors::fg(),
+             Theme::Colors::border(), Theme::Colors::accent()));
     connect(m_varInput, &QLineEdit::returnPressed, this, &DataTraceFrame::onTrace);
     inputLayout->addWidget(m_varInput, 1);
 
     m_traceBtn = new QPushButton("Trace");
     m_traceBtn->setFixedHeight(28);
     m_traceBtn->setCursor(Qt::PointingHandCursor);
-    m_traceBtn->setStyleSheet(
-        "QPushButton { background: #a6e3a1; color: #1e1e2e; font-weight: bold;"
+    m_traceBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; font-weight: bold;"
         " border-radius: 4px; font-size: 12px; padding: 0 20px; }"
-        "QPushButton:hover { background: #b9f0b4; }");
+        "QPushButton:hover { background: #b9f0b4; }")
+        .arg(Theme::Colors::green(), Theme::Colors::bg()));
     connect(m_traceBtn, &QPushButton::clicked, this, &DataTraceFrame::onTrace);
     inputLayout->addWidget(m_traceBtn);
 
-    outerLayout->addWidget(inputBar);
+    m_liveTraceBtn = new QPushButton("Run Live Trace");
+    m_liveTraceBtn->setFixedHeight(28);
+    m_liveTraceBtn->setCursor(Qt::PointingHandCursor);
+    m_liveTraceBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; font-weight: bold;"
+        " border-radius: 4px; font-size: 12px; padding: 0 14px; }"
+        "QPushButton:hover { background: #a0c4fb; }"
+        "QPushButton:disabled { background: %3; color: %4; }")
+        .arg(Theme::Colors::accent(), Theme::Colors::bg(),
+             Theme::Colors::border(), Theme::Colors::fg3()));
+    m_liveTraceBtn->setEnabled(false);
+    connect(m_liveTraceBtn, &QPushButton::clicked, this, &DataTraceFrame::onRunLiveTrace);
+    inputLayout->addWidget(m_liveTraceBtn);
 
-    // ── Status label ──────────────────────────────────────────────────────────
-    m_statusLabel = new QLabel("Enter a variable name and click Trace.");
-    m_statusLabel->setAlignment(Qt::AlignCenter);
-    m_statusLabel->setStyleSheet(
-        "QLabel { color: #6c7086; font-size: 12px; padding: 8px; background: #1e1e2e; }");
-    outerLayout->addWidget(m_statusLabel);
+    m_resultsLayout->insertWidget(0, inputBar);
 
-    // ── Cards scroll area ──────────────────────────────────────────────────────
-    m_scroll = new QScrollArea;
-    m_scroll->setWidgetResizable(true);
-    m_scroll->setStyleSheet(
-        "QScrollArea { border: none; background: #1e1e2e; }"
-        "QScrollBar:vertical { background: #181825; width: 8px; border-radius: 4px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
-
-    m_cardsArea = new QWidget;
-    m_cardsArea->setStyleSheet("background: #1e1e2e;");
-    m_cardsLayout = new QVBoxLayout(m_cardsArea);
-    m_cardsLayout->setContentsMargins(16, 12, 16, 12);
-    m_cardsLayout->setSpacing(6);
-    m_cardsLayout->addStretch();
-
-    m_scroll->setWidget(m_cardsArea);
-    outerLayout->addWidget(m_scroll, 1);
+    setStatus("Enter a variable name and click Trace.");
 }
 
 void DataTraceFrame::setCode(const QString& code, const QString& language, const QString& filePath)
@@ -222,7 +169,7 @@ void DataTraceFrame::setCode(const QString& code, const QString& language, const
     m_liveTraceBtn->setEnabled(isPython && !filePath.isEmpty());
 
     clearCards();
-    m_statusLabel->setText("Enter a variable name and click Trace.");
+    setStatus("Enter a variable name and click Trace.");
 }
 
 void DataTraceFrame::setVariable(const QString& varName)
@@ -237,7 +184,7 @@ void DataTraceFrame::onTrace()
 {
     QString varName = m_varInput->text().trimmed();
     if (varName.isEmpty()) {
-        m_statusLabel->setText("Please enter a variable name.");
+        setStatus("Please enter a variable name.");
         return;
     }
 
@@ -246,13 +193,11 @@ void DataTraceFrame::onTrace()
 
     if (steps.isEmpty()) {
         clearCards();
-        m_statusLabel->setText(
-            QString("No assignments or uses of '%1' found in this file.").arg(varName));
+        setStatus(QString("No assignments or uses of '%1' found in this file.").arg(varName));
         return;
     }
 
-    m_statusLabel->setText(
-        QString("Found %1 step(s) for '%2'  (static analysis — click 'Run Live Trace' for real values)")
+    setStatus(QString("Found %1 step(s) for '%2'  (static analysis — click 'Run Live Trace' for real values)")
         .arg(steps.size()).arg(varName));
 
     populateCards(steps);
@@ -376,11 +321,11 @@ void DataTraceFrame::onRunLiveTrace()
 {
     QString varName = m_varInput->text().trimmed();
     if (varName.isEmpty()) {
-        m_statusLabel->setText("Enter a variable name first.");
+        setStatus("Enter a variable name first.");
         return;
     }
     if (m_filePath.isEmpty() || m_language != "python") {
-        m_statusLabel->setText("Live trace requires a saved Python file.");
+        setStatus("Live trace requires a saved Python file.");
         return;
     }
 
@@ -436,7 +381,7 @@ print(json.dumps(_trace_steps))
     QTemporaryFile* tmp = new QTemporaryFile(this);
     tmp->setFileTemplate(QDir::tempPath() + "/cc_tracer_XXXXXX.py");
     if (!tmp->open()) {
-        m_statusLabel->setText("Failed to create temporary tracer script.");
+        setStatus("Failed to create temporary tracer script.");
         return;
     }
     tmp->write(tracerCode.toUtf8());
@@ -444,7 +389,7 @@ print(json.dumps(_trace_steps))
     QString tracerPath = tmp->fileName();
 
     m_liveOutput.clear();
-    m_statusLabel->setText("Running live trace...");
+    setStatus("Running live trace...");
     m_liveTraceBtn->setEnabled(false);
 
     if (!m_liveProcess) {
@@ -497,15 +442,15 @@ void DataTraceFrame::onLiveTraceFinished(int /*exitCode*/, QProcess::ExitStatus 
     }
 
     if (jsonLine.isEmpty()) {
-        m_statusLabel->setText("Live trace complete — no values captured. "
-                               "Does the script run without input?");
+        setStatus("Live trace complete — no values captured. "
+                  "Does the script run without input?");
         return;
     }
 
     QJsonParseError err;
     QJsonDocument doc = QJsonDocument::fromJson(jsonLine.toUtf8(), &err);
     if (err.error != QJsonParseError::NoError || !doc.isArray()) {
-        m_statusLabel->setText("Live trace complete — could not parse output.");
+        setStatus("Live trace complete — could not parse output.");
         return;
     }
 
@@ -528,8 +473,7 @@ void DataTraceFrame::onLiveTraceFinished(int /*exitCode*/, QProcess::ExitStatus 
     }
 
     QString varName = m_varInput->text().trimmed();
-    m_statusLabel->setText(
-        QString("Live trace: %1 captured event(s) for '%2'").arg(steps.size()).arg(varName));
+    setStatus(QString("Live trace: %1 captured event(s) for '%2'").arg(steps.size()).arg(varName));
     populateCards(steps);
 }
 
@@ -537,23 +481,18 @@ void DataTraceFrame::onLiveTraceFinished(int /*exitCode*/, QProcess::ExitStatus 
 
 void DataTraceFrame::clearCards()
 {
-    // Remove all children except the trailing stretch
-    while (m_cardsLayout->count() > 1) {
-        QLayoutItem* item = m_cardsLayout->takeAt(0);
-        if (item->widget()) item->widget()->deleteLater();
-        delete item;
-    }
+    clearResults();
 }
 
 void DataTraceFrame::populateCards(const QList<TraceStep>& steps)
 {
-    clearCards();
+    clearResults();
 
     for (const TraceStep& step : steps) {
-        auto* card = new TraceCard(step, m_cardsArea);
-        connect(card, &TraceCard::lineJumpRequested, this, &DataTraceFrame::jumpToLine);
-        m_cardsLayout->insertWidget(m_cardsLayout->count() - 1, card);
+        auto* card = new TraceCard(step);
+        connect(card, &TraceCard::lineJumpRequested, this, [this](int line) {
+            emit jumpToLine(m_filePath, line);
+        });
+        addResultWidget(card);
     }
-
-    m_scroll->verticalScrollBar()->setValue(0);
 }

@@ -1,8 +1,8 @@
 #pragma once
 
+#include "core/analysisframe.h"
 #include "core/sast.h"
 #include "core/cvemonitor.h"
-#include <QWidget>
 #include <QTabWidget>
 #include <QPushButton>
 #include <QCheckBox>
@@ -26,7 +26,7 @@
 // Cards are color-coded by severity and include a "Why This Matters" section.
 // Clicking a line number emits jumpToLine. Attribution link at bottom of results.
 // ============================================================================
-class SecurityTestingFrame : public QWidget {
+class SecurityTestingFrame : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -46,16 +46,16 @@ public:
     void reloadCVESettings();
 
 signals:
-    void backToEditor();
-    void jumpToLine(int lineNumber);
     void openLab(const QString& vulnType);  // emitted when "Try It Yourself" clicked
     // Emitted when user changes CVE settings in this frame
     void cveSettingsChanged();
 
+protected:
+    void showHelp() override;
+
 private slots:
     void onRunSast();
     void onRunDast();
-    void onHelpClicked();
     void onCVEToggled(bool enabled);
     void onCVEFrequencyChanged(int index);
     void onRunCVENow();
@@ -90,9 +90,7 @@ private:
     QPushButton* m_cveRunNowBtn   = nullptr;
     CVEMonitor*  m_cveMonitor     = nullptr;  // not owned — set by MainWindow
 
-    // ── State ────────────────────────────────────────────────────────────────
-    QString m_code;
-    QString m_language;
+    // ── State (m_code and m_language are inherited from AnalysisFrame) ────────
     QString m_filePath;
     QString m_exePath;
 };

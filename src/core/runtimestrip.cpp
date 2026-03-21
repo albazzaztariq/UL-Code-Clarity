@@ -13,7 +13,7 @@ RuntimeStrip::RuntimeStrip(QWidget* parent)
     : QWidget(parent)
 {
     setFixedHeight(26);
-    setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #45475a;");
+    setStyleSheet(QString("background: %1; border-bottom: 1px solid %2;").arg(Theme::Colors::bg2(), Theme::Colors::border()));
 
     m_layout = new QHBoxLayout(this);
     m_layout->setContentsMargins(12, 0, 12, 0);
@@ -93,9 +93,9 @@ void RuntimeStrip::applyTheme(bool isDark)
 {
     m_isDark = isDark;
     if (isDark) {
-        setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #45475a;");
+        setStyleSheet(QString("background: %1; border-bottom: 1px solid %2;").arg(Theme::Colors::bg2(), Theme::Colors::border()));
     } else {
-        setStyleSheet("background: #f0f0f0; border-bottom: 1px solid #d0d0d0;");
+        setStyleSheet("background: #f0f0f0; border-bottom: 1px solid #d0d0d0;");  // light theme literals
     }
     rebuild();
 }
@@ -148,15 +148,15 @@ void RuntimeStrip::rebuild()
     auto* dismiss = new QPushButton(QChar(0x2715));  // ✕
     dismiss->setFixedSize(16, 16);
     if (m_isDark) {
-        dismiss->setStyleSheet(
-            "QPushButton { color: #6c7086; background: transparent;"
+        dismiss->setStyleSheet(QString(
+            "QPushButton { color: %1; background: transparent;"
             " border: none; font-size: 12px; padding: 0; }"
-            "QPushButton:hover { color: #cdd6f4; }");
+            "QPushButton:hover { color: %2; }").arg(Theme::Colors::fg3(), Theme::Colors::fg()));
     } else {
         dismiss->setStyleSheet(
             "QPushButton { color: #999999; background: transparent;"
             " border: none; font-size: 12px; padding: 0; }"
-            "QPushButton:hover { color: #1e1e2e; }");
+            "QPushButton:hover { color: #1e1e2e; }");  // light theme literals
     }
     connect(dismiss, &QPushButton::clicked, this, &RuntimeStrip::toggle);
     m_layout->addWidget(dismiss);
@@ -169,30 +169,35 @@ void RuntimeStrip::addItem(QHBoxLayout* layout, const RuntimeRow& row)
 
     // Label
     auto* label = new QLabel(row.label + ":");
-    label->setStyleSheet(m_isDark
-        ? "QLabel { color: #a6adc8; font-size: 10px; background: transparent; }"
-        : "QLabel { color: #666666; font-size: 10px; background: transparent; }");
+    if (m_isDark) {
+        label->setStyleSheet(QString("QLabel { color: %1; font-size: 10px; background: transparent; }").arg(Theme::Colors::fg2()));
+    } else {
+        label->setStyleSheet("QLabel { color: #666666; font-size: 10px; background: transparent; }");
+    }
     layout->addWidget(label);
 
     if (row.options.isEmpty()) {
         // Static value
         auto* value = new QLabel(row.value);
-        value->setStyleSheet(m_isDark
-            ? "QLabel { color: #cdd6f4; font-weight: 600; font-size: 10px; background: transparent; }"
-            : "QLabel { color: #333333; font-weight: 600; font-size: 10px; background: transparent; }");
+        if (m_isDark) {
+            value->setStyleSheet(QString("QLabel { color: %1; font-weight: 600; font-size: 10px; background: transparent; }").arg(Theme::Colors::fg()));
+        } else {
+            value->setStyleSheet("QLabel { color: #333333; font-weight: 600; font-size: 10px; background: transparent; }");
+        }
         layout->addWidget(value);
     } else {
         // Tunable combo box
         auto* combo = new QComboBox;
         combo->addItems(row.options);
         if (m_isDark) {
-            combo->setStyleSheet(
-                "QComboBox { background: transparent; color: #f9e2af;"
-                " border: 1px solid #45475a; border-radius: 3px;"
+            combo->setStyleSheet(QString(
+                "QComboBox { background: transparent; color: %1;"
+                " border: 1px solid %2; border-radius: 3px;"
                 " padding: 1px 4px; font-size: 10px; font-weight: 600; }"
                 "QComboBox::drop-down { border: none; background: transparent; }"
-                "QComboBox QAbstractItemView { background: #3c3c54; color: #cdd6f4;"
-                " border: none; outline: none; selection-background-color: #45475a; }");
+                "QComboBox QAbstractItemView { background: #3c3c54; color: %3;"
+                " border: none; outline: none; selection-background-color: %2; }")
+                .arg(Theme::Colors::yellow(), Theme::Colors::border(), Theme::Colors::fg()));
         } else {
             combo->setStyleSheet(
                 "QComboBox { background: transparent; color: #333333;"
@@ -211,13 +216,17 @@ void RuntimeStrip::addItem(QHBoxLayout* layout, const RuntimeRow& row)
     if (!row.helpTitle.isEmpty()) {
         auto* helpBtn = new QPushButton("?");
         helpBtn->setFixedSize(24, 24);
-        helpBtn->setStyleSheet(m_isDark
-            ? "QPushButton { background: transparent; color: #a6adc8;"
-              " border: none; font-size: 14px; padding: 0; }"
-              "QPushButton:hover { color: #cdd6f4; }"
-            : "QPushButton { background: transparent; color: #888888;"
-              " border: none; font-size: 14px; padding: 0; }"
-              "QPushButton:hover { color: #333333; }");
+        if (m_isDark) {
+            helpBtn->setStyleSheet(QString(
+                "QPushButton { background: transparent; color: %1;"
+                " border: none; font-size: 14px; padding: 0; }"
+                "QPushButton:hover { color: %2; }").arg(Theme::Colors::fg2(), Theme::Colors::fg()));
+        } else {
+            helpBtn->setStyleSheet(
+                "QPushButton { background: transparent; color: #888888;"
+                " border: none; font-size: 14px; padding: 0; }"
+                "QPushButton:hover { color: #333333; }");
+        }
         QString title = row.helpTitle;
         QString body = row.helpBody;
         bool isMemory = (title == "Memory Model" || title == "GC" || title == "RAII"
@@ -227,22 +236,23 @@ void RuntimeStrip::addItem(QHBoxLayout* layout, const RuntimeRow& row)
             dlg->setWindowTitle(title);
             dlg->setModal(true);
             dlg->setMinimumWidth(380);
-            dlg->setStyleSheet("background: #1e1e2e;");
+            dlg->setStyleSheet(QString("background: %1;").arg(Theme::Colors::bg()));
             auto* lay = new QVBoxLayout(dlg);
             lay->setContentsMargins(20, 16, 20, 16);
             lay->setSpacing(12);
             auto* desc = new QLabel(body);
             desc->setWordWrap(true);
-            desc->setStyleSheet("QLabel { color: #cdd6f4; font-size: 13px; }");
+            desc->setStyleSheet(QString("QLabel { color: %1; font-size: 13px; }").arg(Theme::Colors::fg()));
             lay->addWidget(desc);
             auto* btnRow = new QHBoxLayout;
             btnRow->setSpacing(8);
             if (isMemory) {
                 auto* launchBtn = new QPushButton("Launch Tutorial");
-                launchBtn->setStyleSheet(
-                    "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
+                launchBtn->setStyleSheet(QString(
+                    "QPushButton { background: %1; color: %2; border: none;"
                     " border-radius: 6px; padding: 0 14px; font-size: 13px; font-weight: bold; min-height: 28px; }"
-                    "QPushButton:hover { background: #b4d0fb; }");
+                    "QPushButton:hover { background: #b4d0fb; }")
+                    .arg(Theme::Colors::accent(), Theme::Colors::bg()));
                 launchBtn->setCursor(Qt::PointingHandCursor);
                 connect(launchBtn, &QPushButton::clicked, dlg, [dlg, this]() {
                     dlg->accept();
@@ -254,10 +264,11 @@ void RuntimeStrip::addItem(QHBoxLayout* layout, const RuntimeRow& row)
             }
             btnRow->addStretch();
             auto* closeBtn = new QPushButton("Close");
-            closeBtn->setStyleSheet(
-                "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+            closeBtn->setStyleSheet(QString(
+                "QPushButton { background: #313244; color: %1; border: 1px solid %2;"
                 " border-radius: 6px; padding: 0 12px; font-size: 13px; min-height: 28px; }"
-                "QPushButton:hover { background: #45475a; }");
+                "QPushButton:hover { background: %2; }")
+                .arg(Theme::Colors::fg(), Theme::Colors::border()));
             closeBtn->setCursor(Qt::PointingHandCursor);
             connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
             btnRow->addWidget(closeBtn);
@@ -272,9 +283,11 @@ void RuntimeStrip::addItem(QHBoxLayout* layout, const RuntimeRow& row)
 void RuntimeStrip::addSeparator(QHBoxLayout* layout)
 {
     auto* sep = new QLabel("|");
-    sep->setStyleSheet(m_isDark
-        ? "QLabel { color: #45475a; font-size: 10px; padding: 0 2px; background: transparent; }"
-        : "QLabel { color: #cccccc; font-size: 10px; padding: 0 2px; background: transparent; }");
+    if (m_isDark) {
+        sep->setStyleSheet(QString("QLabel { color: %1; font-size: 10px; padding: 0 2px; background: transparent; }").arg(Theme::Colors::border()));
+    } else {
+        sep->setStyleSheet("QLabel { color: #cccccc; font-size: 10px; padding: 0 2px; background: transparent; }");
+    }
     layout->addWidget(sep);
 }
 
@@ -282,8 +295,8 @@ void RuntimeStrip::showHelpTooltip(QWidget* anchor, const QString& title, const 
 {
     QString html = QString(
         "<div style='font-family: Segoe UI; font-size: 11px;'>"
-        "<b style='color: #89b4fa;'>%1</b><br>"
-        "<span style='color: #cdd6f4;'>%2</span>"
-        "</div>").arg(title, body);
+        "<b style='color: %1;'>%2</b><br>"
+        "<span style='color: %3;'>%4</span>"
+        "</div>").arg(Theme::Colors::accent(), title, Theme::Colors::fg(), body);
     QToolTip::showText(anchor->mapToGlobal(QPoint(0, anchor->height() + 4)), html, anchor);
 }

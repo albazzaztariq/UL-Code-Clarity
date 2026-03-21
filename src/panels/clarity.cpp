@@ -72,7 +72,7 @@ void ClarityEntry::buildDetailContent(const QString &detailHtml)
     auto *detailLabel = new QLabel(detailHtml, m_detailWidget);
     detailLabel->setStyleSheet(s_isDark
         ? QString("font-size: 11px; line-height: 1.5; color: %1; background: transparent;"
-                  "QLabel a { color: #74c7ec; }").arg(FG2)
+                  "QLabel a { color: " ACCENT2 "; }").arg(FG2)
         : "font-size: 11px; line-height: 1.5; color: #444444; background: transparent;"
           "QLabel a { color: #2563eb; }");
     detailLabel->setWordWrap(true);
@@ -84,7 +84,7 @@ void ClarityEntry::buildDetailContent(const QString &detailHtml)
     if (detailHtml.contains("Try It Yourself")) {
         auto *tryBtn = new QPushButton("Try It Yourself ->", m_detailWidget);
         tryBtn->setStyleSheet(QString(
-            "QPushButton { background: %1; color: #1e1e2e; font-weight: 600; "
+            "QPushButton { background: %1; color: " BG "; font-weight: 600; "
             "padding: 3px 10px; border-radius: 4px; font-size: 10px; }"
             "QPushButton:hover { filter: brightness(1.15); }"
         ).arg(MAUVE));
@@ -172,7 +172,7 @@ ClarityPanel::ClarityPanel(QWidget *parent)
     m_scrollArea->setStyleSheet(
         "QScrollArea { border: none; background: transparent; }"
         "QScrollBar:vertical { width: 7px; background: transparent; }"
-        "QScrollBar::handle:vertical { background: #3c3c54; border-radius: 4px; }"
+        "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
     );
 
     auto *scrollWidget = new QWidget;
@@ -277,7 +277,7 @@ void ClarityPanel::applyTheme(bool isDark)
         m_scrollArea->setStyleSheet(
             "QScrollArea { border: none; background: transparent; }"
             "QScrollBar:vertical { width: 7px; background: transparent; }"
-            "QScrollBar::handle:vertical { background: #3c3c54; border-radius: 4px; }"
+            "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
         );
     } else {
         setStyleSheet("background: #fafafa;");

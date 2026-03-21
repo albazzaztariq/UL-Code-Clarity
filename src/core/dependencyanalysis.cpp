@@ -34,88 +34,42 @@ QMap<QString, QString> DependencyAnalysisFrame::knownDescriptions()
 // Constructor
 // ─────────────────────────────────────────────────────────────────────────────
 DependencyAnalysisFrame::DependencyAnalysisFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Dependency Analysis", parent)
 {
     buildUI();
 }
 
 void DependencyAnalysisFrame::buildUI()
 {
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(0);
-
-    // ── Header bar ────────────────────────────────────────────────────────
-    auto* headerBar = new QWidget(this);
-    headerBar->setFixedHeight(48);
-    headerBar->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
-    auto* hdr = new QHBoxLayout(headerBar);
-    hdr->setContentsMargins(16, 0, 16, 0);
-
-    auto* title = new QLabel("Dependency Analysis", headerBar);
-    title->setStyleSheet(
-        "QLabel { color: #cdd6f4; font-size: 15px; font-weight: bold; background: transparent; }");
-    hdr->addWidget(title);
-    hdr->addStretch();
-
-    m_helpBtn = new QPushButton("?", headerBar);
-    m_helpBtn->setFixedSize(28, 28);
-    m_helpBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #a6adc8; border-radius: 14px;"
-        " font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background: #45475a; color: #cdd6f4; }");
-    connect(m_helpBtn, &QPushButton::clicked, this, &DependencyAnalysisFrame::onHelpClicked);
-    hdr->addWidget(m_helpBtn);
-
-    hdr->addSpacing(8);
-
-    m_backBtn = new QPushButton("Back to Editor", headerBar);
-    m_backBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #a6adc8; border-radius: 6px;"
-        " padding: 6px 16px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; color: #cdd6f4; }");
-    connect(m_backBtn, &QPushButton::clicked, this, &DependencyAnalysisFrame::backToEditor);
-    hdr->addWidget(m_backBtn);
-
-    root->addWidget(headerBar);
-
-    // ── Toolbar row (scan button + status) ────────────────────────────────
-    auto* toolBar = new QWidget(this);
-    toolBar->setStyleSheet("QWidget { background: #1e1e2e; }");
+    // ── Toolbar row (scan button + status) ────────────────────────────────────
+    auto* toolBar = new QWidget;
+    toolBar->setStyleSheet(QString("QWidget { background: %1; }").arg(Theme::Colors::bg()));
     auto* tbLayout = new QHBoxLayout(toolBar);
     tbLayout->setContentsMargins(32, 16, 32, 12);
     tbLayout->setSpacing(16);
 
     m_scanBtn = new QPushButton("Scan Dependencies", toolBar);
-    m_scanBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border-radius: 6px;"
+    m_scanBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border-radius: 6px;"
         " padding: 7px 20px; font-size: 12px; font-weight: bold; }"
         "QPushButton:hover { background: #74c7ec; }"
-        "QPushButton:disabled { background: #313244; color: #45475a; }");
+        "QPushButton:disabled { background: #313244; color: %3; }")
+        .arg(Theme::Colors::accent(), Theme::Colors::bg(), Theme::Colors::border()));
     connect(m_scanBtn, &QPushButton::clicked, this, &DependencyAnalysisFrame::onScan);
     tbLayout->addWidget(m_scanBtn, 0, Qt::AlignLeft);
+    tbLayout->addStretch();
 
-    m_statusLabel = new QLabel("No scan performed yet.", toolBar);
-    m_statusLabel->setStyleSheet(
-        "QLabel { color: #6c7086; font-size: 11px; background: transparent; }");
-    tbLayout->addWidget(m_statusLabel, 1);
+    m_resultsLayout->insertWidget(0, toolBar);
 
-    root->addWidget(toolBar);
-
-    // ── Scrollable cards area ─────────────────────────────────────────────
-    m_scroll = new QScrollArea(this);
-    m_scroll->setWidgetResizable(true);
-    m_scroll->setStyleSheet("QScrollArea { background: #1e1e2e; border: none; }");
-
+    // ── Cards container (inserted into results layout) ────────────────────────
     m_cardsWidget = new QWidget;
-    m_cardsWidget->setStyleSheet("QWidget { background: #1e1e2e; }");
+    m_cardsWidget->setStyleSheet(QString("QWidget { background: %1; }").arg(Theme::Colors::bg()));
     auto* cardsLayout = new QVBoxLayout(m_cardsWidget);
     cardsLayout->setContentsMargins(32, 8, 32, 32);
     cardsLayout->setSpacing(0);
     cardsLayout->addStretch();
 
-    m_scroll->setWidget(m_cardsWidget);
-    root->addWidget(m_scroll, 1);
+    m_resultsLayout->insertWidget(1, m_cardsWidget);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,7 +83,7 @@ void DependencyAnalysisFrame::setCode(const QString& code,
     m_language = language.toLower();
     m_filePath = filePath;
     clearResults();
-    m_statusLabel->setText("Click 'Scan Dependencies' to begin.");
+    setStatus("Click 'Scan Dependencies' to begin.");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,7 +93,7 @@ void DependencyAnalysisFrame::onScan()
 {
     clearResults();
     m_scanBtn->setEnabled(false);
-    m_statusLabel->setText("Scanning...");
+    setStatus("Scanning...");
 
     QStringList names;
     QList<DepInfo> deps;
@@ -157,8 +111,7 @@ void DependencyAnalysisFrame::onScan()
         names = parseRustUses(m_code);
         deps  = checkRustDeps(names);
     } else {
-        m_statusLabel->setText(
-            QString("Dependency scanning not supported for '%1'.").arg(m_language));
+        setStatus(QString("Dependency scanning not supported for '%1'.").arg(m_language));
         m_scanBtn->setEnabled(true);
         return;
     }
@@ -167,7 +120,7 @@ void DependencyAnalysisFrame::onScan()
     m_scanBtn->setEnabled(true);
 
     if (deps.isEmpty()) {
-        m_statusLabel->setText("No dependencies found.");
+        setStatus("No dependencies found.");
     } else {
         int ok  = 0, warn = 0, bad = 0;
         for (auto& d : deps) {
@@ -175,9 +128,8 @@ void DependencyAnalysisFrame::onScan()
             else if (!d.installed) warn++;
             else                   ok++;
         }
-        m_statusLabel->setText(
-            QString("%1 found — %2 OK, %3 not installed, %4 vulnerable")
-                .arg(deps.count()).arg(ok).arg(warn).arg(bad));
+        setStatus(QString("%1 found — %2 OK, %3 not installed, %4 vulnerable")
+            .arg(deps.count()).arg(ok).arg(warn).arg(bad));
     }
 }
 
@@ -472,13 +424,13 @@ QWidget* DependencyAnalysisFrame::makeCard(const DepInfo& dep)
 {
     QString statusColor, statusText;
     if (dep.vulnerable) {
-        statusColor = "#f38ba8";
+        statusColor = Theme::Colors::red();
         statusText  = "Vulnerable";
     } else if (!dep.installed) {
-        statusColor = "#f9e2af";
+        statusColor = Theme::Colors::yellow();
         statusText  = "Not installed";
     } else {
-        statusColor = "#a6e3a1";
+        statusColor = Theme::Colors::green();
         statusText  = "OK";
     }
 
@@ -499,15 +451,15 @@ QWidget* DependencyAnalysisFrame::makeCard(const DepInfo& dep)
 
     auto* nameLabel = new QLabel(dep.name, card);
     nameLabel->setStyleSheet(
-        QString("QLabel { color: #cdd6f4; font-size: 13px; font-weight: bold;"
-                " font-family: 'Cascadia Code'; background: transparent; }"));
+        QString("QLabel { color: %1; font-size: 13px; font-weight: bold;"
+                " font-family: 'Cascadia Code'; background: transparent; }").arg(Theme::Colors::fg()));
     topRow->addWidget(nameLabel);
 
     if (!dep.version.isEmpty()) {
         auto* verLabel = new QLabel(dep.version, card);
-        verLabel->setStyleSheet(
-            "QLabel { color: #a6adc8; font-size: 11px; background: transparent;"
-            " font-family: 'Cascadia Code'; }");
+        verLabel->setStyleSheet(QString(
+            "QLabel { color: %1; font-size: 11px; background: transparent;"
+            " font-family: 'Cascadia Code'; }").arg(Theme::Colors::fg2()));
         topRow->addWidget(verLabel);
     }
 
@@ -524,8 +476,8 @@ QWidget* DependencyAnalysisFrame::makeCard(const DepInfo& dep)
     // Description
     if (!dep.description.isEmpty()) {
         auto* descLabel = new QLabel(dep.description, card);
-        descLabel->setStyleSheet(
-            "QLabel { color: #6c7086; font-size: 11px; background: transparent; }");
+        descLabel->setStyleSheet(QString(
+            "QLabel { color: %1; font-size: 11px; background: transparent; }").arg(Theme::Colors::fg3()));
         descLabel->setWordWrap(true);
         cl->addWidget(descLabel);
     }

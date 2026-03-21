@@ -33,7 +33,7 @@ ChatBubble::ChatBubble(Role role, const QString &text, QWidget *parent)
 
     if (role == User) {
         bubble->setStyleSheet(QString(
-            "background: %1; color: #1e1e2e; padding: 7px 12px; "
+            "background: %1; color: " BG "; padding: 7px 12px; "
             "border-radius: 12px 12px 2px 12px; font-size: 11px; line-height: 1.4;"
         ).arg(ACCENT));
         layout->addStretch();
@@ -150,7 +150,7 @@ AIChatPanel::AIChatPanel(QWidget *parent)
         "QComboBox::drop-down { border: none; }"
         "QComboBox QAbstractItemView { background: %1; color: %2;"
         " border: none; outline: none; margin: 0; padding: 0;"
-        " selection-background-color: #3c3c54; }"
+        " selection-background-color: " BG4 "; }"
         "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
         "QComboBox QFrame { border: none; }"
     ).arg(BG3, FG, BORDER));
@@ -179,7 +179,7 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     m_scrollArea->setStyleSheet(
         "QScrollArea { border: none; background: transparent; }"
         "QScrollBar:vertical { width: 7px; background: transparent; }"
-        "QScrollBar::handle:vertical { background: #3c3c54; border-radius: 4px; }"
+        "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
     );
 
     m_messagesContainer = new QWidget;
@@ -219,7 +219,7 @@ AIChatPanel::AIChatPanel(QWidget *parent)
 
     m_sendButton = new QPushButton("Send", contentWidget);
     m_sendButton->setStyleSheet(QString(
-        "QPushButton { background: %1; color: #1e1e2e; font-weight: 600; "
+        "QPushButton { background: %1; color: " BG "; font-weight: 600; "
         "padding: 7px 12px; font-size: 11px; border-radius: 4px; }"
         "QPushButton:hover { filter: brightness(1.15); }"
         "QPushButton:disabled { background: %2; color: %3; }"
@@ -608,7 +608,7 @@ void AIChatPanel::applyTheme(bool isDark)
             "QComboBox::drop-down { border: none; }"
             "QComboBox QAbstractItemView { background: %1; color: %2;"
             " border: none; outline: none; margin: 0; padding: 0;"
-            " selection-background-color: #3c3c54; }"
+            " selection-background-color: " BG4 "; }"
             "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
             "QComboBox QFrame { border: none; }"
         ).arg(BG3, FG, BORDER));
@@ -619,7 +619,7 @@ void AIChatPanel::applyTheme(bool isDark)
         m_scrollArea->setStyleSheet(
             "QScrollArea { border: none; background: transparent; }"
             "QScrollBar:vertical { width: 7px; background: transparent; }"
-            "QScrollBar::handle:vertical { background: #3c3c54; border-radius: 4px; }"
+            "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
         );
         m_placeholderLabel->setStyleSheet(QString(
             "color: %1; font-size: 11px; font-style: italic; padding: 20px;"
@@ -629,7 +629,7 @@ void AIChatPanel::applyTheme(bool isDark)
             "color: %2; border: 1px solid %3; border-radius: 4px; }"
         ).arg(BG3, FG, BORDER));
         m_sendButton->setStyleSheet(QString(
-            "QPushButton { background: %1; color: #1e1e2e; font-weight: 600; "
+            "QPushButton { background: %1; color: " BG "; font-weight: 600; "
             "padding: 7px 12px; font-size: 11px; border-radius: 4px; }"
             "QPushButton:hover { filter: brightness(1.15); }"
             "QPushButton:disabled { background: %2; color: %3; }"

@@ -1,6 +1,5 @@
 #include "core/runtimeanalysis.h"
 #include "core/optimizer.h"
-#include "core/diffview.h"
 #include "core/theme.h"
 
 #include <QVBoxLayout>
@@ -20,7 +19,155 @@
 #include <QFile>
 #include <QTextStream>
 #include <QFont>
+#include <QScrollBar>
+#include <QTextBlock>
+#include <QTextCursor>
 #include <algorithm>
+
+// ═══════════════════════════════════════════════════════════════════════
+// SideBySideDiffWidget  (merged from diffview.cpp)
+// ═══════════════════════════════════════════════════════════════════════
+
+SideBySideDiffWidget::SideBySideDiffWidget(QWidget* parent)
+    : QWidget(parent)
+{
+    setMinimumSize(700, 400);
+
+    auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(12, 12, 12, 12);
+    root->setSpacing(8);
+
+    m_titleLabel = new QLabel(this);
+    m_titleLabel->setStyleSheet(
+        "QLabel { color: #cdd6f4; font-size: 14px; font-weight: bold; "
+        "background: transparent; }");
+    root->addWidget(m_titleLabel);
+
+    auto* headerRow = new QHBoxLayout;
+    auto* leftHeader  = new QLabel("Original", this);
+    auto* rightHeader = new QLabel("Suggested", this);
+    leftHeader->setStyleSheet(
+        "QLabel { color: #f38ba8; font-size: 11px; font-weight: bold; "
+        "background: transparent; padding: 2px 4px; }");
+    rightHeader->setStyleSheet(
+        "QLabel { color: #a6e3a1; font-size: 11px; font-weight: bold; "
+        "background: transparent; padding: 2px 4px; }");
+    headerRow->addWidget(leftHeader);
+    headerRow->addWidget(rightHeader);
+    root->addLayout(headerRow);
+
+    auto* panesRow = new QHBoxLayout;
+    panesRow->setSpacing(4);
+
+    m_leftPane = new QPlainTextEdit(this);
+    m_leftPane->setReadOnly(true);
+    m_leftPane->setFont(QFont(Theme::MonoFont, 11));
+    m_leftPane->setStyleSheet(
+        "QPlainTextEdit { background: #2a1a1e; color: #cdd6f4; border: 1px solid #45475a;"
+        " border-radius: 4px; }");
+
+    m_rightPane = new QPlainTextEdit(this);
+    m_rightPane->setReadOnly(true);
+    m_rightPane->setFont(QFont(Theme::MonoFont, 11));
+    m_rightPane->setStyleSheet(
+        "QPlainTextEdit { background: #1a2a1e; color: #cdd6f4; border: 1px solid #45475a;"
+        " border-radius: 4px; }");
+
+    panesRow->addWidget(m_leftPane);
+    panesRow->addWidget(m_rightPane);
+    root->addLayout(panesRow, 1);
+
+    auto* btnRow = new QHBoxLayout;
+    btnRow->addStretch();
+
+    m_skipBtn = new QPushButton("Skip", this);
+    m_skipBtn->setStyleSheet(
+        "QPushButton { background: #313244; color: #a6adc8; border-radius: 6px;"
+        " padding: 6px 20px; font-size: 12px; }"
+        "QPushButton:hover { background: #45475a; }");
+
+    m_applyBtn = new QPushButton("Apply", this);
+    m_applyBtn->setStyleSheet(
+        "QPushButton { background: #a6e3a1; color: #1e1e2e; border-radius: 6px;"
+        " padding: 6px 20px; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background: #89d98e; }");
+
+    btnRow->addWidget(m_skipBtn);
+    btnRow->addWidget(m_applyBtn);
+    root->addLayout(btnRow);
+
+    connect(m_leftPane->verticalScrollBar(),  &QScrollBar::valueChanged,
+            this, &SideBySideDiffWidget::syncScrollLeft);
+    connect(m_rightPane->verticalScrollBar(), &QScrollBar::valueChanged,
+            this, &SideBySideDiffWidget::syncScrollRight);
+
+    connect(m_applyBtn, &QPushButton::clicked, this, &SideBySideDiffWidget::applied);
+    connect(m_skipBtn,  &QPushButton::clicked, this, &SideBySideDiffWidget::skipped);
+}
+
+void SideBySideDiffWidget::setContent(const QString& title,
+                                       const QString& originalCode,
+                                       const QString& suggestedCode)
+{
+    m_titleLabel->setText(title);
+    m_leftPane->setPlainText(originalCode);
+    m_rightPane->setPlainText(suggestedCode);
+    highlightDiffs();
+}
+
+void SideBySideDiffWidget::syncScrollLeft(int value)
+{
+    if (m_syncing) return;
+    m_syncing = true;
+    m_rightPane->verticalScrollBar()->setValue(value);
+    m_syncing = false;
+}
+
+void SideBySideDiffWidget::syncScrollRight(int value)
+{
+    if (m_syncing) return;
+    m_syncing = true;
+    m_leftPane->verticalScrollBar()->setValue(value);
+    m_syncing = false;
+}
+
+void SideBySideDiffWidget::highlightDiffs()
+{
+    QStringList leftLines  = m_leftPane->toPlainText().split('\n');
+    QStringList rightLines = m_rightPane->toPlainText().split('\n');
+
+    int maxLines = qMax(leftLines.size(), rightLines.size());
+
+    QList<QTextEdit::ExtraSelection> leftSels, rightSels;
+
+    QColor leftHighlight  = QColor(0xf3, 0x8b, 0xa8, 60);
+    QColor rightHighlight = QColor(0xa6, 0xe3, 0xa1, 60);
+
+    auto makeSelection = [](QPlainTextEdit* pane, int lineIdx, const QColor& bg)
+        -> QTextEdit::ExtraSelection
+    {
+        QTextEdit::ExtraSelection sel;
+        sel.format.setBackground(bg);
+        sel.format.setProperty(QTextFormat::FullWidthSelection, true);
+        QTextCursor cursor(pane->document()->findBlockByLineNumber(lineIdx));
+        sel.cursor = cursor;
+        return sel;
+    };
+
+    for (int i = 0; i < maxLines; ++i) {
+        QString l = (i < leftLines.size())  ? leftLines[i]  : QString();
+        QString r = (i < rightLines.size()) ? rightLines[i] : QString();
+        if (l != r) {
+            if (i < leftLines.size())
+                leftSels.append(makeSelection(m_leftPane, i, leftHighlight));
+            if (i < rightLines.size())
+                rightSels.append(makeSelection(m_rightPane, i, rightHighlight));
+        }
+    }
+
+    m_leftPane->setExtraSelections(leftSels);
+    m_rightPane->setExtraSelections(rightSels);
+}
 
 // ── Language detection ────────────────────────────────────────────────────
 QString RuntimeAnalysisFrame::detectLanguage(const QString& filePath) const
@@ -40,39 +187,12 @@ QString RuntimeAnalysisFrame::detectLanguage(const QString& filePath) const
 // Constructor / UI building
 // ─────────────────────────────────────────────────────────────────────────────
 RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Runtime Analysis", parent)
 {
     setAcceptDrops(true);
 
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(0, 0, 0, 0);
-    root->setSpacing(0);
-
-    // Header bar
-    auto* headerBar = new QWidget(this);
-    headerBar->setFixedHeight(48);
-    headerBar->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
-    auto* headerLayout = new QHBoxLayout(headerBar);
-    headerLayout->setContentsMargins(16, 0, 16, 0);
-
-    auto* title = new QLabel("Runtime Analysis", headerBar);
-    title->setStyleSheet(
-        "QLabel { color: #cdd6f4; font-size: 15px; font-weight: bold; background: transparent; }");
-    headerLayout->addWidget(title);
-    headerLayout->addStretch();
-
-    m_backBtn = new QPushButton("Back to Editor", headerBar);
-    m_backBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #a6adc8; border-radius: 6px;"
-        " padding: 6px 16px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; color: #cdd6f4; }");
-    connect(m_backBtn, &QPushButton::clicked, this, &RuntimeAnalysisFrame::backToEditor);
-    headerLayout->addWidget(m_backBtn);
-    root->addWidget(headerBar);
-
-    // Stacked panels
-    m_stack = new QStackedWidget(this);
-    root->addWidget(m_stack, 1);
+    // Place the stacked panels into the inherited results scroll area
+    m_stack = new QStackedWidget;
 
     m_selectionPanel = new QWidget;
     buildSelectionPanel();
@@ -84,6 +204,7 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
 
     // Default: show selection panel
     m_stack->setCurrentWidget(m_selectionPanel);
+    addResultWidget(m_stack);
 
     connect(this, &RuntimeAnalysisFrame::profileRequested, this,
         [this](const QString& filePath, const QString& language) {
@@ -110,7 +231,8 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
                     "beginner pitfalls we look for.", dlg);
                 lbl->setWordWrap(true);
                 lbl->setTextFormat(Qt::RichText);
-                lbl->setStyleSheet("color: #a6e3a1; font-size: 13px; background: transparent;");
+                lbl->setStyleSheet(QString("color: %1; font-size: 13px; background: transparent;")
+                    .arg(Theme::Colors::green()));
                 lay->addWidget(lbl);
                 auto* btn = new QPushButton("Close", dlg);
                 connect(btn, &QPushButton::clicked, dlg, &QDialog::accept);
@@ -135,7 +257,8 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
 
                 // ── Teaching header ──────────────────────────────────────
                 auto* headerWidget = new QWidget(dlg);
-                headerWidget->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
+                headerWidget->setStyleSheet(QString("background: %1; border-bottom: 1px solid #313244;")
+                    .arg(Theme::Colors::bg2()));
                 auto* headerLayout = new QVBoxLayout(headerWidget);
                 headerLayout->setContentsMargins(16, 14, 16, 14);
                 headerLayout->setSpacing(6);
@@ -143,15 +266,16 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
                 auto* titleRow = new QHBoxLayout;
                 auto* titleLbl = new QLabel(entry.title, headerWidget);
                 titleLbl->setStyleSheet(
-                    "QLabel { color: #cdd6f4; font-size: 14px; font-weight: bold; background: transparent; }");
+                    QString("QLabel { color: %1; font-size: 14px; font-weight: bold; background: transparent; }")
+                    .arg(Theme::Colors::fg()));
                 titleRow->addWidget(titleLbl);
                 titleRow->addStretch();
                 if (entry.lineNumber > 0) {
                     auto* lineLbl = new QLabel(
                         QString("Line %1").arg(entry.lineNumber), headerWidget);
                     lineLbl->setStyleSheet(
-                        "QLabel { color: #89b4fa; font-size: 11px; background: #313244;"
-                        " border-radius: 3px; padding: 2px 8px; }");
+                        QString("QLabel { color: %1; font-size: 11px; background: #313244;"
+                        " border-radius: 3px; padding: 2px 8px; }").arg(Theme::Colors::accent()));
                     titleRow->addWidget(lineLbl);
                 }
                 headerLayout->addLayout(titleRow);
@@ -160,7 +284,8 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
                 auto* summaryLbl = new QLabel(entry.description, headerWidget);
                 summaryLbl->setWordWrap(true);
                 summaryLbl->setStyleSheet(
-                    "QLabel { color: #a6adc8; font-size: 12px; background: transparent; }");
+                    QString("QLabel { color: %1; font-size: 12px; background: transparent; }")
+                    .arg(Theme::Colors::fg2()));
                 headerLayout->addWidget(summaryLbl);
 
                 // Teaching paragraph (why it matters)
@@ -168,8 +293,8 @@ RuntimeAnalysisFrame::RuntimeAnalysisFrame(QWidget* parent)
                     auto* whyLbl = new QLabel(entry.whyItMatters, headerWidget);
                     whyLbl->setWordWrap(true);
                     whyLbl->setStyleSheet(
-                        "QLabel { color: #cdd6f4; font-size: 12px; background: transparent;"
-                        " padding-top: 6px; }");
+                        QString("QLabel { color: %1; font-size: 12px; background: transparent;"
+                        " padding-top: 6px; }").arg(Theme::Colors::fg()));
                     headerLayout->addWidget(whyLbl);
                 }
 
@@ -207,21 +332,25 @@ void RuntimeAnalysisFrame::buildSelectionPanel()
 
     auto* desc = new QLabel(
         "Add two or more files to compare their runtime performance.", m_selectionPanel);
-    desc->setStyleSheet("QLabel { color: #a6adc8; font-size: 12px; background: transparent; }");
+    desc->setStyleSheet(QString("QLabel { color: %1; font-size: 12px; background: transparent; }")
+        .arg(Theme::Colors::fg2()));
     root->addWidget(desc);
 
     // File list (right side in the spec) — we keep it simple: one list + buttons
     auto* listLabel = new QLabel("Files to Compare:", m_selectionPanel);
-    listLabel->setStyleSheet("QLabel { color: #cdd6f4; font-size: 12px; font-weight: bold; background: transparent; }");
+    listLabel->setStyleSheet(QString("QLabel { color: %1; font-size: 12px; font-weight: bold; background: transparent; }")
+        .arg(Theme::Colors::fg()));
     root->addWidget(listLabel);
 
     m_fileList = new QListWidget(m_selectionPanel);
     m_fileList->setStyleSheet(
-        "QListWidget { background: #1e1e2e; color: #cdd6f4; border: 1px solid #45475a;"
+        QString("QListWidget { background: %1; color: %2; border: 1px solid %3;"
         " border-radius: 4px; font-size: 12px; }"
         "QListWidget::item { padding: 8px 12px; border-bottom: 1px solid #313244; }"
         "QListWidget::item:selected { background: #313244; }"
-        "QListWidget::item:hover { background: #2a2a3c; }");
+        "QListWidget::item:hover { background: %4; }")
+        .arg(Theme::Colors::bg(), Theme::Colors::fg(),
+             Theme::Colors::border(), Theme::Colors::bg2()));
     m_fileList->setMinimumHeight(200);
     root->addWidget(m_fileList, 1);
 
@@ -231,17 +360,17 @@ void RuntimeAnalysisFrame::buildSelectionPanel()
 
     m_browseBtn = new QPushButton("Browse...", m_selectionPanel);
     m_browseBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border-radius: 6px;"
+        QString("QPushButton { background: #313244; color: %1; border-radius: 6px;"
         " padding: 7px 18px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %2; }").arg(Theme::Colors::fg(), Theme::Colors::border()));
     connect(m_browseBtn, &QPushButton::clicked, this, &RuntimeAnalysisFrame::onBrowse);
     btnRow->addWidget(m_browseBtn);
 
     m_removeBtn = new QPushButton("Remove Selected", m_selectionPanel);
     m_removeBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #f38ba8; border-radius: 6px;"
+        QString("QPushButton { background: #313244; color: %1; border-radius: 6px;"
         " padding: 7px 18px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %2; }").arg(Theme::Colors::red(), Theme::Colors::border()));
     connect(m_removeBtn, &QPushButton::clicked, this, &RuntimeAnalysisFrame::onRemoveFile);
     btnRow->addWidget(m_removeBtn);
 
@@ -250,10 +379,11 @@ void RuntimeAnalysisFrame::buildSelectionPanel()
     m_runBtn = new QPushButton("Run and Record Runtimes", m_selectionPanel);
     m_runBtn->setEnabled(false);
     m_runBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border-radius: 6px;"
+        QString("QPushButton { background: %1; color: #1e1e2e; border-radius: 6px;"
         " padding: 8px 24px; font-size: 13px; font-weight: bold; }"
         "QPushButton:hover { background: #74c7ec; }"
-        "QPushButton:disabled { background: #313244; color: #6c7086; }");
+        "QPushButton:disabled { background: #313244; color: %2; }")
+        .arg(Theme::Colors::accent(), Theme::Colors::fg3()));
     connect(m_runBtn, &QPushButton::clicked, this, &RuntimeAnalysisFrame::onRunBenchmark);
     btnRow->addWidget(m_runBtn);
 
@@ -262,7 +392,8 @@ void RuntimeAnalysisFrame::buildSelectionPanel()
     // Hint
     auto* hint = new QLabel(
         "Tip: You can also drag and drop files into this window.", m_selectionPanel);
-    hint->setStyleSheet("QLabel { color: #6c7086; font-size: 11px; background: transparent; }");
+    hint->setStyleSheet(QString("QLabel { color: %1; font-size: 11px; background: transparent; }")
+        .arg(Theme::Colors::fg3()));
     root->addWidget(hint);
 }
 
@@ -283,15 +414,16 @@ void RuntimeAnalysisFrame::buildResultsPanel()
 
     m_progressLabel = new QLabel("Running benchmarks...", progressArea);
     m_progressLabel->setStyleSheet(
-        "QLabel { color: #cdd6f4; font-size: 13px; background: transparent; }");
+        QString("QLabel { color: %1; font-size: 13px; background: transparent; }")
+        .arg(Theme::Colors::fg()));
     progressLayout->addWidget(m_progressLabel);
 
     m_progressBar = new QProgressBar(progressArea);
     m_progressBar->setRange(0, 100);
     m_progressBar->setValue(0);
     m_progressBar->setStyleSheet(
-        "QProgressBar { background: #313244; border: none; border-radius: 4px; height: 8px; }"
-        "QProgressBar::chunk { background: #89b4fa; border-radius: 4px; }");
+        QString("QProgressBar { background: #313244; border: none; border-radius: 4px; height: 8px; }"
+        "QProgressBar::chunk { background: %1; border-radius: 4px; }").arg(Theme::Colors::accent()));
     progressLayout->addWidget(m_progressBar);
 
     root->addWidget(progressArea);
@@ -304,9 +436,9 @@ void RuntimeAnalysisFrame::buildResultsPanel()
     // "Run Again" button
     auto* runAgainBtn = new QPushButton("Run Again with Different Files", m_resultsPanel);
     runAgainBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border-radius: 6px;"
+        QString("QPushButton { background: #313244; color: %1; border-radius: 6px;"
         " padding: 7px 18px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %2; }").arg(Theme::Colors::fg(), Theme::Colors::border()));
     connect(runAgainBtn, &QPushButton::clicked, this, [this]() {
         // Reset and show selection panel
         m_results.clear();
@@ -607,7 +739,8 @@ void RuntimeAnalysisFrame::renderResults()
 
     auto* heading = new QLabel("Results \xe2\x80\x94 fastest to slowest:", m_resultsContent);
     heading->setStyleSheet(
-        "QLabel { color: #cdd6f4; font-size: 14px; font-weight: bold; background: transparent; }");
+        QString("QLabel { color: %1; font-size: 14px; font-weight: bold; background: transparent; }")
+        .arg(Theme::Colors::fg()));
     layout->addWidget(heading);
 
     // Plain-English summary line (level 1-2 only)
@@ -637,7 +770,8 @@ void RuntimeAnalysisFrame::renderResults()
         auto* summaryLbl = new QLabel(summaryText, m_resultsContent);
         summaryLbl->setWordWrap(true);
         summaryLbl->setStyleSheet(
-            "QLabel { color: #a6adc8; font-size: 12px; background: transparent; padding-bottom: 4px; }");
+            QString("QLabel { color: %1; font-size: 12px; background: transparent; padding-bottom: 4px; }")
+            .arg(Theme::Colors::fg2()));
         layout->addWidget(summaryLbl);
     }
 
@@ -658,7 +792,8 @@ void RuntimeAnalysisFrame::renderResults()
         // Row widget
         auto* row = new QWidget(m_resultsContent);
         row->setStyleSheet(
-            "QWidget { background: #2a2a3c; border-radius: 6px; border: 1px solid #313244; }");
+            QString("QWidget { background: %1; border-radius: 6px; border: 1px solid #313244; }")
+            .arg(Theme::Colors::bg2()));
         auto* rowLayout = new QVBoxLayout(row);
         rowLayout->setContentsMargins(14, 10, 14, 10);
         rowLayout->setSpacing(6);
@@ -669,11 +804,11 @@ void RuntimeAnalysisFrame::renderResults()
         // Rank badge color: green=fastest, red=slowest, yellow=middle
         QString rankColor;
         if (i == 0)
-            rankColor = "#a6e3a1";
+            rankColor = Theme::Colors::green();
         else if (i == m_results.size() - 1)
-            rankColor = "#f38ba8";
+            rankColor = Theme::Colors::red();
         else
-            rankColor = "#f9e2af";
+            rankColor = Theme::Colors::yellow();
 
         auto* rankLabel = new QLabel(QString("#%1").arg(i + 1), row);
         rankLabel->setStyleSheet(
@@ -683,13 +818,14 @@ void RuntimeAnalysisFrame::renderResults()
 
         auto* nameLabel = new QLabel(QFileInfo(res.filePath).fileName(), row);
         nameLabel->setStyleSheet(
-            "QLabel { color: #cdd6f4; font-size: 13px; font-weight: bold; background: transparent; }");
+            QString("QLabel { color: %1; font-size: 13px; font-weight: bold; background: transparent; }")
+            .arg(Theme::Colors::fg()));
         topLine->addWidget(nameLabel);
 
         auto* langLabel = new QLabel(res.language.toUpper(), row);
         langLabel->setStyleSheet(
-            "QLabel { color: #89b4fa; font-size: 11px; background: #313244;"
-            " border-radius: 3px; padding: 2px 6px; }");
+            QString("QLabel { color: %1; font-size: 11px; background: #313244;"
+            " border-radius: 3px; padding: 2px 6px; }").arg(Theme::Colors::accent()));
         topLine->addWidget(langLabel);
 
         topLine->addStretch();
@@ -770,9 +906,9 @@ void RuntimeAnalysisFrame::renderResults()
         // "Profile for Improvements" button
         auto* profileBtn = new QPushButton("Profile for Improvements", row);
         profileBtn->setStyleSheet(
-            "QPushButton { background: #313244; color: #89b4fa; border-radius: 5px;"
+            QString("QPushButton { background: #313244; color: %1; border-radius: 5px;"
             " padding: 5px 14px; font-size: 11px; }"
-            "QPushButton:hover { background: #45475a; }");
+            "QPushButton:hover { background: %2; }").arg(Theme::Colors::accent(), Theme::Colors::border()));
         QString fp = res.filePath;
         QString lang = res.language;
         connect(profileBtn, &QPushButton::clicked, this, [this, fp, lang]() {
@@ -798,15 +934,16 @@ void RuntimeAnalysisFrame::renderResults()
             double ratio = double(pythonMs) / double(fastestMs);
             auto* noteWidget = new QWidget(m_resultsContent);
             noteWidget->setStyleSheet(
-                "QWidget { background: #2a2a1e; border: 1px solid #f9e2af;"
-                " border-radius: 6px; }");
+                QString("QWidget { background: #2a2a1e; border: 1px solid %1;"
+                " border-radius: 6px; }").arg(Theme::Colors::yellow()));
             auto* noteLayout = new QVBoxLayout(noteWidget);
             noteLayout->setContentsMargins(14, 10, 14, 10);
             auto* noteLabel = new QLabel(
                 CodeOptimizer::crossLanguageNote(fasterLang, ratio, m_assistLevel), noteWidget);
             noteLabel->setWordWrap(true);
             noteLabel->setStyleSheet(
-                "QLabel { color: #f9e2af; font-size: 12px; background: transparent; }");
+                QString("QLabel { color: %1; font-size: 12px; background: transparent; }")
+                .arg(Theme::Colors::yellow()));
             noteLayout->addWidget(noteLabel);
             layout->addWidget(noteWidget);
         }
@@ -822,8 +959,8 @@ void RuntimeAnalysisFrame::renderResults()
         m_resultsContent);
     footer->setWordWrap(true);
     footer->setStyleSheet(
-        "QLabel { color: #45475a; font-size: 10px; background: transparent;"
-        " padding: 8px 0 4px 0; }");
+        QString("QLabel { color: %1; font-size: 10px; background: transparent;"
+        " padding: 8px 0 4px 0; }").arg(Theme::Colors::border()));
     layout->addWidget(footer);
 
     m_resultsContent->setVisible(true);

@@ -200,7 +200,7 @@ void MainWindow::wireSignals()
     // Security Testing Frame signals
     connect(m_securityFrame, &SecurityTestingFrame::backToEditor,
             this, &MainWindow::returnToEditor);
-    connect(m_securityFrame, &SecurityTestingFrame::jumpToLine, this, [this](int lineNumber) {
+    connect(m_securityFrame, &SecurityTestingFrame::jumpToLine, this, [this](const QString& /*file*/, int lineNumber) {
         if (!m_editor) return;
         m_securityFrame->setVisible(false);
         m_mainSplitter->setVisible(true);
@@ -226,7 +226,7 @@ void MainWindow::wireSignals()
             if (!m_securityLab) return;
             auto* cl = qobject_cast<QVBoxLayout*>(centralWidget()->layout());
             if (cl) cl->insertWidget(cl->count() - 1, m_securityLab);
-            connect(m_securityLab, &SecurityLabWidget::closeRequested, this, [this]() {
+            connect(m_securityLab, &SecurityLabWidget::backToEditor, this, [this]() {
                 if (m_securityLab) m_securityLab->setVisible(false);
                 m_securityFrame->setVisible(true);
             });
@@ -251,7 +251,7 @@ void MainWindow::wireSignals()
             this, &MainWindow::returnToEditor);
 
     // Debug Frame signals
-    connect(m_debugFrame, &DebugFrame::closeRequested, this, [this]() {
+    connect(m_debugFrame, &DebugFrame::backToEditor, this, [this]() {
         m_debugFrame->stopDebugging();
         m_debugFrame->setVisible(false);
         m_mainSplitter->setVisible(true);
@@ -260,7 +260,7 @@ void MainWindow::wireSignals()
     // DataTrace Frame signals
     connect(m_dataTrace, &DataTraceFrame::backToEditor,
             this, &MainWindow::returnToEditor);
-    connect(m_dataTrace, &DataTraceFrame::jumpToLine, this, [this](int line) {
+    connect(m_dataTrace, &DataTraceFrame::jumpToLine, this, [this](const QString& /*file*/, int line) {
         m_dataTrace->setVisible(false);
         m_mainSplitter->setVisible(true);
         if (m_editor && line > 0) {
@@ -402,7 +402,7 @@ void MainWindow::wireSignals()
     // TypeFlow Frame signals
     connect(m_typeFlow, &TypeFlowFrame::backToEditor,
             this, &MainWindow::returnToEditor);
-    connect(m_typeFlow, &TypeFlowFrame::jumpToLine, this, [this](int line) {
+    connect(m_typeFlow, &TypeFlowFrame::jumpToLine, this, [this](const QString& /*file*/, int line) {
         if (!m_editor) return;
         QTextBlock block = m_editor->codeEditor()->document()->findBlockByNumber(line - 1);
         if (block.isValid()) {

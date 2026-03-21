@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QPlainTextEdit>
 #include <QTreeWidget>
 #include <QListWidget>
@@ -10,11 +10,69 @@
 #include <QTimer>
 #include <QMap>
 #include <QSet>
+#include <QVector>
+#include <QJsonObject>
 
 class DebugBackend;
-class ExecutionRecorder;
-class WhatsWrongAnalyzer;
 class DebugEditor;
+
+// ── PossibleCause (inlined from whatswrong.h) ─────────────────────────────
+struct PossibleCause {
+    QString title;
+    QString explanation;
+    int     relevantLine = 0;
+    QString suggestedFix;
+};
+
+// ── WhatsWrongAnalyzer (inlined from whatswrong.h) ────────────────────────
+// Pattern-matching analyzer for common runtime errors.
+// Error patterns are loaded from data/errors.json at construction time.
+class WhatsWrongAnalyzer : public QObject {
+    Q_OBJECT
+public:
+    explicit WhatsWrongAnalyzer(QObject* parent = nullptr);
+    QList<PossibleCause> analyzeError(const QString& errorMessage,
+                                       const QString& code,
+                                       int crashLine) const;
+private:
+    QVector<QJsonObject> m_errorTypes;
+};
+
+// ── ExecutionSnapshot (inlined from executionrecorder.h) ──────────────────
+struct ExecutionSnapshot {
+    int                     line      = 0;
+    QMap<QString, QVariant> variables;
+    QStringList             callStack;
+};
+
+// ── ExecutionRecorder (inlined from executionrecorder.h) ──────────────────
+// Circular buffer of execution snapshots supporting reverse debugging.
+class ExecutionRecorder : public QObject {
+    Q_OBJECT
+public:
+    static constexpr int MAX_SNAPSHOTS   = 1000;
+    static constexpr int MEMORY_WARN_VARS = 500;
+
+    explicit ExecutionRecorder(QObject* parent = nullptr);
+
+    void record(int line,
+                const QMap<QString, QVariant>& variables,
+                const QStringList& callStack);
+    bool stepBack(ExecutionSnapshot& snap);
+    bool stepForward(ExecutionSnapshot& snap);
+    int  count()    const { return m_count; }
+    int  position() const { return m_position; }
+    void reset();
+
+signals:
+    void memoryWarning(const QString& message);
+
+private:
+    QVector<ExecutionSnapshot> m_buffer;
+    int m_head     = 0;
+    int m_count    = 0;
+    int m_position = 0;
+};
 
 // ── Gutter for line numbers + breakpoint dots ────────────────────────────
 // Talks directly to DebugEditor which exposes the protected block geometry.
@@ -97,7 +155,7 @@ private:
 };
 
 // ── Debug Frame (full replacement view) ─────────────────────────────────
-class DebugFrame : public QWidget {
+class DebugFrame : public AnalysisFrame {
     Q_OBJECT
 public:
     explicit DebugFrame(QWidget* parent = nullptr);
@@ -110,9 +168,6 @@ public:
     void stopDebugging();
 
     void applyTheme(bool isDark);
-
-signals:
-    void closeRequested();
 
 private slots:
     void onContinue();
@@ -152,8 +207,7 @@ private:
     QPushButton* m_stopBtn;
     QPushButton* m_restartBtn;
 
-    // Status
-    QLabel* m_statusLabel;
+    // Status label is inherited from AnalysisFrame (m_statusLabel)
 
     // Backend + recorder
     DebugBackend*      m_backend;

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <QWidget>
-#include <QPushButton>
+#include "core/analysisframe.h"
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -40,7 +39,7 @@ struct ErrorEntry {
     bool      fixed = false;
 };
 
-class ErrorJournal : public QWidget {
+class ErrorJournal : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -59,7 +58,6 @@ public:
     int unfixedCount() const;
 
 signals:
-    void backToEditor();
     void jumpToFile(const QString& filePath, int line);
     void errorCountChanged(int count);  // for badge update
 

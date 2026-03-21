@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QListWidget>
 #include <QPushButton>
 #include <QLabel>
@@ -9,6 +9,39 @@
 #include <QMap>
 #include <QElapsedTimer>
 #include <QProcess>
+#include <QPlainTextEdit>
+
+// ── SideBySideDiffWidget (merged from diffview.h) ─────────────────────────
+// Shows original code on left and suggested code on right.
+// Synchronized scrolling; changed lines are highlighted.
+// "Apply" emits applied(), "Skip" emits skipped().
+class SideBySideDiffWidget : public QWidget {
+    Q_OBJECT
+public:
+    explicit SideBySideDiffWidget(QWidget* parent = nullptr);
+
+    void setContent(const QString& title,
+                    const QString& originalCode,
+                    const QString& suggestedCode);
+
+signals:
+    void applied();
+    void skipped();
+
+private slots:
+    void syncScrollLeft(int value);
+    void syncScrollRight(int value);
+
+private:
+    void highlightDiffs();
+
+    QLabel*         m_titleLabel = nullptr;
+    QPlainTextEdit* m_leftPane   = nullptr;
+    QPlainTextEdit* m_rightPane  = nullptr;
+    QPushButton*    m_applyBtn   = nullptr;
+    QPushButton*    m_skipBtn    = nullptr;
+    bool            m_syncing    = false;
+};
 
 class QDragEnterEvent;
 class QDropEvent;
@@ -27,7 +60,7 @@ struct BenchmarkResult {
 // Step 2: Benchmark execution with progress bar
 // Step 3: Results ranked list with colored bar chart (QPainter)
 // ============================================================================
-class RuntimeAnalysisFrame : public QWidget {
+class RuntimeAnalysisFrame : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -37,9 +70,6 @@ public:
     void setAssistLevel(int level) { m_assistLevel = level; }
 
 signals:
-    // Emitted when user wants to go back to the IDE
-    void backToEditor();
-
     // Emitted when compilation of a source file fails;
     // MainWindow should switch back to editor and show the error
     void compilationError(const QString& filePath, const QString& errorText);
@@ -93,7 +123,6 @@ private:
     QWidget*     m_resultsContent = nullptr;   // populated after benchmark
     QProgressBar* m_progressBar   = nullptr;
     QLabel*      m_progressLabel  = nullptr;
-    QPushButton* m_backBtn        = nullptr;
 
     // ── Benchmark state ──────────────────────────────────────────────────
     QStringList              m_pendingFiles;    // files yet to be benchmarked

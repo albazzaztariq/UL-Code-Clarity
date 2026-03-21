@@ -383,7 +383,7 @@ void MainWindow::buildToolsMenu()
                 if (!m_securityLab) return;
                 auto* cl = qobject_cast<QVBoxLayout*>(centralWidget()->layout());
                 if (cl) cl->insertWidget(cl->count() - 1, m_securityLab);
-                connect(m_securityLab, &SecurityLabWidget::closeRequested, this, [this]() {
+                connect(m_securityLab, &SecurityLabWidget::backToEditor, this, [this]() {
                     if (m_securityLab) m_securityLab->setVisible(false);
                     m_mainSplitter->setVisible(true);
                 });

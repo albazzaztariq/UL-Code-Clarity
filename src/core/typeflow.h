@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -92,7 +92,7 @@ private:
 };
 
 // ── The full Type Flow frame (header + scrollable canvas) ─────────────────────
-class TypeFlowFrame : public QWidget {
+class TypeFlowFrame : public AnalysisFrame {
     Q_OBJECT
 public:
     explicit TypeFlowFrame(QWidget* parent = nullptr);
@@ -100,10 +100,6 @@ public:
     // Provide code + language before showing; triggers analysis
     void setCode(const QString& code, const QString& language);
     void applyTheme(bool isDark);
-
-signals:
-    void backToEditor();
-    void jumpToLine(int line);   // emitted when user clicks a function box
 
 private slots:
     void onRunAnalysis();
@@ -121,14 +117,10 @@ private:
     static QString parseCType(const QString& tokens);
 
     // ── Widgets ───────────────────────────────────────────────────────────────
-    QPushButton*     m_backBtn      = nullptr;
     QPushButton*     m_runBtn       = nullptr;
-    QLabel*          m_statusLabel  = nullptr;
     QScrollArea*     m_scroll       = nullptr;
     TypeFlowCanvas*  m_canvas       = nullptr;
 
-    // ── State ─────────────────────────────────────────────────────────────────
-    QString  m_code;
-    QString  m_language;
+    // ── State (m_code and m_language are inherited from AnalysisFrame) ──────
     bool     m_isDark = true;
 };

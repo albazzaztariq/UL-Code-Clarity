@@ -1,12 +1,11 @@
 #pragma once
 
-#include <QWidget>
 #include <QLabel>
-#include <QScrollArea>
 #include <QPushButton>
 #include <QString>
 #include <QList>
 
+#include "core/analysisframe.h"
 #include "core/codehealth.h"
 #include "core/optimizer.h"
 
@@ -29,15 +28,12 @@
 //   ...
 // ============================================================================
 
-class FullReportFrame : public QWidget {
+class FullReportFrame : public AnalysisFrame {
     Q_OBJECT
 public:
     explicit FullReportFrame(QWidget* parent = nullptr);
 
     void setCode(const QString& code, const QString& language, int level = 1);
-
-signals:
-    void backToEditor();
 
 private slots:
     void onRunReport();
@@ -59,12 +55,7 @@ private:
     QPushButton* m_runBtn         = nullptr;
     QLabel*      m_gradeLabel     = nullptr;
     QLabel*      m_subGradeLabel  = nullptr;
-    QWidget*     m_bodyWidget     = nullptr;
-    QScrollArea* m_scrollArea     = nullptr;
-    QVBoxLayout* m_bodyLayout     = nullptr;
 
     // State
-    QString m_code;
-    QString m_language;
-    int     m_level = 1;
+    int m_level = 1;
 };

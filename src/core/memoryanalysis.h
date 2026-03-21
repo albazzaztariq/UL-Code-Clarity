@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QPushButton>
 #include <QLabel>
 #include <QTimer>
@@ -23,7 +23,7 @@
 //   After exit: summary with peak and average.
 //   If Python: suggests Cython for heavy workloads.
 // ============================================================================
-class MemoryAnalysisFrame : public QWidget {
+class MemoryAnalysisFrame : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -33,9 +33,6 @@ public:
     void setFileInfo(const QString& sourceFilePath,
                      const QString& binaryFilePath,
                      const QString& language);
-
-signals:
-    void backToEditor();
 
 private slots:
     void onRunMonitor();
@@ -51,27 +48,22 @@ private:
     void updateDiskSection();
     void resetMonitorState();
 
-    // ── Header ────────────────────────────────────────────────────────────
-    QPushButton* m_backBtn  = nullptr;
-    QPushButton* m_helpBtn  = nullptr;
-
     // ── Section A — Disk ──────────────────────────────────────────────────
     QLabel* m_diskSourceLabel = nullptr;
     QLabel* m_diskBinaryLabel = nullptr;
 
     // ── Section B — Runtime ───────────────────────────────────────────────
-    QPushButton* m_runBtn        = nullptr;
-    QLabel*      m_currentLabel  = nullptr;
-    QLabel*      m_peakLabel     = nullptr;
-    QLabel*      m_statusLabel   = nullptr;
-    QLabel*      m_summaryLabel  = nullptr;
-    QLabel*      m_noteLabel     = nullptr;   // Cython suggestion for Python
-    QWidget*     m_chartWidget   = nullptr;   // chart is painted onto this
+    QPushButton* m_runBtn          = nullptr;
+    QLabel*      m_currentLabel    = nullptr;
+    QLabel*      m_peakLabel       = nullptr;
+    QLabel*      m_runtimeStatus   = nullptr;  // status label inside sectionBBox
+    QLabel*      m_summaryLabel    = nullptr;
+    QLabel*      m_noteLabel       = nullptr;   // Cython suggestion for Python
+    QWidget*     m_chartWidget     = nullptr;   // chart is painted onto this
 
     // ── State ─────────────────────────────────────────────────────────────
     QString  m_sourceFilePath;
     QString  m_binaryFilePath;
-    QString  m_language;
 
     QProcess*      m_process   = nullptr;
     QTimer*        m_pollTimer = nullptr;

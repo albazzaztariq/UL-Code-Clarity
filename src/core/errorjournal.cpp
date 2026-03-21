@@ -1,4 +1,5 @@
 #include "core/errorjournal.h"
+#include "core/theme.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -19,98 +20,57 @@
 // ============================================================================
 
 ErrorJournal::ErrorJournal(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Error Journal", parent)
 {
-    setStyleSheet("background: #1e1e2e; color: #cdd6f4;");
-
-    auto* outerLayout = new QVBoxLayout(this);
-    outerLayout->setContentsMargins(0, 0, 0, 0);
-    outerLayout->setSpacing(0);
-
-    // ── Title bar ─────────────────────────────────────────────────────────────
-    auto* titleBar = new QWidget;
-    titleBar->setFixedHeight(44);
-    titleBar->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
-    auto* titleLayout = new QHBoxLayout(titleBar);
-    titleLayout->setContentsMargins(12, 0, 12, 0);
-    titleLayout->setSpacing(8);
-
-    auto* backBtn = new QPushButton("← Back to Editor");
-    backBtn->setFixedHeight(28);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    backBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; font-size: 12px; padding: 0 12px; }"
-        "QPushButton:hover { background: #45475a; }");
-    connect(backBtn, &QPushButton::clicked, this, &ErrorJournal::backToEditor);
-    titleLayout->addWidget(backBtn);
-
-    titleLayout->addStretch();
-
-    auto* titleLabel = new QLabel("Error Journal");
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;");
-    titleLayout->addWidget(titleLabel);
-
-    titleLayout->addStretch();
-
-    auto* clearAllBtn = new QPushButton("Clear All");
-    clearAllBtn->setFixedHeight(28);
-    clearAllBtn->setCursor(Qt::PointingHandCursor);
-    clearAllBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #f38ba8; border: 1px solid #45475a;"
-        " border-radius: 4px; font-size: 12px; padding: 0 12px; }"
-        "QPushButton:hover { background: #45475a; }");
-    connect(clearAllBtn, &QPushButton::clicked, this, &ErrorJournal::onClearAll);
-    titleLayout->addWidget(clearAllBtn);
-
-    outerLayout->addWidget(titleBar);
-
-    // ── Summary bar ───────────────────────────────────────────────────────────
+    // ── Summary bar (unique control) ──────────────────────────────────────────
     m_summaryLabel = new QLabel("No errors logged yet.");
     m_summaryLabel->setAlignment(Qt::AlignCenter);
     m_summaryLabel->setFixedHeight(32);
-    m_summaryLabel->setStyleSheet(
-        "QLabel { background: #181825; color: #a6adc8; font-size: 11px;"
-        " border-bottom: 1px solid #313244; padding: 0 14px; }");
-    outerLayout->addWidget(m_summaryLabel);
+    m_summaryLabel->setStyleSheet(QString(
+        "QLabel { background: #181825; color: %1; font-size: 11px;"
+        " border-bottom: 1px solid #313244; padding: 0 14px; }").arg(Theme::Colors::fg2()));
+    m_resultsLayout->insertWidget(0, m_summaryLabel);
 
     // ── Search bar ────────────────────────────────────────────────────────────
     auto* searchBar = new QWidget;
     searchBar->setFixedHeight(40);
-    searchBar->setStyleSheet("background: #1e1e2e; border-bottom: 1px solid #313244;");
+    searchBar->setStyleSheet(QString("background: %1; border-bottom: 1px solid #313244;").arg(Theme::Colors::bg()));
     auto* searchLayout = new QHBoxLayout(searchBar);
     searchLayout->setContentsMargins(12, 6, 12, 6);
     searchLayout->setSpacing(8);
 
     auto* searchIcon = new QLabel("Search:");
-    searchIcon->setStyleSheet("color: #a6adc8; font-size: 12px;");
+    searchIcon->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::fg2()));
     searchLayout->addWidget(searchIcon);
 
     m_searchInput = new QLineEdit;
     m_searchInput->setPlaceholderText("Filter by error type, file, or message...");
     m_searchInput->setFixedHeight(26);
-    m_searchInput->setStyleSheet(
-        "QLineEdit { background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
+    m_searchInput->setStyleSheet(QString(
+        "QLineEdit { background: %1; color: %2; border: 1px solid %3;"
         " border-radius: 4px; font-size: 12px; padding: 0 8px; }"
-        "QLineEdit:focus { border-color: #89b4fa; }");
+        "QLineEdit:focus { border-color: %4; }")
+        .arg(Theme::Colors::bg2(), Theme::Colors::fg(),
+             Theme::Colors::border(), Theme::Colors::accent()));
     connect(m_searchInput, &QLineEdit::textChanged, this, &ErrorJournal::onSearch);
     searchLayout->addWidget(m_searchInput, 1);
 
-    outerLayout->addWidget(searchBar);
+    m_resultsLayout->insertWidget(1, searchBar);
 
     // ── List widget ───────────────────────────────────────────────────────────
     m_list = new QListWidget;
-    m_list->setStyleSheet(
-        "QListWidget { background: #1e1e2e; border: none; }"
+    m_list->setStyleSheet(QString(
+        "QListWidget { background: %1; border: none; }"
         "QListWidget::item { border-bottom: 1px solid #313244;"
         " padding: 0; background: transparent; }"
         "QListWidget::item:selected { background: #313244; }"
         "QListWidget::item:hover { background: #252535; }"
         "QScrollBar:vertical { background: #181825; width: 8px; border-radius: 4px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+        "QScrollBar::handle:vertical { background: %2; border-radius: 4px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }")
+        .arg(Theme::Colors::bg(), Theme::Colors::border()));
     connect(m_list, &QListWidget::itemClicked, this, &ErrorJournal::onItemClicked);
-    outerLayout->addWidget(m_list, 1);
+    m_resultsLayout->insertWidget(2, m_list);
 }
 
 // ── Public interface ──────────────────────────────────────────────────────────
@@ -344,9 +304,9 @@ void ErrorJournal::rebuildList(const QString& filter)
 
         // Colour: fixed = dim green accent, unfixed = red accent
         if (entry.fixed) {
-            item->setForeground(QColor("#a6e3a1"));
+            item->setForeground(QColor(Theme::Colors::green()));
         } else {
-            item->setForeground(QColor("#f38ba8"));
+            item->setForeground(QColor(Theme::Colors::red()));
         }
 
         QFont font;

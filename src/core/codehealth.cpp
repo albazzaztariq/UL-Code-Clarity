@@ -1,6 +1,7 @@
 #include "core/codehealth.h"
 #include "core/tutorial.h"
 #include "core/jsonloader.h"
+#include "core/theme.h"
 
 #include <QMouseEvent>
 #include <QVBoxLayout>
@@ -17,6 +18,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <algorithm>
+
+using namespace Theme::Css;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config helpers — load metric config from patterns_codehealth.json
@@ -46,11 +49,11 @@ static QJsonObject metricConfig(const QString& id)
 QString healthScoreColor(HealthScore s)
 {
     switch (s) {
-    case HealthScore::Green:  return "#a6e3a1";
-    case HealthScore::Yellow: return "#f9e2af";
-    case HealthScore::Red:    return "#f38ba8";
+    case HealthScore::Green:  return GREEN;
+    case HealthScore::Yellow: return YELLOW;
+    case HealthScore::Red:    return RED;
     }
-    return "#a6e3a1";
+    return GREEN;
 }
 
 HealthReport healthBuildReport(const QStringList& lines, const QString& lang)
@@ -71,8 +74,8 @@ MetricCard::MetricCard(const MetricResult& result, QWidget* parent)
 
     auto* frame = new QFrame(this);
     frame->setStyleSheet(QString(
-        "QFrame { background: #1e1e2e; border: 1px solid %1;"
-        " border-top: 3px solid %1; border-radius: 6px; }").arg(color));
+        "QFrame { background: %2; border: 1px solid %1;"
+        " border-top: 3px solid %1; border-radius: 6px; }").arg(color, BG));
 
     auto* fl = new QVBoxLayout(frame);
     fl->setContentsMargins(12, 10, 12, 10);
@@ -87,13 +90,13 @@ MetricCard::MetricCard(const MetricResult& result, QWidget* parent)
     nameRow->addWidget(dot);
 
     auto* nameLabel = new QLabel(result.name);
-    nameLabel->setStyleSheet("color: #cdd6f4; font-size: 13px; font-weight: bold;");
+    nameLabel->setStyleSheet(QString("color: %1; font-size: 13px; font-weight: bold;").arg(FG));
     nameRow->addWidget(nameLabel, 1);
     fl->addLayout(nameRow);
 
     auto* sumLabel = new QLabel(result.summary);
     sumLabel->setWordWrap(true);
-    sumLabel->setStyleSheet("color: #a6adc8; font-size: 11px;");
+    sumLabel->setStyleSheet(QString("color: %1; font-size: 11px;").arg(FG2));
     fl->addWidget(sumLabel);
 
     if (!result.findings.isEmpty()) {
@@ -121,60 +124,16 @@ void MetricCard::mousePressEvent(QMouseEvent*)
 // Constructor
 // ─────────────────────────────────────────────────────────────────────────────
 CodeHealthFrame::CodeHealthFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Code Health", parent)
 {
-    setStyleSheet("background: #1e1e2e; color: #cdd6f4;");
-
-    auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(16, 12, 16, 12);
-    root->setSpacing(10);
-
-    auto* topBar = new QHBoxLayout;
-    topBar->setSpacing(8);
-
-    auto* backBtn = new QPushButton("Back to Editor");
-    backBtn->setFixedHeight(30);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    backBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; padding: 0 14px; font-size: 13px; }"
-        "QPushButton:hover { background: #45475a; }");
-    connect(backBtn, &QPushButton::clicked, this, &CodeHealthFrame::backToEditor);
-    topBar->addWidget(backBtn);
-
-    topBar->addStretch(1);
-
-    auto* titleLabel = new QLabel("Code Health");
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 18px; font-weight: bold;");
-    topBar->addWidget(titleLabel);
-
-    topBar->addStretch(1);
-
-    auto* helpBtn = new QPushButton("?");
-    helpBtn->setFixedSize(36, 36);
-    helpBtn->setCursor(Qt::PointingHandCursor);
-    helpBtn->setToolTip("What is Code Health?");
-    helpBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
-        " border-radius: 18px; font-size: 18px; font-weight: bold; }"
-        "QPushButton:hover { background: #b4d0fb; }");
-    connect(helpBtn, &QPushButton::clicked, this, &CodeHealthFrame::onHelpClicked);
-    topBar->addWidget(helpBtn);
-
-    root->addLayout(topBar);
-
-    auto* sep = new QFrame;
-    sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet("color: #313244;");
-    root->addWidget(sep);
-
+    // ── Grade row (unique to this panel) ──────────────────────────────────────
     auto* gradeRow = new QHBoxLayout;
     gradeRow->setSpacing(14);
 
     m_gradeLabel = new QLabel("—");
     m_gradeLabel->setStyleSheet(
-        "color: #6c7086; font-size: 64px; font-weight: bold;"
-        " min-width: 80px; max-width: 80px;");
+        QString("color: %1; font-size: 64px; font-weight: bold;"
+        " min-width: 80px; max-width: 80px;").arg(FG3));
     m_gradeLabel->setAlignment(Qt::AlignCenter);
     gradeRow->addWidget(m_gradeLabel);
 
@@ -182,13 +141,9 @@ CodeHealthFrame::CodeHealthFrame(QWidget* parent)
     gradeRight->setSpacing(2);
 
     m_gradeCaption = new QLabel("Run a health check to score your code.");
-    m_gradeCaption->setStyleSheet("color: #a6adc8; font-size: 13px;");
+    m_gradeCaption->setStyleSheet(QString("color: %1; font-size: 13px;").arg(FG2));
     m_gradeCaption->setWordWrap(true);
     gradeRight->addWidget(m_gradeCaption);
-
-    m_statusLabel = new QLabel(QString());
-    m_statusLabel->setStyleSheet("color: #6c7086; font-size: 11px;");
-    gradeRight->addWidget(m_statusLabel);
 
     gradeRow->addLayout(gradeRight, 1);
 
@@ -196,43 +151,42 @@ CodeHealthFrame::CodeHealthFrame(QWidget* parent)
     m_runBtn->setFixedHeight(34);
     m_runBtn->setCursor(Qt::PointingHandCursor);
     m_runBtn->setStyleSheet(
-        "QPushButton { background: #a6e3a1; color: #1e1e2e; border: none;"
+        QString("QPushButton { background: %1; color: %2; border: none;"
         " border-radius: 4px; padding: 0 18px; font-size: 13px; font-weight: bold; }"
         "QPushButton:hover { background: #c3f5bf; }"
-        "QPushButton:disabled { background: #313244; color: #6c7086; }");
+        "QPushButton:disabled { background: #313244; color: %3; }").arg(GREEN, BG, FG3));
     connect(m_runBtn, &QPushButton::clicked, this, &CodeHealthFrame::onRunHealth);
     gradeRow->addWidget(m_runBtn);
 
-    root->addLayout(gradeRow);
+    auto* gradeWidget = new QWidget;
+    gradeWidget->setLayout(gradeRow);
+    m_resultsLayout->insertWidget(0, gradeWidget);
 
-    auto* sep2 = new QFrame;
-    sep2->setFrameShape(QFrame::HLine);
-    sep2->setStyleSheet("color: #313244;");
-    root->addWidget(sep2);
-
+    // ── Card grid ─────────────────────────────────────────────────────────────
     m_cardGrid = new QWidget;
     m_cardGrid->setStyleSheet("background: transparent;");
     auto* emptyGridLayout = new QGridLayout(m_cardGrid);
     emptyGridLayout->setContentsMargins(0, 0, 0, 0);
     emptyGridLayout->setSpacing(10);
-    root->addWidget(m_cardGrid);
+    m_resultsLayout->insertWidget(1, m_cardGrid);
 
+    // ── Findings panel ────────────────────────────────────────────────────────
     m_findingsTitle = new QLabel(QString());
     m_findingsTitle->setStyleSheet(
-        "color: #cdd6f4; font-size: 13px; font-weight: bold; padding: 4px 0;");
+        QString("color: %1; font-size: 13px; font-weight: bold; padding: 4px 0;").arg(FG));
     m_findingsTitle->hide();
-    root->addWidget(m_findingsTitle);
+    m_resultsLayout->insertWidget(2, m_findingsTitle);
 
     m_findingsScroll = new QScrollArea;
     m_findingsScroll->setWidgetResizable(true);
     m_findingsScroll->setVisible(false);
     m_findingsScroll->setStyleSheet(
-        "QScrollArea { border: 1px solid #313244; background: #181825; border-radius: 4px; }"
-        "QScrollBar:vertical { background: #1e1e2e; width: 8px; border-radius: 4px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+        QString("QScrollArea { border: 1px solid #313244; background: %1; border-radius: 4px; }"
+        "QScrollBar:vertical { background: %2; width: 8px; border-radius: 4px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 4px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }").arg(BG5, BG, BORDER));
     m_findingsScroll->setMaximumHeight(260);
-    root->addWidget(m_findingsScroll, 1);
+    m_resultsLayout->insertWidget(3, m_findingsScroll);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -251,11 +205,11 @@ void CodeHealthFrame::onHelpClicked()
 {
     // Build description from JSON metric names
     QJsonObject cfg = config();
-    QString desc = "<b style='color:#cdd6f4;'>Code Health</b> is a report card for your code. "
-        "It scores quality dimensions and gives you an overall grade.<br><br>";
+    QString desc = QString("<b style='color:%1;'>Code Health</b> is a report card for your code. "
+        "It scores quality dimensions and gives you an overall grade.<br><br>").arg(FG);
     for (const QJsonValue& v : cfg["metrics"].toArray()) {
         QJsonObject m = v.toObject();
-        desc += QString("<b style='color:#cdd6f4;'>%1</b> — %2<br>")
+        desc += QString("<b style='color:%1;'>%2</b> — %3<br>").arg(FG)
                     .arg(m["name"].toString(), m["description"].toString());
     }
 
@@ -263,7 +217,7 @@ void CodeHealthFrame::onHelpClicked()
     dlg->setWindowTitle("Code Health");
     dlg->setModal(true);
     dlg->setMinimumWidth(440);
-    dlg->setStyleSheet("background: #1e1e2e;");
+    dlg->setStyleSheet(QString("background: %1;").arg(BG));
 
     auto* lay = new QVBoxLayout(dlg);
     lay->setContentsMargins(22, 18, 22, 18);
@@ -272,7 +226,7 @@ void CodeHealthFrame::onHelpClicked()
     auto* descLabel = new QLabel(desc);
     descLabel->setWordWrap(true);
     descLabel->setTextFormat(Qt::RichText);
-    descLabel->setStyleSheet("QLabel { color: #cdd6f4; font-size: 13px; }");
+    descLabel->setStyleSheet(QString("QLabel { color: %1; font-size: 13px; }").arg(FG));
     lay->addWidget(descLabel);
 
     auto* btnRow = new QHBoxLayout;
@@ -280,9 +234,9 @@ void CodeHealthFrame::onHelpClicked()
 
     auto* launchBtn = new QPushButton("Launch Tutorial");
     launchBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
+        QString("QPushButton { background: %1; color: %2; border: none;"
         " border-radius: 6px; padding: 0 18px; font-size: 13px; font-weight: bold; min-height: 30px; }"
-        "QPushButton:hover { background: #b4d0fb; }");
+        "QPushButton:hover { background: #b4d0fb; }").arg(ACCENT, BG));
     launchBtn->setCursor(Qt::PointingHandCursor);
     connect(launchBtn, &QPushButton::clicked, dlg, [dlg, this]() {
         dlg->accept();
@@ -295,9 +249,9 @@ void CodeHealthFrame::onHelpClicked()
 
     auto* closeBtn = new QPushButton("Close");
     closeBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+        QString("QPushButton { background: #313244; color: %1; border: 1px solid %2;"
         " border-radius: 6px; padding: 0 14px; font-size: 13px; min-height: 30px; }"
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %2; }").arg(FG, BORDER));
     closeBtn->setCursor(Qt::PointingHandCursor);
     connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
     btnRow->addWidget(closeBtn);
@@ -313,12 +267,12 @@ void CodeHealthFrame::onHelpClicked()
 void CodeHealthFrame::onRunHealth()
 {
     if (m_code.trimmed().isEmpty()) {
-        m_statusLabel->setText("No code loaded. Open a file in the editor first.");
+        setStatus("No code loaded. Open a file in the editor first.");
         return;
     }
 
     m_runBtn->setEnabled(false);
-    m_statusLabel->setText("Analysing…");
+    setStatus("Analysing…");
 
     QStringList lines = m_code.split('\n');
     HealthReport report = buildReport(lines, m_language);
@@ -329,8 +283,7 @@ void CodeHealthFrame::onRunHealth()
     m_findingsTitle->hide();
     m_findingsScroll->setVisible(false);
 
-    m_statusLabel->setText(
-        QString("%1 functions analysed across %2 lines.")
+    setStatus(QString("%1 functions analysed across %2 lines.")
         .arg(report.complexity.findings.size())
         .arg(lines.size()));
 
@@ -415,7 +368,7 @@ void CodeHealthFrame::showFindings(const MetricResult& result)
     m_findingsTitle->show();
 
     auto* container = new QWidget;
-    container->setStyleSheet("background: #181825;");
+    container->setStyleSheet(QString("background: %1;").arg(BG5));
     auto* vl = new QVBoxLayout(container);
     vl->setContentsMargins(8, 8, 8, 8);
     vl->setSpacing(6);
@@ -423,27 +376,27 @@ void CodeHealthFrame::showFindings(const MetricResult& result)
     if (result.findings.isEmpty()) {
         auto* ok = new QLabel("No issues found.");
         ok->setAlignment(Qt::AlignCenter);
-        ok->setStyleSheet("color: #a6e3a1; font-size: 13px; font-weight: bold; padding: 16px;");
+        ok->setStyleSheet(QString("color: %1; font-size: 13px; font-weight: bold; padding: 16px;").arg(GREEN));
         vl->addWidget(ok);
     } else {
         for (const auto& f : result.findings) {
             auto* row = new QFrame;
-            row->setStyleSheet(QString(
-                "QFrame { background: #1e1e2e; border-left: 3px solid %1;"
-                " border-radius: 4px; }").arg(color));
+            row->setStyleSheet(
+                QString("QFrame { background: %2; border-left: 3px solid %1;"
+                " border-radius: 4px; }").arg(color, BG));
             auto* rl = new QHBoxLayout(row);
             rl->setContentsMargins(10, 6, 10, 6);
             rl->setSpacing(10);
 
             auto* subjLabel = new QLabel(f.subject);
-            subjLabel->setStyleSheet("color: #cdd6f4; font-size: 12px; font-weight: bold;");
+            subjLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold;").arg(FG));
             subjLabel->setMinimumWidth(120);
             subjLabel->setMaximumWidth(180);
             rl->addWidget(subjLabel);
 
             auto* detailLabel = new QLabel(f.detail);
             detailLabel->setWordWrap(true);
-            detailLabel->setStyleSheet("color: #a6adc8; font-size: 12px;");
+            detailLabel->setStyleSheet(QString("color: %1; font-size: 12px;").arg(FG2));
             rl->addWidget(detailLabel, 1);
 
             if (f.score > 0) {

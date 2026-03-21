@@ -1,4 +1,5 @@
 #include "core/predictpanel.h"
+#include "core/theme.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -20,17 +21,17 @@ PredictPanel::PredictPanel(QWidget* parent)
     outerLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->setSpacing(0);
 
-    setStyleSheet("background: #1a1a2e; border-bottom: 1px solid #313244;");
+    setStyleSheet("background: #1a1a2e; border-bottom: 1px solid #313244;");  // #1a1a2e = near-bg custom shade
 
     // ── Header row ────────────────────────────────────────────────────────────
     auto* headerWidget = new QWidget;
-    headerWidget->setStyleSheet("background: #1a1a2e;");
+    headerWidget->setStyleSheet("background: #1a1a2e;");  // custom near-bg shade
     auto* headerLayout = new QVBoxLayout(headerWidget);
     headerLayout->setContentsMargins(14, 10, 14, 6);
     headerLayout->setSpacing(6);
 
     auto* promptLabel = new QLabel("What do you think this will print?");
-    promptLabel->setStyleSheet("color: #cdd6f4; font-size: 12px; font-weight: bold;");
+    promptLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold;").arg(Theme::Colors::fg()));
     headerLayout->addWidget(promptLabel);
 
     // Input + buttons row
@@ -40,22 +41,25 @@ PredictPanel::PredictPanel(QWidget* parent)
     m_predictionInput = new QLineEdit;
     m_predictionInput->setPlaceholderText("Type your prediction here...");
     m_predictionInput->setFixedHeight(30);
-    m_predictionInput->setStyleSheet(
-        "QLineEdit { background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
+    m_predictionInput->setStyleSheet(QString(
+        "QLineEdit { background: %1; color: %2; border: 1px solid %3;"
         " border-radius: 4px; font-family: 'Cascadia Code', 'Consolas', monospace;"
         " font-size: 12px; padding: 0 8px; }"
-        "QLineEdit:focus { border-color: #89b4fa; }");
+        "QLineEdit:focus { border-color: %4; }")
+        .arg(Theme::Colors::bg2(), Theme::Colors::fg(),
+             Theme::Colors::border(), Theme::Colors::accent()));
     connect(m_predictionInput, &QLineEdit::returnPressed, this, &PredictPanel::onRunAndCheck);
     inputRow->addWidget(m_predictionInput, 1);
 
     m_runCheckBtn = new QPushButton("Run & Check");
     m_runCheckBtn->setFixedHeight(30);
     m_runCheckBtn->setCursor(Qt::PointingHandCursor);
-    m_runCheckBtn->setStyleSheet(
-        "QPushButton { background: #a6e3a1; color: #1e1e2e; font-weight: bold;"
+    m_runCheckBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; font-weight: bold;"
         " font-size: 12px; border-radius: 4px; padding: 0 16px; }"
         "QPushButton:hover { background: #b9f0b4; }"
-        "QPushButton:pressed { background: #94d08f; }");
+        "QPushButton:pressed { background: #94d08f; }")
+        .arg(Theme::Colors::green(), Theme::Colors::bg()));
     connect(m_runCheckBtn, &QPushButton::clicked, this, &PredictPanel::onRunAndCheck);
     inputRow->addWidget(m_runCheckBtn);
 
@@ -63,7 +67,7 @@ PredictPanel::PredictPanel(QWidget* parent)
 
     // Accuracy row
     m_accuracyLabel = new QLabel;
-    m_accuracyLabel->setStyleSheet("color: #6c7086; font-size: 11px;");
+    m_accuracyLabel->setStyleSheet(QString("color: %1; font-size: 11px;").arg(Theme::Colors::fg3()));
     updateAccuracyLabel();
     headerLayout->addWidget(m_accuracyLabel);
 
@@ -72,14 +76,14 @@ PredictPanel::PredictPanel(QWidget* parent)
     // ── Result area (hidden until a check is done) ─────────────────────────────
     m_resultArea = new QWidget;
     m_resultArea->setVisible(false);
-    m_resultArea->setStyleSheet("background: #1a1a2e;");
+    m_resultArea->setStyleSheet("background: #1a1a2e;");  // custom near-bg shade
     auto* resultLayout = new QVBoxLayout(m_resultArea);
     resultLayout->setContentsMargins(14, 4, 14, 10);
     resultLayout->setSpacing(4);
 
     auto* sepLine = new QFrame;
     sepLine->setFrameShape(QFrame::HLine);
-    sepLine->setStyleSheet("color: #313244;");
+    sepLine->setStyleSheet("color: #313244;");  // surface0, no Colors method
     resultLayout->addWidget(sepLine);
 
     auto* resultIconRow = new QHBoxLayout;
@@ -89,7 +93,7 @@ PredictPanel::PredictPanel(QWidget* parent)
 
     m_resultText = new QLabel;
     m_resultText->setWordWrap(true);
-    m_resultText->setStyleSheet("color: #cdd6f4; font-size: 12px;");
+    m_resultText->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::fg()));
     resultIconRow->addWidget(m_resultText, 1);
     resultLayout->addLayout(resultIconRow);
 
@@ -97,10 +101,10 @@ PredictPanel::PredictPanel(QWidget* parent)
     m_diffArea->setReadOnly(true);
     m_diffArea->setVisible(false);
     m_diffArea->setMaximumHeight(80);
-    m_diffArea->setStyleSheet(
-        "QTextEdit { background: #181825; color: #a6adc8; border: 1px solid #313244;"
+    m_diffArea->setStyleSheet(QString(
+        "QTextEdit { background: #181825; color: %1; border: 1px solid #313244;"
         " border-radius: 4px; font-family: 'Cascadia Code', 'Consolas', monospace;"
-        " font-size: 11px; }");
+        " font-size: 11px; }").arg(Theme::Colors::fg2()));
     resultLayout->addWidget(m_diffArea);
 
     outerLayout->addWidget(m_resultArea);
@@ -178,15 +182,15 @@ void PredictPanel::showResult(bool correct, const QString& actualOutput)
         m_resultArea->setStyleSheet(
             "background: #1a3d28; border-top: 1px solid #40a870;");
         m_resultIcon->setText("✓");
-        m_resultIcon->setStyleSheet("color: #a6e3a1; font-size: 16px; font-weight: bold;");
+        m_resultIcon->setStyleSheet(QString("color: %1; font-size: 16px; font-weight: bold;").arg(Theme::Colors::green()));
         m_resultText->setText("Correct! You predicted it right.");
-        m_resultText->setStyleSheet("color: #a6e3a1; font-size: 12px;");
+        m_resultText->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::green()));
         m_diffArea->setVisible(false);
     } else {
         m_resultArea->setStyleSheet(
             "background: #3d1f1f; border-top: 1px solid #f38ba8;");
         m_resultIcon->setText("✗");
-        m_resultIcon->setStyleSheet("color: #f38ba8; font-size: 16px; font-weight: bold;");
+        m_resultIcon->setStyleSheet(QString("color: %1; font-size: 16px; font-weight: bold;").arg(Theme::Colors::red()));
 
         // Find first line of divergence
         QStringList predictedLines = m_pendingPrediction.split('\n');
@@ -216,25 +220,26 @@ void PredictPanel::showResult(bool correct, const QString& actualOutput)
 
         m_resultText->setText(
             QString("Not quite. %1").arg(explanation));
-        m_resultText->setStyleSheet("color: #f38ba8; font-size: 12px;");
+        m_resultText->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::red()));
 
         // Show diff in monospace area
         m_diffArea->setVisible(true);
         m_diffArea->setHtml(
-            QString("<span style='color:#6c7086'>Your prediction:</span> "
-                    "<span style='color:#cdd6f4'>%1</span><br>"
-                    "<span style='color:#6c7086'>Actual output:</span>   "
-                    "<span style='color:#a6e3a1'>%2</span>")
+            QString("<span style='color:%3'>Your prediction:</span> "
+                    "<span style='color:%4'>%1</span><br>"
+                    "<span style='color:%3'>Actual output:</span>   "
+                    "<span style='color:%5'>%2</span>")
             .arg(m_pendingPrediction.toHtmlEscaped().replace("\n", "<br>"),
-                 displayActual.toHtmlEscaped().replace("\n", "<br>")));
+                 displayActual.toHtmlEscaped().replace("\n", "<br>"),
+                 Theme::Colors::fg3(), Theme::Colors::fg(), Theme::Colors::green()));
     }
 
     // Flash the result area background briefly
     QTimer::singleShot(400, this, [this, correct]() {
-        QString baseColor = correct ? "#1a3d28" : "#3d1f1f";
+        QString baseColor = correct ? "#1a3d28" : "#3d1f1f";  // custom tinted bg shades
         m_resultArea->setStyleSheet(
             QString("background: %1; border-top: 1px solid %2;")
-            .arg(baseColor, correct ? "#40a870" : "#f38ba8"));
+            .arg(baseColor, correct ? "#40a870" : Theme::Colors::red()));
     });
 }
 

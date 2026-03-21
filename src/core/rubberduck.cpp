@@ -23,32 +23,33 @@ RubberDuckDialog::RubberDuckDialog(const QString& originalMessage, QWidget* pare
     // Header
     auto* headerLbl = new QLabel("Before I help you, let's think through this together.");
     headerLbl->setWordWrap(true);
-    headerLbl->setStyleSheet("color: #89b4fa; font-size: 14px; font-weight: bold;");
+    headerLbl->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: bold;").arg(Theme::Colors::accent()));
     root->addWidget(headerLbl);
 
     auto* subLbl = new QLabel(
         "Answering these questions often reveals the bug before you even send the message.");
     subLbl->setWordWrap(true);
-    subLbl->setStyleSheet("color: #a6adc8; font-size: 12px;");
+    subLbl->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::fg2()));
     root->addWidget(subLbl);
 
     // Separator
     auto* sep = new QFrame;
     sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet("color: #313244;");
+    sep->setStyleSheet("color: #313244;");  // surface0, no Colors method
     root->addWidget(sep);
 
     // Field helper
     auto addField = [&](const QString& label, QTextEdit*& field) {
         auto* lbl = new QLabel(label);
-        lbl->setStyleSheet("color: #cdd6f4; font-size: 12px; font-weight: bold;");
+        lbl->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold;").arg(Theme::Colors::fg()));
         root->addWidget(lbl);
         field = new QTextEdit;
         field->setPlaceholderText("Type here...");
         field->setFixedHeight(72);
-        field->setStyleSheet(
-            "QTextEdit { background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
-            " border-radius: 4px; padding: 6px; font-size: 12px; }");
+        field->setStyleSheet(QString(
+            "QTextEdit { background: %1; color: %2; border: 1px solid %3;"
+            " border-radius: 4px; padding: 6px; font-size: 12px; }")
+            .arg(Theme::Colors::bg2(), Theme::Colors::fg(), Theme::Colors::border()));
         root->addWidget(field);
     };
 
@@ -62,20 +63,22 @@ RubberDuckDialog::RubberDuckDialog(const QString& originalMessage, QWidget* pare
 
     m_solvedBtn = new QPushButton("I figured it out!");
     m_solvedBtn->setCursor(Qt::PointingHandCursor);
-    m_solvedBtn->setStyleSheet(
-        "QPushButton { background: #a6e3a1; color: #1e1e2e; border-radius: 6px;"
+    m_solvedBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border-radius: 6px;"
         " padding: 8px 18px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background: #c0efbb; }");
+        "QPushButton:hover { background: #c0efbb; }")
+        .arg(Theme::Colors::green(), Theme::Colors::bg()));
     btnRow->addWidget(m_solvedBtn);
 
     btnRow->addStretch();
 
     m_sendBtn = new QPushButton("Send to AI");
     m_sendBtn->setCursor(Qt::PointingHandCursor);
-    m_sendBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border-radius: 6px;"
+    m_sendBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border-radius: 6px;"
         " padding: 8px 18px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background: #b4d0ff; }");
+        "QPushButton:hover { background: #b4d0ff; }")
+        .arg(Theme::Colors::accent(), Theme::Colors::bg()));
     btnRow->addWidget(m_sendBtn);
 
     root->addLayout(btnRow);
@@ -122,23 +125,6 @@ void RubberDuckDialog::onSolvedClicked()
     accept();
 }
 
-void RubberDuckDialog::applyTheme(bool isDark)
-{
-    if (isDark) {
-        setStyleSheet("QDialog { background: #1e1e2e; } QLabel { color: #cdd6f4; }");
-    } else {
-        setStyleSheet("QDialog { background: #ffffff; } QLabel { color: #333333; }");
-        if (m_expectField) m_expectField->setStyleSheet(
-            "QTextEdit { background: #f5f5f5; color: #333333; border: 1px solid #d0d0d0;"
-            " border-radius: 4px; padding: 6px; font-size: 12px; }");
-        if (m_actualField) m_actualField->setStyleSheet(
-            "QTextEdit { background: #f5f5f5; color: #333333; border: 1px solid #d0d0d0;"
-            " border-radius: 4px; padding: 6px; font-size: 12px; }");
-        if (m_triedField) m_triedField->setStyleSheet(
-            "QTextEdit { background: #f5f5f5; color: #333333; border: 1px solid #d0d0d0;"
-            " border-radius: 4px; padding: 6px; font-size: 12px; }");
-    }
-}
 
 
 // ─── RubberDuckToggle ────────────────────────────────────────────────────────
@@ -155,7 +141,7 @@ RubberDuckToggle::RubberDuckToggle(QWidget* parent)
     lay->addWidget(m_check);
 
     m_label = new QLabel("Rubber Duck", this);
-    m_label->setStyleSheet("color: #f9e2af; font-size: 11px;");
+    m_label->setStyleSheet(QString("color: %1; font-size: 11px;").arg(Theme::Colors::yellow()));
     m_label->setToolTip("Rubber Duck Mode: think before you ask");
     lay->addWidget(m_label);
 
@@ -199,12 +185,5 @@ void RubberDuckToggle::updateSolveLabel()
     }
 }
 
-void RubberDuckToggle::applyTheme(bool isDark)
-{
-    m_isDark = isDark;
-    if (isDark) {
-        if (m_label) m_label->setStyleSheet("color: #f9e2af; font-size: 11px;");
-    } else {
-        if (m_label) m_label->setStyleSheet("color: #b45309; font-size: 11px;");
-    }
-}
+void RubberDuckDialog::applyTheme(bool /*isDark*/) {}
+void RubberDuckToggle::applyTheme(bool /*isDark*/) {}

@@ -129,7 +129,8 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    setStyleSheet("background: #2a2a3c; border-right: 1px solid #45475a;");
+    setStyleSheet(QString("background: %1; border-right: 1px solid %2;")
+        .arg(Theme::Colors::bg2(), Theme::Colors::border()));
 
     // Header: "Explorer" + collapse button
     m_header = new QWidget;
@@ -138,8 +139,8 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
 
     m_headerLabel = new QLabel("EXPLORER");
     m_headerLabel->setStyleSheet(
-        "QLabel { color: #a6adc8; font-size: 10px; font-weight: 700;"
-        " letter-spacing: 1px; }");
+        QString("QLabel { color: %1; font-size: 10px; font-weight: 700;"
+        " letter-spacing: 1px; }").arg(Theme::Colors::fg2()));
     headerLayout->addWidget(m_headerLabel);
 
     headerLayout->addStretch();
@@ -148,9 +149,10 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
     m_collapseBtn->setFixedSize(22, 22);
     m_collapseBtn->setToolTip("Collapse Explorer");
     m_collapseBtn->setStyleSheet(
-        "QPushButton { color: #a6adc8; background: transparent;"
+        QString("QPushButton { color: %1; background: transparent;"
         " font-size: 14px; border: none; padding: 0; }"
-        "QPushButton:hover { color: #cdd6f4; background: #3c3c54; border-radius: 4px; }");
+        "QPushButton:hover { color: %2; background: %3; border-radius: 4px; }")
+        .arg(Theme::Colors::fg2(), Theme::Colors::fg(), Theme::Colors::bg4()));
     headerLayout->addWidget(m_collapseBtn);
 
     layout->addWidget(m_header);
@@ -160,24 +162,24 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
 
     // ── Empty state page ──
     m_emptyPage = new QWidget;
-    m_emptyPage->setStyleSheet("background: #2a2a3c;");
+    m_emptyPage->setStyleSheet(QString("background: %1;").arg(Theme::Colors::bg2()));
     auto* emptyLayout = new QVBoxLayout(m_emptyPage);
     emptyLayout->setContentsMargins(16, 40, 16, 16);
     emptyLayout->setSpacing(12);
 
     auto* emptyLabel = new QLabel("No workspace open");
     emptyLabel->setStyleSheet(
-        "QLabel { color: #a6adc8; font-size: 12px; }");
+        QString("QLabel { color: %1; font-size: 12px; }").arg(Theme::Colors::fg2()));
     emptyLabel->setAlignment(Qt::AlignCenter);
     emptyLayout->addWidget(emptyLabel);
 
     m_addWorkspaceBtn = new QPushButton("Add Workspace");
     m_addWorkspaceBtn->setStyleSheet(
-        "QPushButton {"
-        "  color: #cdd6f4; background: #45475a; border: 1px solid #585b70;"
+        QString("QPushButton {"
+        "  color: %1; background: %2; border: 1px solid #585b70;"
         "  border-radius: 4px; padding: 6px 16px; font-size: 11px; font-weight: 600;"
         "}"
-        "QPushButton:hover { background: #585b70; }");
+        "QPushButton:hover { background: #585b70; }").arg(Theme::Colors::fg(), Theme::Colors::border()));
     m_addWorkspaceBtn->setCursor(Qt::PointingHandCursor);
     emptyLayout->addWidget(m_addWorkspaceBtn, 0, Qt::AlignCenter);
 
@@ -186,7 +188,7 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
 
     // ── Tree state page ──
     m_treePage = new QWidget;
-    m_treePage->setStyleSheet("background: #2a2a3c;");
+    m_treePage->setStyleSheet(QString("background: %1;").arg(Theme::Colors::bg2()));
     auto* treeLayout = new QVBoxLayout(m_treePage);
     treeLayout->setContentsMargins(0, 0, 0, 0);
     treeLayout->setSpacing(0);
@@ -214,13 +216,13 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
     m_treeView->hideColumn(3);  // Date Modified
 
     m_treeView->setStyleSheet(
-        "QTreeView { background: #2a2a3c; color: #a6adc8; border: none; font-size: 12px; }"
+        QString("QTreeView { background: %1; color: %2; border: none; font-size: 12px; }"
         "QTreeView::item { padding: 3px 6px; min-height: 24px; }"
         "QTreeView::item:hover { background: #313244; }"
-        "QTreeView::item:selected { background: transparent; color: #cdd6f4;"
-        " border-left: 2px solid #89b4fa; }"
+        "QTreeView::item:selected { background: transparent; color: %3;"
+        " border-left: 2px solid %4; }"
         "QTreeView::item:selected:hover { background: #313244; }"
-        "QTreeView::branch { background: #2a2a3c; color: #6c7086; }"
+        "QTreeView::branch { background: %1; color: %5; }"
         // Closed folder — right-pointing triangle
         "QTreeView::branch:has-children:!has-siblings:closed,"
         "QTreeView::branch:closed:has-children:has-siblings {"
@@ -228,7 +230,9 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
         // Open folder — down-pointing triangle
         "QTreeView::branch:open:has-children:!has-siblings,"
         "QTreeView::branch:open:has-children:has-siblings {"
-        "  border-image: none; image: none; }"
+        "  border-image: none; image: none; }")
+        .arg(Theme::Colors::bg2(), Theme::Colors::fg2(),
+             Theme::Colors::fg(), Theme::Colors::accent(), Theme::Colors::fg3())
     );
 
     treeLayout->addWidget(m_treeView, 1);
@@ -377,73 +381,7 @@ void FileTreeWidget::rebuildTreeModel()
     // Reserved for future multi-root tree implementation
 }
 
-void FileTreeWidget::applyTheme(bool isDark)
+void FileTreeWidget::applyTheme(bool /*isDark*/)
 {
-    if (isDark) {
-        setStyleSheet("background: #2a2a3c; border-right: 1px solid #45475a;");
-        m_headerLabel->setStyleSheet(
-            "QLabel { color: #a6adc8; font-size: 10px; font-weight: 700;"
-            " letter-spacing: 1px; }");
-        m_collapseBtn->setStyleSheet(
-            "QPushButton { color: #a6adc8; background: transparent;"
-            " font-size: 14px; border: none; padding: 0; }"
-            "QPushButton:hover { color: #cdd6f4; background: #3c3c54; border-radius: 4px; }");
-        m_emptyPage->setStyleSheet("background: #2a2a3c;");
-        m_emptyPage->findChild<QLabel*>()->setStyleSheet(
-            "QLabel { color: #a6adc8; font-size: 12px; }");
-        m_addWorkspaceBtn->setStyleSheet(
-            "QPushButton {"
-            "  color: #cdd6f4; background: #45475a; border: 1px solid #585b70;"
-            "  border-radius: 4px; padding: 6px 16px; font-size: 11px; font-weight: 600;"
-            "}"
-            "QPushButton:hover { background: #585b70; }");
-        m_treePage->setStyleSheet("background: #2a2a3c;");
-        m_treeView->setStyleSheet(
-            "QTreeView { background: #2a2a3c; color: #a6adc8; border: none; font-size: 12px; }"
-            "QTreeView::item { padding: 3px 6px; min-height: 24px; }"
-            "QTreeView::item:hover { background: #313244; }"
-            "QTreeView::item:selected { background: transparent; color: #cdd6f4;"
-            " border-left: 2px solid #89b4fa; }"
-            "QTreeView::item:selected:hover { background: #313244; }"
-            "QTreeView::branch { background: #2a2a3c; color: #6c7086; }"
-            "QTreeView::branch:has-children:!has-siblings:closed,"
-            "QTreeView::branch:closed:has-children:has-siblings {"
-            "  border-image: none; image: none; }"
-            "QTreeView::branch:open:has-children:!has-siblings,"
-            "QTreeView::branch:open:has-children:has-siblings {"
-            "  border-image: none; image: none; }");
-    } else {
-        setStyleSheet("background: #f5f5f5; border-right: 1px solid #d0d0d0;");
-        m_headerLabel->setStyleSheet(
-            "QLabel { color: #666666; font-size: 10px; font-weight: 700;"
-            " letter-spacing: 1px; background: transparent; }");
-        m_collapseBtn->setStyleSheet(
-            "QPushButton { color: #666666; background: transparent;"
-            " font-size: 14px; border: none; padding: 0; }"
-            "QPushButton:hover { color: #1e1e2e; background: #e0e0e0; border-radius: 4px; }");
-        m_emptyPage->setStyleSheet("background: #f5f5f5;");
-        m_emptyPage->findChild<QLabel*>()->setStyleSheet(
-            "QLabel { color: #666666; font-size: 12px; }");
-        m_addWorkspaceBtn->setStyleSheet(
-            "QPushButton {"
-            "  color: #1e1e2e; background: #e8e8e8; border: 1px solid #d0d0d0;"
-            "  border-radius: 4px; padding: 6px 16px; font-size: 11px; font-weight: 600;"
-            "}"
-            "QPushButton:hover { background: #d8d8d8; }");
-        m_treePage->setStyleSheet("background: #f5f5f5;");
-        m_treeView->setStyleSheet(
-            "QTreeView { background: #f5f5f5; color: #1e1e2e; border: none; font-size: 12px; }"
-            "QTreeView::item { padding: 3px 6px; min-height: 24px; }"
-            "QTreeView::item:hover { background: #e8e8e8; }"
-            "QTreeView::item:selected { background: transparent; color: #2563eb;"
-            " border-left: 2px solid #2563eb; }"
-            "QTreeView::item:selected:hover { background: #e8e8e8; }"
-            "QTreeView::branch { background: #f5f5f5; color: #999999; }"
-            "QTreeView::branch:has-children:!has-siblings:closed,"
-            "QTreeView::branch:closed:has-children:has-siblings {"
-            "  border-image: none; image: none; }"
-            "QTreeView::branch:open:has-children:!has-siblings,"
-            "QTreeView::branch:open:has-children:has-siblings {"
-            "  border-image: none; image: none; }");
-    }
+    // Theme::Colors auto-switches; stylesheets set in constructor are theme-aware.
 }

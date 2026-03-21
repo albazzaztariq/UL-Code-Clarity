@@ -1,4 +1,5 @@
 #include "core/favoritesbar.h"
+#include "core/theme.h"
 
 #include <QSettings>
 #include <QMenu>
@@ -76,7 +77,7 @@ void FavoritesBar::rebuildButtons()
         auto* sep = new QFrame(this);
         sep->setFrameShape(QFrame::VLine);
         sep->setFixedWidth(1);
-        sep->setStyleSheet("QFrame { background: #45475a; }");
+        sep->setStyleSheet(QString("QFrame { background: %1; }").arg(Theme::Colors::border()));
         m_layout->addWidget(sep);
     };
 
@@ -94,10 +95,11 @@ void FavoritesBar::rebuildButtons()
         btn->setContextMenuPolicy(Qt::CustomContextMenu);
 
         QString btnStyle = m_isDark
-            ? "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+            ? QString("QPushButton { background: #313244; color: %1; border: 1px solid %2;"
               " border-radius: 3px; padding: 0 10px; font-size: 11px; }"
-              "QPushButton:hover { background: #45475a; }"
-              "QPushButton:pressed { background: #585b70; }"
+              "QPushButton:hover { background: %2; }"
+              "QPushButton:pressed { background: #585b70; }")
+              .arg(Theme::Colors::fg(), Theme::Colors::border())
             : "QPushButton { background: #e0e0e8; color: #313244; border: 1px solid #b0b0c0;"
               " border-radius: 3px; padding: 0 10px; font-size: 11px; }"
               "QPushButton:hover { background: #c8c8d8; }"
@@ -152,12 +154,14 @@ void FavoritesBar::showAddToolDialog()
     dlg->setMinimumSize(300, 360);
 
     QString dlgStyle = m_isDark
-        ? "QDialog { background: #1e1e2e; color: #cdd6f4; }"
-          "QListWidget { background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
+        ? QString("QDialog { background: %1; color: %2; }"
+          "QListWidget { background: %3; color: %2; border: 1px solid %4;"
           " border-radius: 4px; font-size: 12px; }"
           "QListWidget::item:hover { background: #313244; }"
-          "QListWidget::item:selected { background: #45475a; color: #cdd6f4; }"
-          "QLabel { color: #a6adc8; font-size: 11px; }"
+          "QListWidget::item:selected { background: %4; color: %2; }"
+          "QLabel { color: %5; font-size: 11px; }")
+          .arg(Theme::Colors::bg(), Theme::Colors::fg(),
+               Theme::Colors::bg2(), Theme::Colors::border(), Theme::Colors::fg2())
         : "QDialog { background: #f0f0f8; color: #313244; }"
           "QListWidget { background: #ffffff; color: #313244; border: 1px solid #b0b0c0;"
           " border-radius: 4px; font-size: 12px; }"
@@ -184,10 +188,11 @@ void FavoritesBar::showAddToolDialog()
 
     auto* btnBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, dlg);
-    btnBox->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+    btnBox->setStyleSheet(QString(
+        "QPushButton { background: #313244; color: %1; border: 1px solid %2;"
         " border-radius: 4px; padding: 4px 14px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %2; }")
+        .arg(Theme::Colors::fg(), Theme::Colors::border()));
     lay->addWidget(btnBox);
 
     connect(btnBox, &QDialogButtonBox::accepted, dlg, [this, dlg, list]() {
@@ -242,10 +247,10 @@ void FavoritesBar::applyTheme(bool isDark)
     m_isDark = isDark;
     if (isDark) {
         setStyleSheet(
-            "FavoritesBar { background: #181825; border-bottom: 1px solid #313244; }");
+            "FavoritesBar { background: #181825; border-bottom: 1px solid #313244; }");  // bg5
     } else {
         setStyleSheet(
-            "FavoritesBar { background: #e8e8f0; border-bottom: 1px solid #c0c0d0; }");
+            "FavoritesBar { background: #e8e8f0; border-bottom: 1px solid #c0c0d0; }");  // light theme literals
     }
     rebuildButtons();
 }

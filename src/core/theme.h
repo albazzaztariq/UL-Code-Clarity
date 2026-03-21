@@ -40,6 +40,25 @@ inline QString colorStr(const QColor& c) {
     return c.name(QColor::HexRgb);
 }
 
+// ── Dynamic theme colors — switch with Colors::isDark ────────────────────────
+// Set Theme::Colors::isDark before building any widget to pick dark/light values.
+// Usage: QString ss = QString("background: %1;").arg(Theme::Colors::bg());
+struct Colors {
+    static bool isDark; // set by MainWindow::applyTheme
+    static const char* bg()     { return isDark ? "#1e1e2e" : "#ffffff"; }
+    static const char* bg2()    { return isDark ? "#2a2a3c" : "#f5f5f5"; }
+    static const char* bg3()    { return isDark ? "#333348" : "#e8e8e8"; }
+    static const char* bg4()    { return isDark ? "#3c3c54" : "#e0e0e0"; }
+    static const char* fg()     { return isDark ? "#cdd6f4" : "#1e1e2e"; }
+    static const char* fg2()    { return isDark ? "#a6adc8" : "#555555"; }
+    static const char* fg3()    { return isDark ? "#6c7086" : "#999999"; }
+    static const char* accent() { return isDark ? "#89b4fa" : "#2563eb"; }
+    static const char* border() { return isDark ? "#45475a" : "#d0d0d0"; }
+    static const char* green()  { return isDark ? "#a6e3a1" : "#22c55e"; }
+    static const char* red()    { return isDark ? "#f38ba8" : "#dc2626"; }
+    static const char* yellow() { return isDark ? "#f9e2af" : "#d97706"; }
+};
+
 // Unified theme stylesheet — pass isDark=true for Catppuccin Mocha, false for light
 inline QString themeStyleSheet(bool isDark) {
     // Color variables selected per theme

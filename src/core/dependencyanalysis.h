@@ -1,9 +1,8 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QPushButton>
 #include <QLabel>
-#include <QScrollArea>
 #include <QProcess>
 #include <QMap>
 #include <QList>
@@ -25,7 +24,7 @@ struct DepInfo {
 // Results shown as cards: name | version | status (green=ok, yellow=warn, red=vulnerable)
 // Each card has a "What is this?" that shows a description for known packages.
 // ============================================================================
-class DependencyAnalysisFrame : public QWidget {
+class DependencyAnalysisFrame : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -34,9 +33,6 @@ public:
     // Must be called before showing the frame
     void setCode(const QString& code, const QString& language,
                  const QString& filePath = QString());
-
-signals:
-    void backToEditor();
 
 private slots:
     void onScan();
@@ -64,15 +60,9 @@ private:
     static QMap<QString, QString> knownDescriptions();
 
     // ── Widgets ───────────────────────────────────────────────────────────
-    QPushButton* m_backBtn     = nullptr;
-    QPushButton* m_helpBtn     = nullptr;
     QPushButton* m_scanBtn     = nullptr;
-    QLabel*      m_statusLabel = nullptr;
-    QScrollArea* m_scroll      = nullptr;
     QWidget*     m_cardsWidget = nullptr;
 
     // ── State ─────────────────────────────────────────────────────────────
-    QString m_code;
-    QString m_language;
     QString m_filePath;
 };

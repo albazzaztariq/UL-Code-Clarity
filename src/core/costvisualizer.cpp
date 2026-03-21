@@ -236,25 +236,26 @@ CostVisualizerPanel::CostVisualizerPanel(QWidget* parent)
     lay->setSpacing(8);
 
     auto* icon = new QLabel("Cost Visualizer");
-    icon->setStyleSheet("color: #89b4fa; font-size: 11px; font-weight: bold;");
+    icon->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold;").arg(Theme::Colors::accent()));
     lay->addWidget(icon);
 
     m_statusLabel = new QLabel("Idle");
-    m_statusLabel->setStyleSheet("color: #a6adc8; font-size: 11px;");
+    m_statusLabel->setStyleSheet(QString("color: %1; font-size: 11px;").arg(Theme::Colors::fg2()));
     lay->addWidget(m_statusLabel, 1);
 
     m_stopBtn = new QPushButton("Stop");
     m_stopBtn->setFixedHeight(22);
     m_stopBtn->setCursor(Qt::PointingHandCursor);
-    m_stopBtn->setStyleSheet(
-        "QPushButton { background: #45475a; color: #cdd6f4; border-radius: 4px;"
+    m_stopBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border-radius: 4px;"
         " padding: 0 10px; font-size: 11px; }"
-        "QPushButton:hover { background: #585b70; }");
+        "QPushButton:hover { background: #585b70; }")
+        .arg(Theme::Colors::border(), Theme::Colors::fg()));
     lay->addWidget(m_stopBtn);
 
     connect(m_stopBtn, &QPushButton::clicked, this, &CostVisualizerPanel::stopRequested);
 
-    setStyleSheet("background: #181825; border-bottom: 1px solid #313244;");
+    setStyleSheet("background: #181825; border-bottom: 1px solid #313244;");  // bg5
     setFixedHeight(30);
 }
 
@@ -263,14 +264,5 @@ void CostVisualizerPanel::setStatus(const QString& text)
     if (m_statusLabel) m_statusLabel->setText(text);
 }
 
-void CostVisualizerPanel::applyTheme(bool isDark)
-{
-    m_isDark = isDark;
-    if (isDark) {
-        setStyleSheet("background: #181825; border-bottom: 1px solid #313244;");
-        if (m_statusLabel) m_statusLabel->setStyleSheet("color: #a6adc8; font-size: 11px;");
-    } else {
-        setStyleSheet("background: #f0f0f0; border-bottom: 1px solid #d0d0d0;");
-        if (m_statusLabel) m_statusLabel->setStyleSheet("color: #555555; font-size: 11px;");
-    }
-}
+void CostVisualizerPanel::applyTheme(bool /*isDark*/) {}
+

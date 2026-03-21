@@ -12,14 +12,13 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 # ── Sources ──────────────────────────────────────────────────────────────
 set(SOURCES
     main.cpp
+    core/theme.cpp
     core/mainwindow.cpp
     core/mainwindow_menus.cpp
     core/mainwindow_layout.cpp
     core/mainwindow_signals.cpp
-    core/custompipeline.cpp
     core/cvemonitor.cpp
     core/newsticker.cpp
-    core/workspace.cpp
     core/aibackend.cpp
     core/setupwizard.cpp
     core/settingspanel.cpp
@@ -39,7 +38,6 @@ set(SOURCES
     panels/levels.cpp
     core/runtimeanalysis.cpp
     core/optimizer.cpp
-    core/diffview.cpp
     core/sast.cpp
     core/dast.cpp
     core/securitytesting.cpp
@@ -51,8 +49,6 @@ set(SOURCES
     core/interactivebasics.cpp
     core/debugger.cpp
     core/debugbackend.cpp
-    core/executionrecorder.cpp
-    core/whatswrong.cpp
     core/costvisualizer.cpp
     core/rubberduck.cpp
     core/whatif.cpp
@@ -95,7 +91,6 @@ set(HEADERS
     panels/levels.h
     core/runtimeanalysis.h
     core/optimizer.h
-    core/diffview.h
     core/sast.h
     core/dast.h
     core/securitytesting.h
@@ -107,8 +102,6 @@ set(HEADERS
     core/interactivebasics.h
     core/debugger.h
     core/debugbackend.h
-    core/executionrecorder.h
-    core/whatswrong.h
     core/costvisualizer.h
     core/rubberduck.h
     core/whatif.h

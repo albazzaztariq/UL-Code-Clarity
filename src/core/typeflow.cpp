@@ -1,6 +1,8 @@
 #include "core/typeflow.h"
 #include "core/theme.h"
 
+using namespace Theme::Css;
+
 #include <QPainter>
 #include <QPainterPath>
 #include <QMouseEvent>
@@ -32,34 +34,19 @@ static const int RADIUS          = 8;
 TypeFlowCanvas::TypeFlowCanvas(QWidget* parent)
     : QWidget(parent)
 {
-    applyTheme(true);
+    // Initialize with dark (Catppuccin Mocha) colors via Theme::Css constants
+    m_isDark        = true;
+    m_bgColor       = QColor(BG);
+    m_nodeColor     = QColor("#313244");   // surface0, no Css constant
+    m_nodeBorder    = QColor("#585b70");   // overlay0, no Css constant
+    m_nodeTextColor = QColor(FG);
+    m_typeColor     = QColor(ACCENT);
+    m_arrowColor    = QColor(FG2);
+    m_errorColor    = QColor(RED);
+    m_portBg        = QColor(BORDER);
     setMinimumSize(400, 300);
 }
 
-void TypeFlowCanvas::applyTheme(bool isDark)
-{
-    m_isDark = isDark;
-    if (isDark) {
-        m_bgColor      = QColor("#1e1e2e");
-        m_nodeColor    = QColor("#313244");
-        m_nodeBorder   = QColor("#585b70");
-        m_nodeTextColor= QColor("#cdd6f4");
-        m_typeColor    = QColor("#89b4fa");
-        m_arrowColor   = QColor("#a6adc8");
-        m_errorColor   = QColor("#f38ba8");
-        m_portBg       = QColor("#45475a");
-    } else {
-        m_bgColor      = QColor("#f5f5f5");
-        m_nodeColor    = QColor("#ffffff");
-        m_nodeBorder   = QColor("#bdbdbd");
-        m_nodeTextColor= QColor("#1c1c2e");
-        m_typeColor    = QColor("#1565c0");
-        m_arrowColor   = QColor("#616161");
-        m_errorColor   = QColor("#c62828");
-        m_portBg       = QColor("#e0e0e0");
-    }
-    update();
-}
 
 void TypeFlowCanvas::setNodes(const QVector<FuncNode>& nodes, const QVector<FlowEdge>& edges)
 {
@@ -582,54 +569,12 @@ QVector<FlowEdge> TypeFlowFrame::buildEdges(const QVector<FuncNode>& nodes,
 // ============================================================================
 
 TypeFlowFrame::TypeFlowFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Type Flow", parent)
 {
-    auto* mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-
-    // ── Header bar ────────────────────────────────────────────────────────────
-    auto* headerBar = new QWidget;
-    headerBar->setFixedHeight(44);
-    headerBar->setStyleSheet("background: #181825; border-bottom: 1px solid #313244;");
-    auto* headerLayout = new QHBoxLayout(headerBar);
-    headerLayout->setContentsMargins(12, 0, 12, 0);
-    headerLayout->setSpacing(10);
-
-    m_backBtn = new QPushButton("Back to Editor");
-    m_backBtn->setFixedHeight(28);
-    m_backBtn->setCursor(Qt::PointingHandCursor);
-    m_backBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-        " border-radius: 4px; padding: 0 12px; font-size: 12px; }"
-        "QPushButton:hover { background: #45475a; }");
-    headerLayout->addWidget(m_backBtn);
-
-    auto* titleLabel = new QLabel("Type Flow");
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;"
-                              " background: transparent;");
-    headerLayout->addWidget(titleLabel);
-    headerLayout->addStretch();
-
-    m_statusLabel = new QLabel("Click 'Run Analysis' to scan your code.");
-    m_statusLabel->setStyleSheet("color: #a6adc8; font-size: 12px; background: transparent;");
-    headerLayout->addWidget(m_statusLabel);
-
-    m_runBtn = new QPushButton("Run Analysis");
-    m_runBtn->setFixedHeight(28);
-    m_runBtn->setCursor(Qt::PointingHandCursor);
-    m_runBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
-        " border-radius: 4px; padding: 0 14px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background: #74c7ec; }");
-    headerLayout->addWidget(m_runBtn);
-
-    mainLayout->addWidget(headerBar);
-
     // ── Legend bar ────────────────────────────────────────────────────────────
     auto* legendBar = new QWidget;
     legendBar->setFixedHeight(28);
-    legendBar->setStyleSheet("background: #1e1e2e; border-bottom: 1px solid #313244;");
+    legendBar->setStyleSheet(QString("background: %1; border-bottom: 1px solid #313244;").arg(BG));
     auto* legendLayout = new QHBoxLayout(legendBar);
     legendLayout->setContentsMargins(16, 0, 16, 0);
     legendLayout->setSpacing(18);
@@ -641,48 +586,55 @@ TypeFlowFrame::TypeFlowFrame(QWidget* parent)
         dot->setFixedSize(10, 10);
         dot->setStyleSheet(QString("background: %1; border-radius: 5px;").arg(color));
         auto* lbl = new QLabel(text);
-        lbl->setStyleSheet("color: #a6adc8; font-size: 11px; background: transparent;");
+        lbl->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;").arg(FG2));
         row->addWidget(dot);
         row->addWidget(lbl);
         legendLayout->addLayout(row);
     };
 
-    makeLegend("#89b4fa", "Type port");
-    makeLegend("#f38ba8", "Type error");
-    makeLegend("#a6adc8", "Data flow arrow");
+    makeLegend(ACCENT, "Type port");
+    makeLegend(RED,    "Type error");
+    makeLegend(FG2,    "Data flow arrow");
     legendLayout->addStretch();
     auto* hint = new QLabel("Click any function box to jump to it in the editor");
-    hint->setStyleSheet("color: #585b70; font-size: 11px; background: transparent;");
+    hint->setStyleSheet("color: #585b70; font-size: 11px; background: transparent;");  // overlay0, no Css constant
     legendLayout->addWidget(hint);
 
-    mainLayout->addWidget(legendBar);
+    // Run button control bar
+    m_runBtn = new QPushButton("Run Analysis");
+    m_runBtn->setFixedHeight(28);
+    m_runBtn->setCursor(Qt::PointingHandCursor);
+    m_runBtn->setStyleSheet(
+        QString("QPushButton { background: %1; color: %2; border: none;"
+        " border-radius: 4px; padding: 0 14px; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background: %3; }").arg(ACCENT, BG, ACCENT2));
 
     // ── Scrollable canvas ─────────────────────────────────────────────────────
     m_canvas = new TypeFlowCanvas;
     m_scroll = new QScrollArea;
     m_scroll->setWidget(m_canvas);
     m_scroll->setWidgetResizable(false);
-    m_scroll->setStyleSheet("QScrollArea { background: #1e1e2e; border: none; }");
-    mainLayout->addWidget(m_scroll, 1);
+    m_scroll->setStyleSheet(QString("QScrollArea { background: %1; border: none; }").arg(BG));
+
+    // Insert controls and canvas into inherited results area
+    addResultWidget(legendBar);
+    addResultWidget(m_runBtn);
+    addResultWidget(m_scroll);
+
+    // ── Status label ──────────────────────────────────────────────────────────
+    setStatus("Click 'Run Analysis' to scan your code.");
 
     // ── Connections ───────────────────────────────────────────────────────────
-    connect(m_backBtn, &QPushButton::clicked, this, &TypeFlowFrame::backToEditor);
     connect(m_runBtn,  &QPushButton::clicked, this, &TypeFlowFrame::onRunAnalysis);
     connect(m_canvas,  &TypeFlowCanvas::funcClicked, this, &TypeFlowFrame::onFuncClicked);
 }
 
 void TypeFlowFrame::setCode(const QString& code, const QString& language)
 {
-    m_code     = code;
-    m_language = language;
-    m_statusLabel->setText("Click 'Run Analysis' to scan your code.");
+    AnalysisFrame::setCode(code, language);
+    setStatus("Click 'Run Analysis' to scan your code.");
 }
 
-void TypeFlowFrame::applyTheme(bool isDark)
-{
-    m_isDark = isDark;
-    if (m_canvas) m_canvas->applyTheme(isDark);
-}
 
 void TypeFlowFrame::onRunAnalysis()
 {
@@ -723,6 +675,6 @@ void TypeFlowFrame::onRunAnalysis()
 
 void TypeFlowFrame::onFuncClicked(int sourceLine)
 {
-    emit jumpToLine(sourceLine);
+    emit jumpToLine(QString(), sourceLine);
     emit backToEditor();
 }

@@ -1,8 +1,14 @@
 #include "core/debugger.h"
+#include "core/analysisframe.h"
 #include "core/debugbackend.h"
-#include "core/executionrecorder.h"
-#include "core/whatswrong.h"
 #include "core/theme.h"
+#include "core/jsonloader.h"
+
+#include <QRegularExpression>
+#include <QJsonArray>
+#include <QJsonObject>
+
+using C = Theme::Colors;
 
 #include <QPainter>
 #include <QMouseEvent>
@@ -17,6 +23,149 @@
 #include <QFile>
 #include <QTimer>
 #include <QPropertyAnimation>
+
+// ═══════════════════════════════════════════════════════════════════════
+// WhatsWrongAnalyzer  (merged from whatswrong.cpp)
+// ═══════════════════════════════════════════════════════════════════════
+
+WhatsWrongAnalyzer::WhatsWrongAnalyzer(QObject* parent)
+    : QObject(parent)
+{
+    QJsonArray arr = JsonLoader::loadArray("errors.json", "error_types");
+    for (const QJsonValue& v : arr)
+        m_errorTypes.append(v.toObject());
+}
+
+QList<PossibleCause> WhatsWrongAnalyzer::analyzeError(const QString& errorMessage,
+                                                        const QString& /*code*/,
+                                                        int crashLine) const
+{
+    QList<PossibleCause> causes;
+    QString msg = errorMessage.toLower();
+
+    for (const QJsonObject& et : m_errorTypes) {
+        bool matched = false;
+        if (et.contains("match")) {
+            matched = msg.contains(et["match"].toString());
+        } else if (et.contains("match_any")) {
+            for (const QJsonValue& m : et["match_any"].toArray()) {
+                if (msg.contains(m.toString())) { matched = true; break; }
+            }
+        }
+        if (!matched) continue;
+
+        PossibleCause c;
+        c.title        = et["title"].toString();
+        c.relevantLine = crashLine;
+
+        bool patternMatched = false;
+        if (et.contains("patterns")) {
+            for (const QJsonValue& pv : et["patterns"].toArray()) {
+                QJsonObject p = pv.toObject();
+                QRegularExpression re(p["regex"].toString());
+                auto m = re.match(errorMessage);
+                if (m.hasMatch()) {
+                    QString expl = p["explanation_template"].toString();
+                    QString fix  = p.contains("fix") ? p["fix"].toString()
+                                                     : p["fix_template"].toString();
+                    for (int i = 1; i <= m.lastCapturedIndex(); ++i) {
+                        expl.replace(QString("%%1").arg(i), m.captured(i));
+                        fix.replace(QString("%%1").arg(i), m.captured(i));
+                    }
+                    c.explanation  = expl;
+                    c.suggestedFix = fix;
+                    patternMatched = true;
+                    break;
+                }
+            }
+        }
+        if (!patternMatched && et.contains("regex")) {
+            QRegularExpression re(et["regex"].toString());
+            auto m = re.match(errorMessage);
+            if (m.hasMatch()) {
+                QString captured = m.captured(et["capture_group"].toInt(1));
+                c.explanation  = et["explanation_with_var"].toString().replace("%1", captured);
+                c.suggestedFix = et["fix_with_var"].toString().replace("%1", captured);
+                patternMatched = true;
+            }
+        }
+        if (!patternMatched) {
+            c.explanation  = et["explanation_generic"].toString();
+            c.suggestedFix = et["fix_generic"].toString();
+        }
+
+        causes.append(c);
+    }
+
+    return causes;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ExecutionRecorder  (merged from executionrecorder.cpp)
+// ═══════════════════════════════════════════════════════════════════════
+
+ExecutionRecorder::ExecutionRecorder(QObject* parent)
+    : QObject(parent)
+{
+    m_buffer.resize(MAX_SNAPSHOTS);
+}
+
+void ExecutionRecorder::record(int line,
+                                const QMap<QString, QVariant>& variables,
+                                const QStringList& callStack)
+{
+    if (variables.size() > MEMORY_WARN_VARS) {
+        emit memoryWarning(
+            QString("Watch out: %1 variables in scope. Recording may use significant memory.")
+                .arg(variables.size()));
+    }
+
+    ExecutionSnapshot snap;
+    snap.line      = line;
+    snap.variables = variables;
+    snap.callStack = callStack;
+
+    m_buffer[m_head] = snap;
+    m_head = (m_head + 1) % MAX_SNAPSHOTS;
+    if (m_count < MAX_SNAPSHOTS)
+        ++m_count;
+
+    m_position = 0;
+}
+
+bool ExecutionRecorder::stepBack(ExecutionSnapshot& snap)
+{
+    if (m_position >= m_count - 1)
+        return false;
+
+    ++m_position;
+    int idx = ((m_head - 1 - m_position) % MAX_SNAPSHOTS + MAX_SNAPSHOTS) % MAX_SNAPSHOTS;
+    snap = m_buffer[idx];
+    return true;
+}
+
+bool ExecutionRecorder::stepForward(ExecutionSnapshot& snap)
+{
+    if (m_position <= 0)
+        return false;
+
+    --m_position;
+    int idx = ((m_head - 1 - m_position) % MAX_SNAPSHOTS + MAX_SNAPSHOTS) % MAX_SNAPSHOTS;
+    snap = m_buffer[idx];
+    return true;
+}
+
+void ExecutionRecorder::reset()
+{
+    m_head     = 0;
+    m_count    = 0;
+    m_position = 0;
+    for (auto& s : m_buffer) {
+        s.line = 0;
+        s.variables.clear();
+        s.callStack.clear();
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // DebugEditor
@@ -64,7 +213,7 @@ QSize CodeGutter::sizeHint() const
 void CodeGutter::paintEvent(QPaintEvent* /*event*/)
 {
     QPainter p(this);
-    p.fillRect(rect(), QColor("#1a1a2e"));
+    p.fillRect(rect(), QColor(C::bg()));
 
     QTextBlock block = m_editor->firstBlock();
     int blockNumber = block.blockNumber();
@@ -81,7 +230,7 @@ void CodeGutter::paintEvent(QPaintEvent* /*event*/)
             }
 
             // Line number text
-            p.setPen(lineNum == m_currentLine ? QColor("#f1fa8c") : QColor("#4a4a6a"));
+            p.setPen(lineNum == m_currentLine ? QColor(C::yellow()) : QColor(C::fg3()));
             p.setFont(m_editor->font());
             p.drawText(2, top, width() - 16, bottom - top,
                        Qt::AlignRight | Qt::AlignVCenter,
@@ -90,15 +239,15 @@ void CodeGutter::paintEvent(QPaintEvent* /*event*/)
             // Breakpoint dot
             if (m_breakpoints.contains(lineNum)) {
                 p.setPen(Qt::NoPen);
-                p.setBrush(QColor("#f38ba8"));
+                p.setBrush(QColor(C::red()));
                 int cy = top + (bottom - top) / 2;
                 p.drawEllipse(width() - 12, cy - 5, 10, 10);
             }
 
             // Current line arrow
             if (lineNum == m_currentLine) {
-                p.setPen(QColor("#a6e3a1"));
-                p.setBrush(QColor("#a6e3a1"));
+                p.setPen(QColor(C::green()));
+                p.setBrush(QColor(C::green()));
                 int cy = top + (bottom - top) / 2;
                 QPolygon arrow;
                 arrow << QPoint(2, cy - 4) << QPoint(10, cy) << QPoint(2, cy + 4);
@@ -147,13 +296,14 @@ DebugCodeView::DebugCodeView(QWidget* parent)
     m_editor->setReadOnly(true);
     m_editor->setLineWrapMode(QPlainTextEdit::NoWrap);
     m_editor->setStyleSheet(
-        "QPlainTextEdit {"
-        " background: #1e1e2e; color: #cdd6f4;"
+        QString("QPlainTextEdit {"
+        " background: %1; color: %2;"
         " font-family: 'Cascadia Code', 'Consolas', monospace;"
         " font-size: 12px; border: none; }"
-        "QScrollBar:vertical { background: #181825; width: 8px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+        "QScrollBar:vertical { background: %1; width: 8px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 4px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }")
+        .arg(C::bg(), C::fg(), C::border()));
 
     m_gutter = new CodeGutter(m_editor, this);
     lay->addWidget(m_gutter);
@@ -245,15 +395,16 @@ WatchPanel::WatchPanel(QWidget* parent)
     header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     header()->setSectionResizeMode(2, QHeaderView::Stretch);
     setStyleSheet(
-        "QTreeWidget {"
-        " background: #1a1a2e; color: #cdd6f4;"
+        QString("QTreeWidget {"
+        " background: %1; color: %2;"
         " font-family: 'Cascadia Code', 'Consolas', monospace;"
         " font-size: 11px; border: none; }"
         "QTreeWidget::item { padding: 2px 4px; }"
-        "QTreeWidget::item:selected { background: #313244; }"
+        "QTreeWidget::item:selected { background: %3; }"
         "QHeaderView::section {"
-        " background: #181825; color: #a6adc8; font-size: 10px;"
-        " border: none; padding: 3px 6px; border-bottom: 1px solid #313244; }");
+        " background: %1; color: %4; font-size: 10px;"
+        " border: none; padding: 3px 6px; border-bottom: 1px solid %3; }")
+        .arg(C::bg(), C::fg(), C::bg2(), C::fg2()));
     setRootIsDecorated(false);
     setAlternatingRowColors(true);
 }
@@ -283,9 +434,9 @@ void WatchPanel::updateVariables(const QMap<QString, QVariant>& vars)
 
 void WatchPanel::flashItem(QTreeWidgetItem* item)
 {
-    item->setBackground(0, QColor("#f1fa8c"));
-    item->setBackground(1, QColor("#f1fa8c"));
-    item->setBackground(2, QColor("#f1fa8c"));
+    item->setBackground(0, QColor(C::yellow()));
+    item->setBackground(1, QColor(C::yellow()));
+    item->setBackground(2, QColor(C::yellow()));
 
     QTimer::singleShot(600, this, [this, item]() {
         // item may be gone after clear(); safe because we only schedule during update
@@ -299,42 +450,42 @@ void WatchPanel::flashItem(QTreeWidgetItem* item)
 // ═══════════════════════════════════════════════════════════════════════
 
 DebugFrame::DebugFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Debugger", parent)
 {
     m_backend  = new DebugBackend(this);
     m_recorder = new ExecutionRecorder(this);
     m_analyzer = new WhatsWrongAnalyzer(this);
 
-    auto* outerLayout = new QVBoxLayout(this);
+    // Container widget that fills the inherited results area
+    auto* container = new QWidget;
+    auto* outerLayout = new QVBoxLayout(container);
     outerLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->setSpacing(0);
-
-    setStyleSheet("background: #1e1e2e;");
 
     // ── Toolbar ──────────────────────────────────────────────────────
     auto* toolbar = new QWidget;
     toolbar->setFixedHeight(40);
     toolbar->setStyleSheet(
-        "background: #2a2a3c; border-bottom: 1px solid #313244;");
+        QString("background: %1; border-bottom: 1px solid %2;").arg(C::bg2(), C::bg2()));
     buildToolbar(toolbar);
     outerLayout->addWidget(toolbar);
 
     // ── Main 4-pane split ────────────────────────────────────────────
     auto* hSplit = new QSplitter(Qt::Horizontal);
     hSplit->setHandleWidth(1);
-    hSplit->setStyleSheet("QSplitter::handle { background: #313244; }");
+    hSplit->setStyleSheet(QString("QSplitter::handle { background: %1; }").arg(C::bg2()));
 
     // Left column: code view (top) + call stack (bottom)
     auto* leftSplit = new QSplitter(Qt::Vertical);
     leftSplit->setHandleWidth(1);
-    leftSplit->setStyleSheet("QSplitter::handle { background: #313244; }");
+    leftSplit->setStyleSheet(QString("QSplitter::handle { background: %1; }").arg(C::bg2()));
 
     m_codeView = new DebugCodeView;
     leftSplit->addWidget(m_codeView);
 
     // Call stack panel
     auto* callStackWrapper = new QWidget;
-    callStackWrapper->setStyleSheet("background: #1a1a2e;");
+    callStackWrapper->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* csLayout = new QVBoxLayout(callStackWrapper);
     csLayout->setContentsMargins(0, 0, 0, 0);
     csLayout->setSpacing(0);
@@ -342,19 +493,21 @@ DebugFrame::DebugFrame(QWidget* parent)
     auto* csHeader = new QLabel("  Call Stack");
     csHeader->setFixedHeight(22);
     csHeader->setStyleSheet(
-        "QLabel { background: #181825; color: #a6adc8; font-size: 10px;"
-        " border-bottom: 1px solid #313244; padding: 0 6px; }");
+        QString("QLabel { background: %1; color: %2; font-size: 10px;"
+        " border-bottom: 1px solid %3; padding: 0 6px; }")
+        .arg(C::bg(), C::fg2(), C::bg2()));
     csLayout->addWidget(csHeader);
 
     m_callStack = new QListWidget;
     m_callStack->setStyleSheet(
-        "QListWidget {"
-        " background: #1a1a2e; color: #cdd6f4;"
+        QString("QListWidget {"
+        " background: %1; color: %2;"
         " font-family: 'Cascadia Code', 'Consolas', monospace;"
         " font-size: 11px; border: none; }"
         "QListWidget::item { padding: 3px 8px; }"
-        "QListWidget::item:selected { background: #313244; color: #89b4fa; }"
-        "QListWidget::item:hover { background: #2a2a3c; }");
+        "QListWidget::item:selected { background: %3; color: %4; }"
+        "QListWidget::item:hover { background: %3; }")
+        .arg(C::bg(), C::fg(), C::bg2(), C::accent()));
     csLayout->addWidget(m_callStack, 1);
     leftSplit->addWidget(callStackWrapper);
     leftSplit->setSizes({600, 200});
@@ -364,11 +517,11 @@ DebugFrame::DebugFrame(QWidget* parent)
     // Right column: watch panel (top) + console (bottom)
     auto* rightSplit = new QSplitter(Qt::Vertical);
     rightSplit->setHandleWidth(1);
-    rightSplit->setStyleSheet("QSplitter::handle { background: #313244; }");
+    rightSplit->setStyleSheet(QString("QSplitter::handle { background: %1; }").arg(C::bg2()));
 
     // Watch panel
     auto* watchWrapper = new QWidget;
-    watchWrapper->setStyleSheet("background: #1a1a2e;");
+    watchWrapper->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* watchLayout = new QVBoxLayout(watchWrapper);
     watchLayout->setContentsMargins(0, 0, 0, 0);
     watchLayout->setSpacing(0);
@@ -376,8 +529,9 @@ DebugFrame::DebugFrame(QWidget* parent)
     auto* watchHeader = new QLabel("  Watch Panel");
     watchHeader->setFixedHeight(22);
     watchHeader->setStyleSheet(
-        "QLabel { background: #181825; color: #a6adc8; font-size: 10px;"
-        " border-bottom: 1px solid #313244; padding: 0 6px; }");
+        QString("QLabel { background: %1; color: %2; font-size: 10px;"
+        " border-bottom: 1px solid %3; padding: 0 6px; }")
+        .arg(C::bg(), C::fg2(), C::bg2()));
     watchLayout->addWidget(watchHeader);
 
     m_watchPanel = new WatchPanel;
@@ -386,7 +540,7 @@ DebugFrame::DebugFrame(QWidget* parent)
 
     // Console
     auto* consoleWrapper = new QWidget;
-    consoleWrapper->setStyleSheet("background: #181825;");
+    consoleWrapper->setStyleSheet(QString("background: %1;").arg(C::bg()));
     auto* consoleLayout = new QVBoxLayout(consoleWrapper);
     consoleLayout->setContentsMargins(0, 0, 0, 0);
     consoleLayout->setSpacing(0);
@@ -394,20 +548,22 @@ DebugFrame::DebugFrame(QWidget* parent)
     auto* consoleHeader = new QLabel("  Debug Console");
     consoleHeader->setFixedHeight(22);
     consoleHeader->setStyleSheet(
-        "QLabel { background: #181825; color: #a6adc8; font-size: 10px;"
-        " border-bottom: 1px solid #313244; border-top: 1px solid #313244; padding: 0 6px; }");
+        QString("QLabel { background: %1; color: %2; font-size: 10px;"
+        " border-bottom: 1px solid %3; border-top: 1px solid %3; padding: 0 6px; }")
+        .arg(C::bg(), C::fg2(), C::bg2()));
     consoleLayout->addWidget(consoleHeader);
 
     m_console = new QPlainTextEdit;
     m_console->setReadOnly(true);
     m_console->setStyleSheet(
-        "QPlainTextEdit {"
-        " background: #181825; color: #a6e3a1;"
+        QString("QPlainTextEdit {"
+        " background: %1; color: %2;"
         " font-family: 'Cascadia Code', 'Consolas', monospace;"
         " font-size: 11px; border: none; padding: 4px; }"
-        "QScrollBar:vertical { background: #181825; width: 8px; }"
-        "QScrollBar::handle:vertical { background: #45475a; border-radius: 4px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
+        "QScrollBar:vertical { background: %1; width: 8px; }"
+        "QScrollBar::handle:vertical { background: %3; border-radius: 4px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }")
+        .arg(C::bg(), C::green(), C::border()));
     consoleLayout->addWidget(m_console, 1);
     rightSplit->addWidget(consoleWrapper);
     rightSplit->setSizes({400, 200});
@@ -422,28 +578,9 @@ DebugFrame::DebugFrame(QWidget* parent)
     outerLayout->addWidget(m_whatsWrongPanel);
     m_whatsWrongPanel->hide();
 
-    // ── Status bar ───────────────────────────────────────────────────
-    auto* statusBar = new QWidget;
-    statusBar->setFixedHeight(24);
-    statusBar->setStyleSheet("background: #181825; border-top: 1px solid #313244;");
-    auto* statusLayout = new QHBoxLayout(statusBar);
-    statusLayout->setContentsMargins(8, 0, 8, 0);
-
-    m_statusLabel = new QLabel("Debugger ready");
-    m_statusLabel->setStyleSheet("QLabel { color: #a6adc8; font-size: 10px; }");
-    statusLayout->addWidget(m_statusLabel);
-    statusLayout->addStretch();
-
-    auto* closeBtn = new QPushButton("Back to Editor");
-    closeBtn->setFixedHeight(18);
-    closeBtn->setStyleSheet(
-        "QPushButton { background: transparent; color: #6c7086; border: none;"
-        " font-size: 10px; }"
-        "QPushButton:hover { color: #cdd6f4; }");
-    connect(closeBtn, &QPushButton::clicked, this, &DebugFrame::closeRequested);
-    statusLayout->addWidget(closeBtn);
-
-    outerLayout->addWidget(statusBar);
+    // Add the entire content container into the inherited results area
+    addResultWidget(container);
+    setStatus("Debugger ready");
 
     // ── Wire backend signals ─────────────────────────────────────────
     connect(m_backend, &DebugBackend::lineChanged,
@@ -487,12 +624,13 @@ void DebugFrame::buildToolbar(QWidget* toolbar)
         btn->setToolTip(tip);
         btn->setCursor(Qt::PointingHandCursor);
         btn->setStyleSheet(
-            "QPushButton { background: #313244; color: #cdd6f4;"
-            " border: 1px solid #45475a; border-radius: 5px;"
+            QString("QPushButton { background: %1; color: %2;"
+            " border: 1px solid %3; border-radius: 5px;"
             " font-size: 14px; padding: 0; }"
-            "QPushButton:hover { background: #3c3c54; }"
-            "QPushButton:pressed { background: #45475a; }"
-            "QPushButton:disabled { color: #4a4a6a; background: #252535; border-color: #313244; }");
+            "QPushButton:hover { background: %4; }"
+            "QPushButton:pressed { background: %3; }"
+            "QPushButton:disabled { color: %5; background: %1; border-color: %1; }")
+            .arg(C::bg2(), C::fg(), C::border(), C::bg3(), C::fg3()));
         return btn;
     };
 
@@ -512,7 +650,7 @@ void DebugFrame::buildToolbar(QWidget* toolbar)
     auto* sep = new QFrame;
     sep->setFrameShape(QFrame::VLine);
     sep->setFixedHeight(16);
-    sep->setStyleSheet("color: #45475a;");
+    sep->setStyleSheet(QString("color: %1;").arg(C::border()));
     lay->addWidget(sep);
 
     lay->addWidget(m_backBtn);
@@ -526,21 +664,22 @@ void DebugFrame::buildToolbar(QWidget* toolbar)
     helpBtn->setFixedSize(26, 26);
     helpBtn->setCursor(Qt::PointingHandCursor);
     helpBtn->setStyleSheet(
-        "QPushButton { background: transparent; color: #a6adc8;"
+        QString("QPushButton { background: transparent; color: %1;"
         " border-radius: 13px; font-size: 14px; border: none; }"
-        "QPushButton:hover { color: #cdd6f4; }");
+        "QPushButton:hover { color: %2; }")
+        .arg(C::fg2(), C::fg()));
     connect(helpBtn, &QPushButton::clicked, this, [this]() {
         auto* dlg = new QDialog(this);
         dlg->setWindowTitle("Using the Debugger");
         dlg->setModal(true);
         dlg->setMinimumWidth(480);
-        dlg->setStyleSheet("background: #1e1e2e;");
+        dlg->setStyleSheet(QString("background: %1;").arg(C::bg()));
         auto* lay = new QVBoxLayout(dlg);
         lay->setContentsMargins(22, 18, 22, 18);
         lay->setSpacing(12);
 
         auto* title = new QLabel("How to Debug Your Code");
-        title->setStyleSheet("color: #cdd6f4; font-size: 16px; font-weight: bold;");
+        title->setStyleSheet(QString("color: %1; font-size: 16px; font-weight: bold;").arg(C::fg()));
         lay->addWidget(title);
 
         const QString helpText =
@@ -576,9 +715,10 @@ void DebugFrame::buildToolbar(QWidget* toolbar)
 
         auto* closeBtn = new QPushButton("Close");
         closeBtn->setStyleSheet(
-            "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+            QString("QPushButton { background: %1; color: %2; border: 1px solid %3;"
             " border-radius: 6px; padding: 0 18px; font-size: 13px; min-height: 30px; }"
-            "QPushButton:hover { background: #45475a; }");
+            "QPushButton:hover { background: %3; }")
+            .arg(C::bg2(), C::fg(), C::border()));
         closeBtn->setCursor(Qt::PointingHandCursor);
         connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
         auto* btnRow = new QHBoxLayout;
@@ -606,7 +746,7 @@ void DebugFrame::buildWhatsWrongPanel()
     m_whatsWrongPanel = new QWidget;
     m_whatsWrongPanel->setFixedHeight(120);
     m_whatsWrongPanel->setStyleSheet(
-        "background: #2a1a1a; border-top: 2px solid #f38ba8;");
+        QString("background: %1; border-top: 2px solid %2;").arg(C::bg2(), C::red()));
 
     auto* lay = new QVBoxLayout(m_whatsWrongPanel);
     lay->setContentsMargins(12, 8, 12, 8);
@@ -614,22 +754,23 @@ void DebugFrame::buildWhatsWrongPanel()
 
     auto* headerRow = new QHBoxLayout;
     auto* wwTitle = new QLabel("What Could Be Wrong?");
-    wwTitle->setStyleSheet("color: #f38ba8; font-size: 12px; font-weight: bold;");
+    wwTitle->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold;").arg(C::red()));
     headerRow->addWidget(wwTitle);
     headerRow->addStretch();
 
     auto* wwClose = new QPushButton(QChar(0x2715));
     wwClose->setFixedSize(16, 16);
     wwClose->setStyleSheet(
-        "QPushButton { background: transparent; color: #6c7086; border: none; font-size: 11px; }"
-        "QPushButton:hover { color: #cdd6f4; }");
+        QString("QPushButton { background: transparent; color: %1; border: none; font-size: 11px; }"
+        "QPushButton:hover { color: %2; }")
+        .arg(C::fg3(), C::fg()));
     connect(wwClose, &QPushButton::clicked, this, &DebugFrame::hideWhatsWrongPanel);
     headerRow->addWidget(wwClose);
     lay->addLayout(headerRow);
 
     m_whatsWrongContent = new QLabel;
     m_whatsWrongContent->setWordWrap(true);
-    m_whatsWrongContent->setStyleSheet("color: #cdd6f4; font-size: 11px;");
+    m_whatsWrongContent->setStyleSheet(QString("color: %1; font-size: 11px;").arg(C::fg()));
     m_whatsWrongContent->setTextFormat(Qt::RichText);
     lay->addWidget(m_whatsWrongContent);
 }

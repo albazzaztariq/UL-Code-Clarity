@@ -1,72 +1,33 @@
 #include "core/fullreport.h"
+#include "core/theme.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFrame>
-#include <QScrollArea>
 #include <QPushButton>
 #include <QLabel>
+
+using namespace Theme::Css;
 
 // ============================================================================
 // FullReportFrame — constructor
 // ============================================================================
 
 FullReportFrame::FullReportFrame(QWidget* parent)
-    : QWidget(parent)
+    : AnalysisFrame("Full Report + Score", parent)
 {
-    setStyleSheet("background: #1e1e2e;");
-
-    auto* mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-
-    // ── Header bar ────────────────────────────────────────────────────────
-    auto* header = new QWidget;
-    header->setFixedHeight(48);
-    header->setStyleSheet("background: #181825; border-bottom: 1px solid #313244;");
-    auto* hLayout = new QHBoxLayout(header);
-    hLayout->setContentsMargins(12, 0, 12, 0);
-
-    auto* backBtn = new QPushButton("Back to Editor");
-    backBtn->setCursor(Qt::PointingHandCursor);
-    backBtn->setStyleSheet(
-        "QPushButton { background: none; color: #89b4fa; font-size: 12px; border: none; }"
-        "QPushButton:hover { color: #cdd6f4; }");
-    connect(backBtn, &QPushButton::clicked, this, &FullReportFrame::backToEditor);
-    hLayout->addWidget(backBtn);
-
-    hLayout->addStretch();
-
-    auto* titleLabel = new QLabel("Full Report");
-    titleLabel->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;"
-                              " background: transparent;");
-    hLayout->addWidget(titleLabel);
-
-    hLayout->addStretch();
-
-    auto* helpBtn = new QPushButton("?");
-    helpBtn->setFixedSize(24, 24);
-    helpBtn->setCursor(Qt::PointingHandCursor);
-    helpBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border-radius: 12px; font-size: 12px; border: none; }"
-        "QPushButton:hover { background: #45475a; }");
-    connect(helpBtn, &QPushButton::clicked, this, &FullReportFrame::onHelpClicked);
-    hLayout->addWidget(helpBtn);
-
-    mainLayout->addWidget(header);
-
-    // ── Score header ──────────────────────────────────────────────────────
+    // ── Score header (unique) ──────────────────────────────────────────────────
     auto* scoreArea = new QWidget;
     scoreArea->setFixedHeight(100);
-    scoreArea->setStyleSheet("background: #181825; border-bottom: 1px solid #313244;");
+    scoreArea->setStyleSheet(QString("background: %1; border-bottom: 1px solid #313244;").arg(BG5));
     auto* scoreLayout = new QVBoxLayout(scoreArea);
     scoreLayout->setContentsMargins(0, 8, 0, 8);
     scoreLayout->setSpacing(4);
     scoreLayout->setAlignment(Qt::AlignCenter);
 
     m_gradeLabel = new QLabel("--");
-    m_gradeLabel->setStyleSheet("color: #cdd6f4; font-size: 48px; font-weight: bold;"
-                                " background: transparent;");
+    m_gradeLabel->setStyleSheet(QString("color: %1; font-size: 48px; font-weight: bold;"
+                                " background: transparent;").arg(FG));
     m_gradeLabel->setAlignment(Qt::AlignCenter);
     scoreLayout->addWidget(m_gradeLabel);
 
@@ -75,43 +36,27 @@ FullReportFrame::FullReportFrame(QWidget* parent)
     m_subGradeLabel->setAlignment(Qt::AlignCenter);
     scoreLayout->addWidget(m_subGradeLabel);
 
-    mainLayout->addWidget(scoreArea);
+    m_resultsLayout->insertWidget(0, scoreArea);
 
-    // ── Run button ────────────────────────────────────────────────────────
+    // ── Run button ────────────────────────────────────────────────────────────
     auto* btnRow = new QWidget;
     btnRow->setFixedHeight(48);
-    btnRow->setStyleSheet("background: #1e1e2e;");
+    btnRow->setStyleSheet(QString("background: %1;").arg(BG));
     auto* btnLayout = new QHBoxLayout(btnRow);
     btnLayout->setContentsMargins(16, 8, 16, 8);
 
     m_runBtn = new QPushButton("Run Full Report");
     m_runBtn->setCursor(Qt::PointingHandCursor);
     m_runBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border-radius: 6px;"
+        QString("QPushButton { background: %1; color: %2; border-radius: 6px;"
         " font-size: 13px; font-weight: bold; padding: 6px 20px; border: none; }"
-        "QPushButton:hover { background: #b4d0fb; }");
+        "QPushButton:hover { background: #b4d0fb; }").arg(ACCENT, BG));
     connect(m_runBtn, &QPushButton::clicked, this, &FullReportFrame::onRunReport);
     btnLayout->addStretch();
     btnLayout->addWidget(m_runBtn);
     btnLayout->addStretch();
 
-    mainLayout->addWidget(btnRow);
-
-    // ── Scrollable body ───────────────────────────────────────────────────
-    m_scrollArea = new QScrollArea;
-    m_scrollArea->setWidgetResizable(true);
-    m_scrollArea->setFrameShape(QFrame::NoFrame);
-    m_scrollArea->setStyleSheet("background: #1e1e2e;");
-
-    m_bodyWidget = new QWidget;
-    m_bodyWidget->setStyleSheet("background: #1e1e2e;");
-    m_bodyLayout = new QVBoxLayout(m_bodyWidget);
-    m_bodyLayout->setContentsMargins(16, 12, 16, 20);
-    m_bodyLayout->setSpacing(8);
-    m_bodyLayout->addStretch();
-
-    m_scrollArea->setWidget(m_bodyWidget);
-    mainLayout->addWidget(m_scrollArea, 1);
+    m_resultsLayout->insertWidget(1, btnRow);
 }
 
 // ============================================================================
@@ -155,11 +100,11 @@ QChar FullReportFrame::computeGrade(int healthPoints, int optimCount)
 
 QString FullReportFrame::gradeColor(QChar grade)
 {
-    if (grade == 'A') return "#a6e3a1";
-    if (grade == 'B') return "#94e2d5";
-    if (grade == 'C') return "#f9e2af";
-    if (grade == 'D') return "#fab387";
-    return "#f38ba8";
+    if (grade == 'A') return GREEN;
+    if (grade == 'B') return TEAL;
+    if (grade == 'C') return YELLOW;
+    if (grade == 'D') return PEACH;
+    return RED;
 }
 
 // ============================================================================
@@ -206,7 +151,6 @@ void FullReportFrame::onRunReport()
     buildScoreHeader(overall, healthGrade, optGrade);
     buildHealthSection(health);
     buildOptimizerSection(optEntries);
-    m_bodyLayout->addStretch();
 }
 
 void FullReportFrame::onHelpClicked()
@@ -215,7 +159,7 @@ void FullReportFrame::onHelpClicked()
     auto* dlg = new QWidget(this, Qt::Tool | Qt::WindowStaysOnTopHint);
     dlg->setWindowTitle("Full Report Help");
     dlg->resize(380, 260);
-    dlg->setStyleSheet("background: #1e1e2e; color: #cdd6f4;");
+    dlg->setStyleSheet(QString("background: %1; color: %2;").arg(BG, FG));
     auto* l = new QVBoxLayout(dlg);
     auto* lbl = new QLabel(
         "<b>Full Report</b><br><br>"
@@ -230,13 +174,13 @@ void FullReportFrame::onHelpClicked()
         "Set your Assist Level before running to tune the detail of explanations."
     );
     lbl->setWordWrap(true);
-    lbl->setStyleSheet("color: #cdd6f4; font-size: 12px; background: transparent;");
+    lbl->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(FG));
     l->addWidget(lbl);
     auto* closeBtn = new QPushButton("Close");
     closeBtn->setStyleSheet(
-        "QPushButton { background: #313244; color: #cdd6f4; border: none;"
+        QString("QPushButton { background: #313244; color: %1; border: none;"
         " border-radius: 4px; padding: 4px 12px; } "
-        "QPushButton:hover { background: #45475a; }");
+        "QPushButton:hover { background: %2; }").arg(FG, BORDER));
     connect(closeBtn, &QPushButton::clicked, dlg, &QWidget::close);
     l->addWidget(closeBtn);
     dlg->show();
@@ -248,9 +192,9 @@ void FullReportFrame::onHelpClicked()
 
 void FullReportFrame::clearBody()
 {
-    // Remove all items except the trailing stretch
-    while (m_bodyLayout->count() > 0) {
-        QLayoutItem* item = m_bodyLayout->takeAt(0);
+    // Remove all items after the scoreArea (index 0) and btnRow (index 1)
+    while (m_resultsLayout->count() > 2) {
+        QLayoutItem* item = m_resultsLayout->takeAt(2);
         if (item->widget()) item->widget()->deleteLater();
         delete item;
     }
@@ -265,7 +209,7 @@ void FullReportFrame::buildScoreHeader(QChar grade, QChar healthGrade, QChar opt
     m_subGradeLabel->setText(
         QString("Code Health: %1   |   Optimizer: %2")
             .arg(healthGrade).arg(optGrade));
-    m_subGradeLabel->setStyleSheet("color: #a6adc8; font-size: 12px; background: transparent;");
+    m_subGradeLabel->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(FG2));
 }
 
 static QWidget* makeSectionHeader(const QString& title)
@@ -278,12 +222,12 @@ static QWidget* makeSectionHeader(const QString& title)
     l->setSpacing(8);
 
     auto* lbl = new QLabel(title);
-    lbl->setStyleSheet("color: #89b4fa; font-size: 12px; font-weight: bold; background: transparent;");
+    lbl->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold; background: transparent;").arg(ACCENT));
     l->addWidget(lbl);
 
     auto* line = new QFrame;
     line->setFrameShape(QFrame::HLine);
-    line->setStyleSheet("color: #313244; background: #313244;");
+    line->setStyleSheet("color: #313244; background: #313244;");  // surface0, no Css constant
     l->addWidget(line, 1);
 
     return w;
@@ -292,16 +236,16 @@ static QWidget* makeSectionHeader(const QString& title)
 static QWidget* makeMetricRow(const MetricResult& m)
 {
     auto* w = new QWidget;
-    w->setStyleSheet("background: #181825; border-radius: 6px;");
+    w->setStyleSheet(QString("background: %1; border-radius: 6px;").arg(BG5));
     auto* l = new QHBoxLayout(w);
     l->setContentsMargins(12, 8, 12, 8);
     l->setSpacing(12);
 
     QString dot;
     switch (m.score) {
-    case HealthScore::Green:  dot = "#a6e3a1"; break;
-    case HealthScore::Yellow: dot = "#f9e2af"; break;
-    case HealthScore::Red:    dot = "#f38ba8"; break;
+    case HealthScore::Green:  dot = GREEN;  break;
+    case HealthScore::Yellow: dot = YELLOW; break;
+    case HealthScore::Red:    dot = RED;    break;
     }
     auto* dotLbl = new QLabel("●");
     dotLbl->setStyleSheet(QString("color: %1; font-size: 14px; background: transparent;").arg(dot));
@@ -309,12 +253,12 @@ static QWidget* makeMetricRow(const MetricResult& m)
     l->addWidget(dotLbl);
 
     auto* nameLbl = new QLabel(m.name);
-    nameLbl->setStyleSheet("color: #cdd6f4; font-size: 12px; font-weight: bold; background: transparent;");
+    nameLbl->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold; background: transparent;").arg(FG));
     nameLbl->setFixedWidth(110);
     l->addWidget(nameLbl);
 
     auto* sumLbl = new QLabel(m.summary);
-    sumLbl->setStyleSheet("color: #a6adc8; font-size: 11px; background: transparent;");
+    sumLbl->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;").arg(FG2));
     sumLbl->setWordWrap(true);
     l->addWidget(sumLbl, 1);
 
@@ -324,7 +268,7 @@ static QWidget* makeMetricRow(const MetricResult& m)
 static QWidget* makeOptRow(const OptimizationEntry& e)
 {
     auto* w = new QWidget;
-    w->setStyleSheet("background: #181825; border-radius: 6px;");
+    w->setStyleSheet(QString("background: %1; border-radius: 6px;").arg(BG5));
     auto* l = new QVBoxLayout(w);
     l->setContentsMargins(12, 8, 12, 8);
     l->setSpacing(4);
@@ -335,17 +279,17 @@ static QWidget* makeOptRow(const OptimizationEntry& e)
     auto* lineLbl = new QLabel(e.lineNumber > 0
         ? QString("Line %1").arg(e.lineNumber) : QString("—"));
     lineLbl->setFixedWidth(50);
-    lineLbl->setStyleSheet("color: #585b70; font-size: 10px; background: transparent;");
+    lineLbl->setStyleSheet("color: #585b70; font-size: 10px; background: transparent;");  // overlay0, no Css constant
     titleRow->addWidget(lineLbl);
 
     auto* titleLbl = new QLabel(e.title);
-    titleLbl->setStyleSheet("color: #89b4fa; font-size: 12px; font-weight: bold; background: transparent;");
+    titleLbl->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: bold; background: transparent;").arg(ACCENT));
     titleRow->addWidget(titleLbl, 1);
 
     l->addLayout(titleRow);
 
     auto* descLbl = new QLabel(e.description);
-    descLbl->setStyleSheet("color: #a6adc8; font-size: 11px; background: transparent;");
+    descLbl->setStyleSheet(QString("color: %1; font-size: 11px; background: transparent;").arg(FG2));
     descLbl->setWordWrap(true);
     l->addWidget(descLbl);
 
@@ -354,27 +298,27 @@ static QWidget* makeOptRow(const OptimizationEntry& e)
 
 void FullReportFrame::buildHealthSection(const HealthReport& report)
 {
-    m_bodyLayout->addWidget(makeSectionHeader("Code Health"));
+    m_resultsLayout->addWidget(makeSectionHeader("Code Health"));
 
     for (const MetricResult* m : {
             &report.complexity, &report.readability, &report.duplication,
             &report.deadCode,   &report.naming }) {
-        m_bodyLayout->addWidget(makeMetricRow(*m));
+        m_resultsLayout->addWidget(makeMetricRow(*m));
     }
 }
 
 void FullReportFrame::buildOptimizerSection(const QList<OptimizationEntry>& entries)
 {
-    m_bodyLayout->addWidget(makeSectionHeader("Optimizer"));
+    m_resultsLayout->addWidget(makeSectionHeader("Optimizer"));
 
     if (entries.isEmpty()) {
         auto* noneLbl = new QLabel("No optimization issues found.");
-        noneLbl->setStyleSheet("color: #a6e3a1; font-size: 12px; background: transparent;");
+        noneLbl->setStyleSheet(QString("color: %1; font-size: 12px; background: transparent;").arg(GREEN));
         noneLbl->setContentsMargins(4, 4, 4, 4);
-        m_bodyLayout->addWidget(noneLbl);
+        m_resultsLayout->addWidget(noneLbl);
         return;
     }
 
     for (const OptimizationEntry& e : entries)
-        m_bodyLayout->addWidget(makeOptRow(e));
+        m_resultsLayout->addWidget(makeOptRow(e));
 }

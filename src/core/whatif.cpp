@@ -62,8 +62,8 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
 
     // ── Title ────────────────────────────────────────────────────────────────
     auto* titleLbl = new QLabel("What If Sandbox");
-    titleLbl->setStyleSheet(
-        "color: #89b4fa; font-size: 14px; font-weight: bold;");
+    titleLbl->setStyleSheet(QString(
+        "color: %1; font-size: 14px; font-weight: bold;").arg(Theme::Colors::accent()));
     root->addWidget(titleLbl);
 
     // ── Line text display ────────────────────────────────────────────────────
@@ -72,9 +72,10 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
         .arg(lineNumber)
         .arg(lineText.trimmed().toHtmlEscaped()));
     m_lineLabel->setTextFormat(Qt::RichText);
-    m_lineLabel->setStyleSheet(
-        "color: #a6adc8; font-size: 11px;"
-        "background: #2a2a3c; padding: 4px 8px; border-radius: 4px;");
+    m_lineLabel->setStyleSheet(QString(
+        "color: %1; font-size: 11px;"
+        "background: %2; padding: 4px 8px; border-radius: 4px;")
+        .arg(Theme::Colors::fg2(), Theme::Colors::bg2()));
     m_lineLabel->setWordWrap(true);
     root->addWidget(m_lineLabel);
 
@@ -83,7 +84,7 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
     ctrlRow->setSpacing(8);
 
     auto* changeLbl = new QLabel("Change");
-    changeLbl->setStyleSheet("color: #cdd6f4; font-size: 12px;");
+    changeLbl->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::fg()));
     ctrlRow->addWidget(changeLbl);
 
     m_oldValueEdit = new QLineEdit;
@@ -94,7 +95,7 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
     ctrlRow->addWidget(m_oldValueEdit);
 
     auto* toLbl = new QLabel("to");
-    toLbl->setStyleSheet("color: #cdd6f4; font-size: 12px;");
+    toLbl->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::fg()));
     ctrlRow->addWidget(toLbl);
 
     m_newValueEdit = new QLineEdit;
@@ -106,26 +107,29 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
 
     m_runOrigBtn = new QPushButton("Run Original");
     m_runOrigBtn->setCursor(Qt::PointingHandCursor);
-    m_runOrigBtn->setStyleSheet(
-        "QPushButton { background: #45475a; color: #cdd6f4; border-radius: 5px;"
+    m_runOrigBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border-radius: 5px;"
         " padding: 5px 14px; font-size: 12px; }"
-        "QPushButton:hover { background: #585b70; }");
+        "QPushButton:hover { background: #585b70; }")
+        .arg(Theme::Colors::border(), Theme::Colors::fg()));
     ctrlRow->addWidget(m_runOrigBtn);
 
     m_runModBtn = new QPushButton("Run Modified");
     m_runModBtn->setCursor(Qt::PointingHandCursor);
-    m_runModBtn->setStyleSheet(
-        "QPushButton { background: #45475a; color: #cdd6f4; border-radius: 5px;"
+    m_runModBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border-radius: 5px;"
         " padding: 5px 14px; font-size: 12px; }"
-        "QPushButton:hover { background: #585b70; }");
+        "QPushButton:hover { background: #585b70; }")
+        .arg(Theme::Colors::border(), Theme::Colors::fg()));
     ctrlRow->addWidget(m_runModBtn);
 
     m_runBothBtn = new QPushButton("Run Both");
     m_runBothBtn->setCursor(Qt::PointingHandCursor);
-    m_runBothBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border-radius: 5px;"
+    m_runBothBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; color: %2; border-radius: 5px;"
         " padding: 5px 14px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background: #b4d0ff; }");
+        "QPushButton:hover { background: #b4d0ff; }")
+        .arg(Theme::Colors::accent(), Theme::Colors::bg()));
     ctrlRow->addWidget(m_runBothBtn);
 
     root->addLayout(ctrlRow);
@@ -140,14 +144,14 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
     leftLay->setContentsMargins(0,0,0,0);
     leftLay->setSpacing(4);
     m_leftLabel = new QLabel("Original Output");
-    m_leftLabel->setStyleSheet("color: #a6e3a1; font-size: 11px; font-weight: bold; padding: 2px 4px;");
+    m_leftLabel->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; padding: 2px 4px;").arg(Theme::Colors::green()));
     leftLay->addWidget(m_leftLabel);
     m_leftPane = new QPlainTextEdit;
     m_leftPane->setReadOnly(true);
     m_leftPane->setPlaceholderText("Run the original file to see output here...");
-    m_leftPane->setStyleSheet(
-        "QPlainTextEdit { background: #181825; color: #cdd6f4; border: 1px solid #313244;"
-        " font-family: 'Cascadia Code','Consolas',monospace; font-size: 12px; }");
+    m_leftPane->setStyleSheet(QString(
+        "QPlainTextEdit { background: #181825; color: %1; border: 1px solid #313244;"
+        " font-family: 'Cascadia Code','Consolas',monospace; font-size: 12px; }").arg(Theme::Colors::fg()));
     leftLay->addWidget(m_leftPane);
     splitter->addWidget(leftContainer);
 
@@ -157,14 +161,14 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
     rightLay->setContentsMargins(0,0,0,0);
     rightLay->setSpacing(4);
     m_rightLabel = new QLabel("Modified Output");
-    m_rightLabel->setStyleSheet("color: #f38ba8; font-size: 11px; font-weight: bold; padding: 2px 4px;");
+    m_rightLabel->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: bold; padding: 2px 4px;").arg(Theme::Colors::red()));
     rightLay->addWidget(m_rightLabel);
     m_rightPane = new QPlainTextEdit;
     m_rightPane->setReadOnly(true);
     m_rightPane->setPlaceholderText("Run the modified file to see output here...");
-    m_rightPane->setStyleSheet(
-        "QPlainTextEdit { background: #181825; color: #cdd6f4; border: 1px solid #313244;"
-        " font-family: 'Cascadia Code','Consolas',monospace; font-size: 12px; }");
+    m_rightPane->setStyleSheet(QString(
+        "QPlainTextEdit { background: #181825; color: %1; border: 1px solid #313244;"
+        " font-family: 'Cascadia Code','Consolas',monospace; font-size: 12px; }").arg(Theme::Colors::fg()));
     rightLay->addWidget(m_rightPane);
     splitter->addWidget(rightContainer);
 
@@ -177,7 +181,7 @@ WhatIfDialog::WhatIfDialog(const QString& filePath,
             QString("Note: Live execution sandbox supports Python and JavaScript. "
                     "For %1, you can still edit the values above.").arg(language));
         noteLbl->setWordWrap(true);
-        noteLbl->setStyleSheet("color: #f9e2af; font-size: 11px;");
+        noteLbl->setStyleSheet(QString("color: %1; font-size: 11px;").arg(Theme::Colors::yellow()));
         root->addWidget(noteLbl);
         m_runBothBtn->setEnabled(false);
         m_runOrigBtn->setEnabled(false);
@@ -380,9 +384,9 @@ void WhatIfDialog::showDiff(const QString& original, const QString& modified)
 void WhatIfDialog::applyTheme(bool isDark)
 {
     m_isDark = isDark;
-    QString paneBg  = isDark ? "#181825" : "#f5f5f5";
-    QString paneFg  = isDark ? "#cdd6f4" : "#1e1e2e";
-    QString border  = isDark ? "#313244" : "#d0d0d0";
+    QString paneBg  = isDark ? "#181825" : "#f5f5f5";       // #181825 = bg5
+    QString paneFg  = isDark ? Theme::Colors::fg() : Theme::Colors::bg();
+    QString border  = isDark ? "#313244" : "#d0d0d0";       // surface0 / light
     QString paneStyle = QString(
         "QPlainTextEdit { background: %1; color: %2; border: 1px solid %3;"
         " font-family: 'Cascadia Code','Consolas',monospace; font-size: 12px; }")

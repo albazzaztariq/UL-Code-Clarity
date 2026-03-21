@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QWidget>
+#include "core/analysisframe.h"
 #include <QString>
 #include <QPlainTextEdit>
 #include <QTextEdit>
@@ -46,7 +46,7 @@ struct LabDefinition {
 // SQL and XSS labs also show a styled "browser/login" mock UI on top
 // of the input area — styled QWidgets that visually simulate a webpage.
 // ============================================================================
-class SecurityLabWidget : public QWidget {
+class SecurityLabWidget : public AnalysisFrame {
     Q_OBJECT
 
 public:
@@ -58,9 +58,6 @@ public:
 
     // All built-in lab definitions (used by Tools > Security Labs browser)
     static QList<LabDefinition> allLabs();
-
-signals:
-    void closeRequested();
 
 private slots:
     void runNormal();
@@ -91,8 +88,7 @@ private:
     QPushButton*     m_runAttackBtn  = nullptr;
     QPushButton*     m_fixBtn        = nullptr;
     QPushButton*     m_whyBtn        = nullptr;
-
-    QLabel*          m_statusLabel   = nullptr;
+    // m_statusLabel is inherited from AnalysisFrame
 
     // SQL mock UI
     QLineEdit*       m_sqlUsername   = nullptr;
