@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     bool isDark = s.value("theme/dark", true).toBool();
 
     // Apply global Qt stylesheet
-    app.setStyleSheet(isDark ? Theme::appStyleSheet() : Theme::lightStyleSheet());
+    app.setStyleSheet(Theme::themeStyleSheet(isDark));
 
     // Set Fusion palette to match the theme so native decorations align
     QPalette pal = app.palette();

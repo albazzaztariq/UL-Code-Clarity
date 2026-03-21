@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <QMainWindow>
 #include <QSplitter>
 #include <QLabel>
@@ -78,6 +79,16 @@ private:
     void setupFavoritesBar();
     void runBuildChain();
     void runPipeline(const PipelineConfig& cfg);
+    void hideAllAnalysisFrames();
+    void showAnalysisFrame(QWidget* frame);
+    void returnToEditor();
+    // Connects action->triggered() to showAnalysisFrame(frame) and wires frame's
+    // backToEditor-style signal back to returnToEditor().
+    // Usage: call once per frame; the signal connector (backFn) is a callable that
+    // performs the specific connect() for that frame type's back signal.
+    void connectFrameToggle(QAction* action, QWidget* frame,
+                            std::function<void()> setupFn,
+                            std::function<void()> backFn);
     void showCVENotificationBar(int count, const QStringList& packages);
     QString currentLangKey() const;
 

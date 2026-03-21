@@ -17,7 +17,6 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
-#include <QTimer>
 #include <QJsonObject>
 
 // ============================================================================
@@ -145,12 +144,6 @@ private:
         const QString &explanation);
 
     // Checking answers
-    void checkCurrentExercise();
     void flashFeedback(QLabel *label, bool correct,
                        const QString &correctMsg, const QString &wrongMsg);
-    void advanceExercise();
-
-    // Utility
-    QString codeForLanguages(const QMap<QString,QString> &snippets) const;
-    bool    isCOnly() const;
 };

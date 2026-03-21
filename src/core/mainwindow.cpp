@@ -127,10 +127,53 @@ QString MainWindow::currentLangKey() const
     return "python";
 }
 
+// ── View Switching Helpers ────────────────────────────────────────────────
+void MainWindow::hideAllAnalysisFrames()
+{
+    if (m_securityFrame)   m_securityFrame->setVisible(false);
+    if (m_securityLab)     m_securityLab->setVisible(false);
+    if (m_runtimeAnalysis) m_runtimeAnalysis->setVisible(false);
+    if (m_memoryAnalysis)  m_memoryAnalysis->setVisible(false);
+    if (m_depAnalysis)     m_depAnalysis->setVisible(false);
+    if (m_codeHealth)      m_codeHealth->setVisible(false);
+    if (m_debugFrame)      m_debugFrame->setVisible(false);
+    if (m_dataTrace)       m_dataTrace->setVisible(false);
+    if (m_errorJournal)    m_errorJournal->setVisible(false);
+    if (m_typeFlow)        m_typeFlow->setVisible(false);
+}
+
+void MainWindow::showAnalysisFrame(QWidget* frame)
+{
+    m_mainSplitter->setVisible(false);
+    hideAllAnalysisFrames();
+    if (frame) frame->setVisible(true);
+}
+
+void MainWindow::returnToEditor()
+{
+    hideAllAnalysisFrames();
+    m_mainSplitter->setVisible(true);
+}
+
+// Connects action->triggered() to showAnalysisFrame(frame), then runs backFn
+// to wire the frame's own back signal to returnToEditor(). setupFn is called
+// in the triggered handler before showAnalysisFrame, allowing per-frame init
+// (e.g. setCode(), setTargetFile()).
+void MainWindow::connectFrameToggle(QAction* action, QWidget* frame,
+                                    std::function<void()> setupFn,
+                                    std::function<void()> backFn)
+{
+    connect(action, &QAction::triggered, this, [this, frame, setupFn]() {
+        if (setupFn) setupFn();
+        showAnalysisFrame(frame);
+    });
+    if (backFn) backFn();
+}
+
 // ── Theme ────────────────────────────────────────────────────────────────
 void MainWindow::applyTheme()
 {
-    qApp->setStyleSheet(m_isDarkTheme ? Theme::appStyleSheet() : Theme::lightStyleSheet());
+    qApp->setStyleSheet(Theme::themeStyleSheet(m_isDarkTheme));
 
     // Re-apply per-widget stylesheets that hardcode colors and override the global sheet
     if (m_fileTree)
@@ -349,12 +392,7 @@ void MainWindow::setupFavoritesBar()
     m_favoritesBar->registerTool("fullReport", "Full Report", [this]() {
         if (!m_codeHealth || !m_editor) return;
         m_codeHealth->setCode(m_editor->currentContent(), currentLangKey());
-        m_mainSplitter->setVisible(false);
-        if (m_securityFrame)    m_securityFrame->setVisible(false);
-        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
-        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
-        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
-        m_codeHealth->setVisible(true);
+        showAnalysisFrame(m_codeHealth);
     });
 
     m_favoritesBar->registerTool("security", "Security", [this]() {

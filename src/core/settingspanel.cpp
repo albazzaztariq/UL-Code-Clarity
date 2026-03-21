@@ -666,7 +666,7 @@ void SettingsPanel::onSaveClicked()
     // Apply theme instantly before saving
     QString theme = m_themeCombo->currentText();
     if (theme == "Dark") {
-        qApp->setStyleSheet(Theme::appStyleSheet());
+        qApp->setStyleSheet(Theme::themeStyleSheet(true));
 #ifdef Q_OS_WIN
         if (parentWidget()) {
             BOOL useDark = TRUE;
@@ -674,7 +674,7 @@ void SettingsPanel::onSaveClicked()
         }
 #endif
     } else {
-        qApp->setStyleSheet(Theme::lightStyleSheet());
+        qApp->setStyleSheet(Theme::themeStyleSheet(false));
 #ifdef Q_OS_WIN
         if (parentWidget()) {
             BOOL useDark = FALSE;

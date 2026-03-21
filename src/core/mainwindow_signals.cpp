@@ -178,10 +178,8 @@ void MainWindow::wireSignals()
         });
 
     // Runtime Analysis Frame signals
-    connect(m_runtimeAnalysis, &RuntimeAnalysisFrame::backToEditor, this, [this]() {
-        m_runtimeAnalysis->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_runtimeAnalysis, &RuntimeAnalysisFrame::backToEditor,
+            this, &MainWindow::returnToEditor);
     connect(m_runtimeAnalysis, &RuntimeAnalysisFrame::compilationError, this,
         [this](const QString& filePath, const QString& errorText) {
             m_runtimeAnalysis->setVisible(false);
@@ -200,10 +198,8 @@ void MainWindow::wireSignals()
         });
 
     // Security Testing Frame signals
-    connect(m_securityFrame, &SecurityTestingFrame::backToEditor, this, [this]() {
-        m_securityFrame->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_securityFrame, &SecurityTestingFrame::backToEditor,
+            this, &MainWindow::returnToEditor);
     connect(m_securityFrame, &SecurityTestingFrame::jumpToLine, this, [this](int lineNumber) {
         if (!m_editor) return;
         m_securityFrame->setVisible(false);
@@ -243,22 +239,16 @@ void MainWindow::wireSignals()
         });
 
     // Memory Analysis Frame signals
-    connect(m_memoryAnalysis, &MemoryAnalysisFrame::backToEditor, this, [this]() {
-        m_memoryAnalysis->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_memoryAnalysis, &MemoryAnalysisFrame::backToEditor,
+            this, &MainWindow::returnToEditor);
 
     // Dependency Analysis Frame signals
-    connect(m_depAnalysis, &DependencyAnalysisFrame::backToEditor, this, [this]() {
-        m_depAnalysis->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_depAnalysis, &DependencyAnalysisFrame::backToEditor,
+            this, &MainWindow::returnToEditor);
 
     // Code Health Frame signals
-    connect(m_codeHealth, &CodeHealthFrame::backToEditor, this, [this]() {
-        m_codeHealth->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_codeHealth, &CodeHealthFrame::backToEditor,
+            this, &MainWindow::returnToEditor);
 
     // Debug Frame signals
     connect(m_debugFrame, &DebugFrame::closeRequested, this, [this]() {
@@ -268,10 +258,8 @@ void MainWindow::wireSignals()
     });
 
     // DataTrace Frame signals
-    connect(m_dataTrace, &DataTraceFrame::backToEditor, this, [this]() {
-        m_dataTrace->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_dataTrace, &DataTraceFrame::backToEditor,
+            this, &MainWindow::returnToEditor);
     connect(m_dataTrace, &DataTraceFrame::jumpToLine, this, [this](int line) {
         m_dataTrace->setVisible(false);
         m_mainSplitter->setVisible(true);
@@ -286,10 +274,8 @@ void MainWindow::wireSignals()
     });
 
     // ErrorJournal signals
-    connect(m_errorJournal, &ErrorJournal::backToEditor, this, [this]() {
-        m_errorJournal->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_errorJournal, &ErrorJournal::backToEditor,
+            this, &MainWindow::returnToEditor);
     connect(m_errorJournal, &ErrorJournal::jumpToFile, this,
         [this](const QString& filePath, int line) {
             if (m_editor) {
@@ -365,13 +351,7 @@ void MainWindow::wireSignals()
         }
         m_editor->saveCurrentFile();
         m_debugFrame->setTargetFile(filePath, currentLangKey());
-        m_mainSplitter->setVisible(false);
-        if (m_securityFrame)    m_securityFrame->setVisible(false);
-        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
-        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
-        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
-        if (m_codeHealth)       m_codeHealth->setVisible(false);
-        m_debugFrame->setVisible(true);
+        showAnalysisFrame(m_debugFrame);
         m_debugFrame->startDebugging();
     });
 
@@ -388,15 +368,7 @@ void MainWindow::wireSignals()
         if (!m_errorJournal) return;
         if (m_fileTree && !m_fileTree->rootPath().isEmpty())
             m_errorJournal->setWorkspaceRoot(m_fileTree->rootPath());
-        m_mainSplitter->setVisible(false);
-        if (m_securityFrame)    m_securityFrame->setVisible(false);
-        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
-        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
-        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
-        if (m_codeHealth)       m_codeHealth->setVisible(false);
-        if (m_debugFrame)       m_debugFrame->setVisible(false);
-        if (m_dataTrace)        m_dataTrace->setVisible(false);
-        m_errorJournal->setVisible(true);
+        showAnalysisFrame(m_errorJournal);
     });
 
     // Error badge sync
@@ -421,24 +393,15 @@ void MainWindow::wireSignals()
                 QString filePath = m_editor->currentFilePath();
                 m_dataTrace->setCode(code, lang, filePath);
                 m_dataTrace->setVariable(selected);
-                m_mainSplitter->setVisible(false);
-                if (m_securityFrame)    m_securityFrame->setVisible(false);
-                if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
-                if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
-                if (m_depAnalysis)      m_depAnalysis->setVisible(false);
-                if (m_codeHealth)       m_codeHealth->setVisible(false);
-                if (m_debugFrame)       m_debugFrame->setVisible(false);
-                m_dataTrace->setVisible(true);
+                showAnalysisFrame(m_dataTrace);
             });
             menu->exec(m_editor->codeEditor()->mapToGlobal(pos));
             menu->deleteLater();
         });
 
     // TypeFlow Frame signals
-    connect(m_typeFlow, &TypeFlowFrame::backToEditor, this, [this]() {
-        m_typeFlow->setVisible(false);
-        m_mainSplitter->setVisible(true);
-    });
+    connect(m_typeFlow, &TypeFlowFrame::backToEditor,
+            this, &MainWindow::returnToEditor);
     connect(m_typeFlow, &TypeFlowFrame::jumpToLine, this, [this](int line) {
         if (!m_editor) return;
         QTextBlock block = m_editor->codeEditor()->document()->findBlockByNumber(line - 1);

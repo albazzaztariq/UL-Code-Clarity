@@ -1,24 +1,13 @@
 #include "panels/basics.h"
 #include "core/jsonloader.h"
+#include "core/theme.h"
 
 #include <QKeyEvent>
 #include <QScrollBar>
 #include <QJsonObject>
 #include <QJsonArray>
 
-// ============================================================================
-// Theme colors
-// ============================================================================
-static const char* BG      = "#1e1e2e";
-static const char* BG2     = "#2a2a3c";
-static const char* BG3     = "#333348";
-static const char* BG4     = "#3c3c54";
-static const char* FG      = "#cdd6f4";
-static const char* FG2     = "#a6adc8";
-static const char* FG3     = "#6c7086";
-static const char* ACCENT  = "#89b4fa";
-static const char* GREEN   = "#a6e3a1";
-static const char* BORDER  = "#45475a";
+using namespace Theme::Css;
 
 // ============================================================================
 // BasicsOverlay

@@ -1,18 +1,12 @@
 #include "panels/modelconfig.h"
+#include "core/theme.h"
 
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <dwmapi.h>
 #endif
 
-static const char* BG      = "#1e1e2e";
-static const char* BG2     = "#2a2a3c";
-static const char* BG3     = "#333348";
-static const char* FG      = "#cdd6f4";
-static const char* FG2     = "#a6adc8";
-static const char* FG3     = "#6c7086";
-static const char* ACCENT  = "#89b4fa";
-static const char* BORDER  = "#45475a";
+using namespace Theme::Css;
 
 ModelConfigDialog::ModelConfigDialog(QWidget *parent)
     : QDialog(parent)

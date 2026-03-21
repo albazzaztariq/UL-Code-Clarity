@@ -1,0 +1,344 @@
+{
+  "topics": [
+    {
+      "id": 1,
+      "step_label": "STEP 1 OF 7",
+      "title": "Types & Variables",
+      "subtitle": "Naming and categorising data",
+      "teaching": [
+        "A <b>variable</b> is a named slot that holds a value. You give it a name so you can refer to that value later — instead of writing the number <code>42</code> everywhere, you write <code>age</code>.",
+        "Every value has a <b>type</b> — the kind of data it is. Common types: <b>integer</b> (whole number), <b>float</b> (decimal number), <b>string</b> (text), <b>bool</b> (true/false). Types matter because they control what operations are valid and how much memory is used.",
+        "In <b>dynamically typed</b> languages like Python the type is attached to the value, not the variable — you can reassign a variable to a completely different type. In <b>statically typed</b> languages like C, Rust, and UniLogic the type is fixed at compile time and violations are caught before the program runs."
+      ],
+      "code_blocks": [
+        {
+          "lang": "Python",
+          "code": "age = 25          # int\nname = \"Alice\"    # str\nprice = 9.99      # float\nactive = True     # bool\n\nprint(type(age))  # <class 'int'>"
+        },
+        {
+          "lang": "C",
+          "code": "int    age    = 25;\nchar*  name   = \"Alice\";   /* pointer to string literal */\nfloat  price  = 9.99f;\nint    active = 1;          /* C has no bool keyword pre-C99 */"
+        },
+        {
+          "lang": "Rust",
+          "code": "let age: i32     = 25;\nlet name: &str   = \"Alice\";\nlet price: f64   = 9.99;\nlet active: bool = true;"
+        },
+        {
+          "lang": "UniLogic",
+          "code": "var age   : Int  = 25\nvar name  : Str  = \"Alice\"\nvar price : F64  = 9.99\nvar active: Bool = true"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "radio",
+          "question": "Which type would you use to store the number of students in a class (e.g. 30)?",
+          "options": [
+            "float — for decimal precision",
+            "int — it's a whole number",
+            "string — numbers are text",
+            "bool — it's either zero or not"
+          ],
+          "correct_index": 1,
+          "explanation": "A student count is always a whole number, so an integer is the right choice. Floats carry unnecessary overhead for values that are never fractional."
+        },
+        {
+          "type": "text",
+          "question": "What keyword does Python use to declare a variable? (just type the keyword, lowercase)",
+          "correct": "none",
+          "explanation": "Python has no keyword — you declare a variable just by assigning to it: <code>x = 5</code>. The variable springs into existence on first assignment."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "step_label": "STEP 2 OF 7",
+      "title": "Functions",
+      "subtitle": "Reusable code blocks with inputs and outputs",
+      "teaching": [
+        "A <b>function</b> is a named block of code that does one thing. You define it once and call it as many times as you need — write the logic once, reuse it everywhere.",
+        "Functions take <b>parameters</b> (inputs) and <b>return</b> a value (output). Good functions are small, focused, and named clearly after what they do: <code>add_tax</code>, <code>is_valid_email</code>, <code>send_message</code>.",
+        "Functions also create a <b>scope</b> — variables declared inside a function are invisible outside it. This prevents code in different parts of a program from accidentally interfering with each other."
+      ],
+      "code_blocks": [
+        {
+          "lang": "Python",
+          "code": "def add(a, b):\n    return a + b\n\nresult = add(3, 4)   # result = 7\nprint(result)"
+        },
+        {
+          "lang": "C",
+          "code": "int add(int a, int b) {\n    return a + b;\n}\n\nint main(void) {\n    int result = add(3, 4);  /* result = 7 */\n    return 0;\n}"
+        },
+        {
+          "lang": "Rust",
+          "code": "fn add(a: i32, b: i32) -> i32 {\n    a + b   // no semicolon = implicit return\n}\n\nfn main() {\n    let result = add(3, 4);  // result = 7\n}"
+        },
+        {
+          "lang": "UniLogic",
+          "code": "fn add(a: Int, b: Int) -> Int {\n    return a + b\n}\n\nlet result = add(3, 4)   // result = 7"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "radio",
+          "question": "What is the term for the values you pass into a function when calling it?",
+          "options": [
+            "Returns",
+            "Arguments (or parameters)",
+            "Scopes",
+            "Declarations"
+          ],
+          "correct_index": 1,
+          "explanation": "The values passed at call-time are called <b>arguments</b>. The names in the function definition are <b>parameters</b>. In casual use both words are common."
+        },
+        {
+          "type": "text",
+          "question": "In Python, what keyword starts a function definition?",
+          "correct": "def",
+          "explanation": "<code>def</code> is Python's keyword for defining a function: <code>def my_function():</code>"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "step_label": "STEP 3 OF 7",
+      "title": "If / Else Logic",
+      "subtitle": "Making decisions based on conditions",
+      "teaching": [
+        "Programs need to make decisions. <b>If/else</b> lets a program run different code depending on whether a condition is true or false.",
+        "A <b>condition</b> is any expression that evaluates to a boolean — true or false. Comparison operators: <code>==</code> (equal), <code>!=</code> (not equal), <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code>. Logical operators: <code>and</code> / <code>&&</code>, <code>or</code> / <code>||</code>, <code>not</code> / <code>!</code>.",
+        "You can chain conditions with <b>else if</b> (called <code>elif</code> in Python) to test multiple possibilities in sequence. Only the first matching branch runs."
+      ],
+      "code_blocks": [
+        {
+          "lang": "Python",
+          "code": "score = 72\n\nif score >= 90:\n    print(\"A\")\nelif score >= 70:\n    print(\"B\")   # this runs\nelif score >= 50:\n    print(\"C\")\nelse:\n    print(\"Fail\")"
+        },
+        {
+          "lang": "C",
+          "code": "int score = 72;\n\nif (score >= 90) {\n    printf(\"A\\n\");\n} else if (score >= 70) {\n    printf(\"B\\n\");   /* this runs */\n} else if (score >= 50) {\n    printf(\"C\\n\");\n} else {\n    printf(\"Fail\\n\");\n}"
+        },
+        {
+          "lang": "Rust",
+          "code": "let score = 72;\n\nif score >= 90 {\n    println!(\"A\");\n} else if score >= 70 {\n    println!(\"B\");   // this runs\n} else if score >= 50 {\n    println!(\"C\");\n} else {\n    println!(\"Fail\");\n}"
+        },
+        {
+          "lang": "UniLogic",
+          "code": "let score = 72\n\nif score >= 90 {\n    print(\"A\")\n} elif score >= 70 {\n    print(\"B\")   // this runs\n} elif score >= 50 {\n    print(\"C\")\n} else {\n    print(\"Fail\")\n}"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "radio",
+          "question": "Which operator checks if two values are equal (not assigning, but comparing)?",
+          "options": [
+            "= (single equals)",
+            "== (double equals)",
+            "!= (not equal)",
+            ":= (walrus)"
+          ],
+          "correct_index": 1,
+          "explanation": "<code>==</code> compares two values for equality. <code>=</code> is assignment (sets a variable). Mixing them up is one of the most common bugs in programming."
+        },
+        {
+          "type": "text",
+          "question": "In Python, what is the keyword for 'else if'? (type it exactly)",
+          "correct": "elif",
+          "explanation": "Python uses <code>elif</code> as a contraction of <i>else if</i>. Most other languages spell it out as <code>else if</code>."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "step_label": "STEP 4 OF 7",
+      "title": "Loops",
+      "subtitle": "Repeating code efficiently",
+      "teaching": [
+        "A <b>loop</b> repeats a block of code. Without loops you'd have to write the same line hundreds of times. There are two main kinds: <b>for</b> loops (repeat a known number of times or over a collection) and <b>while</b> loops (repeat as long as a condition is true).",
+        "The <b>for</b> loop is used when you know the range ahead of time, or when you want to process every item in a list. The <b>while</b> loop is used when you don't know how many iterations you need — you keep going until a condition becomes false.",
+        "Two control keywords: <b>break</b> exits the loop immediately. <b>continue</b> skips the rest of the current iteration and moves to the next."
+      ],
+      "code_blocks": [
+        {
+          "lang": "Python",
+          "code": "# for loop — count 0 to 4\nfor i in range(5):\n    print(i)   # prints 0, 1, 2, 3, 4\n\n# while loop\ncount = 0\nwhile count < 3:\n    print(count)\n    count += 1   # prints 0, 1, 2"
+        },
+        {
+          "lang": "C",
+          "code": "/* for loop */\nfor (int i = 0; i < 5; i++) {\n    printf(\"%d\\n\", i);   /* 0 1 2 3 4 */\n}\n\n/* while loop */\nint count = 0;\nwhile (count < 3) {\n    printf(\"%d\\n\", count);\n    count++;\n}"
+        },
+        {
+          "lang": "Rust",
+          "code": "// for loop\nfor i in 0..5 {\n    println!(\"{}\", i);  // 0 1 2 3 4\n}\n\n// while loop\nlet mut count = 0;\nwhile count < 3 {\n    println!(\"{}\", count);\n    count += 1;\n}"
+        },
+        {
+          "lang": "UniLogic",
+          "code": "// for loop\nfor i in 0..5 {\n    print(i)   // 0 1 2 3 4\n}\n\n// while loop\nvar count = 0\nwhile count < 3 {\n    print(count)\n    count = count + 1\n}"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "radio",
+          "question": "Which loop type is best when you don't know in advance how many iterations are needed?",
+          "options": [
+            "for loop — it always knows the count",
+            "while loop — it runs until a condition becomes false",
+            "Both are identical — choose either",
+            "Neither — use recursion instead"
+          ],
+          "correct_index": 1,
+          "explanation": "A <b>while</b> loop keeps running as long as its condition is true, making it ideal when the iteration count is unknown — e.g. reading input until the user types 'quit'."
+        },
+        {
+          "type": "text",
+          "question": "What keyword immediately exits a loop (stops it completely)?",
+          "correct": "break",
+          "explanation": "<code>break</code> exits the nearest enclosing loop. <code>continue</code> skips to the next iteration instead."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "step_label": "STEP 5 OF 7",
+      "title": "Collections",
+      "subtitle": "Storing and iterating over multiple values",
+      "teaching": [
+        "Instead of having a separate variable for each value, <b>collections</b> let you group many values under one name. The most common are <b>arrays</b> (fixed-size, same type) and <b>lists</b> (dynamic size).",
+        "You access items by <b>index</b> — a position number starting at 0. Index 0 is the first item, index 1 is the second, and so on. Accessing an index that doesn't exist causes an error (index out of bounds).",
+        "Other common collection types: <b>dictionary / map</b> — key/value pairs (like a phone book). <b>set</b> — unique values only, no duplicates. Each has different performance characteristics depending on the operation."
+      ],
+      "code_blocks": [
+        {
+          "lang": "Python",
+          "code": "# List — dynamic, any type\nfruits = [\"apple\", \"banana\", \"cherry\"]\nprint(fruits[0])   # apple\n\nfruits.append(\"date\")   # add item\n\n# Dictionary\nages = {\"Alice\": 30, \"Bob\": 25}\nprint(ages[\"Alice\"])   # 30\n\n# Loop over a list\nfor fruit in fruits:\n    print(fruit)"
+        },
+        {
+          "lang": "C",
+          "code": "/* C arrays are fixed size */\nint numbers[4] = {10, 20, 30, 40};\nprintf(\"%d\\n\", numbers[0]);   /* 10 */\n\n/* Iterate */\nfor (int i = 0; i < 4; i++) {\n    printf(\"%d\\n\", numbers[i]);\n}"
+        },
+        {
+          "lang": "Rust",
+          "code": "// Array — fixed size\nlet numbers = [10, 20, 30, 40];\nprintln!(\"{}\", numbers[0]);   // 10\n\n// Vec — dynamic\nlet mut fruits = vec![\"apple\", \"banana\"];\nfruits.push(\"cherry\");\n\nfor fruit in &fruits {\n    println!(\"{}\", fruit);\n}"
+        },
+        {
+          "lang": "UniLogic",
+          "code": "// List — dynamic\nvar fruits = [\"apple\", \"banana\", \"cherry\"]\nprint(fruits[0])   // apple\n\nfruits.push(\"date\")\n\nfor fruit in fruits {\n    print(fruit)\n}"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "radio",
+          "question": "If a list has 5 items, what is the index of the last item?",
+          "options": [
+            "5 — there are 5 items",
+            "4 — indices start at 0",
+            "1 — the last is always 1",
+            "It depends on the language"
+          ],
+          "correct_index": 1,
+          "explanation": "Indices start at 0. A list of 5 items has indices 0, 1, 2, 3, 4. The last item is always at index <code>length - 1</code>, which is 4 here."
+        },
+        {
+          "type": "text",
+          "question": "What index accesses the FIRST element of any list or array?",
+          "correct": "0",
+          "explanation": "All mainstream languages (Python, C, Rust, UniLogic, Java, JavaScript…) use 0-based indexing. The first element is always at index 0."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "step_label": "STEP 6 OF 7",
+      "title": "Objects & Inheritance",
+      "subtitle": "Bundling data and behaviour",
+      "teaching": [
+        "A <b>class</b> is a blueprint for creating objects. It bundles related data (called <b>fields</b> or <b>attributes</b>) and behaviour (called <b>methods</b>) into one unit. An <b>object</b> is one instance of a class — created from the blueprint.",
+        "<b>Inheritance</b> lets one class extend another. The child class gets all the fields and methods of the parent, and can add or override them. This avoids duplicating code when two things are similar but not identical.",
+        "C doesn't have classes — it uses <code>struct</code> for grouping data, and function pointers for behaviour. Rust uses <code>struct</code> with <code>impl</code> blocks and <b>traits</b> instead of inheritance. Python and UniLogic have full class-based inheritance."
+      ],
+      "code_blocks": [
+        {
+          "lang": "Python",
+          "code": "class Animal:\n    def __init__(self, name):\n        self.name = name\n\n    def speak(self):\n        return \"...\"\n\nclass Dog(Animal):          # inherits Animal\n    def speak(self):        # overrides speak\n        return f\"{self.name} says Woof!\"\n\nd = Dog(\"Rex\")\nprint(d.speak())   # Rex says Woof!"
+        },
+        {
+          "lang": "Rust",
+          "code": "struct Animal {\n    name: String,\n}\n\ntrait Speak {\n    fn speak(&self) -> String;\n}\n\nstruct Dog {\n    animal: Animal,\n}\n\nimpl Speak for Dog {\n    fn speak(&self) -> String {\n        format!(\"{} says Woof!\", self.animal.name)\n    }\n}\n\nlet d = Dog { animal: Animal { name: String::from(\"Rex\") } };\nprintln!(\"{}\", d.speak());"
+        },
+        {
+          "lang": "UniLogic",
+          "code": "class Animal {\n    var name: Str\n    fn speak() -> Str { return \"...\" }\n}\n\nclass Dog : Animal {\n    fn speak() -> Str {\n        return name + \" says Woof!\"\n    }\n}\n\nlet d = Dog { name: \"Rex\" }\nprint(d.speak())   // Rex says Woof!"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "radio",
+          "question": "What is an 'object' in object-oriented programming?",
+          "options": [
+            "The class definition itself",
+            "One specific instance created from a class",
+            "A function that belongs to a module",
+            "A type of loop"
+          ],
+          "correct_index": 1,
+          "explanation": "A <b>class</b> is the blueprint; an <b>object</b> is a specific instance built from that blueprint. You can create many objects from one class, each with their own data."
+        },
+        {
+          "type": "text",
+          "question": "What is the term for when a child class provides its own version of a method defined in the parent class?",
+          "correct": "overriding",
+          "explanation": "<b>Overriding</b> (or method overriding) is when a subclass replaces a method inherited from its parent. The child's version runs instead of the parent's."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "step_label": "STEP 7 OF 7",
+      "title": "Language Deep Dive",
+      "subtitle": "What makes each language distinctive",
+      "teaching": [
+        "<b>Python</b> — beginner-friendly, dynamically typed, garbage-collected. Ideal for scripting, data science, and rapid prototyping. Slower than compiled languages but readable and concise. Huge standard library.",
+        "<b>C</b> — the foundation of modern computing. No garbage collector, no runtime overhead. You manage memory manually with <code>malloc</code>/<code>free</code>. Fast, low-level, but unforgiving — undefined behaviour and memory bugs are real risks. Used in OS kernels, embedded systems, and anywhere performance is critical.",
+        "<b>Rust</b> — systems-level performance like C, but with a compiler that eliminates memory bugs at compile time through its ownership model. No garbage collector, no null pointer exceptions, no data races. Steeper learning curve, but the compiler catches entire classes of bugs before the program runs.",
+        "<b>UniLogic</b> — compiles to multiple targets (native binary, bytecode, WASM). Statically typed, clean syntax. Designed for code that needs to run on different platforms without rewriting. The language this IDE is built for."
+      ],
+      "code_blocks": [
+        {
+          "lang": "Python",
+          "code": "# Python: concise, no types needed\ndef greet(name):\n    return f\"Hello, {name}!\"\n\nprint(greet(\"World\"))   # Hello, World!"
+        },
+        {
+          "lang": "C",
+          "code": "/* C: explicit types, manual memory */\n#include <stdio.h>\n\nvoid greet(const char* name) {\n    printf(\"Hello, %s!\\n\", name);\n}\n\nint main(void) {\n    greet(\"World\");\n    return 0;\n}"
+        },
+        {
+          "lang": "Rust",
+          "code": "// Rust: safe, explicit, zero-cost abstractions\nfn greet(name: &str) -> String {\n    format!(\"Hello, {}!\", name)\n}\n\nfn main() {\n    println!(\"{}\", greet(\"World\"));\n}"
+        },
+        {
+          "lang": "UniLogic",
+          "code": "// UniLogic: multi-target, statically typed\nfn greet(name: Str) -> Str {\n    return \"Hello, \" + name + \"!\"\n}\n\nprint(greet(\"World\"))   // Hello, World!"
+        }
+      ],
+      "exercises": [
+        {
+          "type": "radio",
+          "question": "Which language uses an 'ownership model' to prevent memory bugs at compile time, with no garbage collector?",
+          "options": [
+            "Python — it uses reference counting",
+            "C — it uses malloc/free",
+            "Rust — the borrow checker enforces ownership rules",
+            "UniLogic — it compiles to WASM"
+          ],
+          "correct_index": 2,
+          "explanation": "Rust's <b>borrow checker</b> is a compile-time analysis that enforces ownership rules — ensuring no two parts of the program can mutate the same data simultaneously, and all allocations are freed exactly once."
+        },
+        {
+          "type": "text",
+          "question": "What is the name of the memory management technique Python uses (hint: it counts how many references point to each object)?",
+          "correct": "reference counting",
+          "explanation": "Python uses <b>reference counting</b> — each object tracks how many variables point to it. When that count reaches zero, the object is freed. A cycle-detector handles circular references."
+        }
+      ]
+    }
+  ]
+}

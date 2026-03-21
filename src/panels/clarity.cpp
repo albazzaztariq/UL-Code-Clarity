@@ -1,22 +1,11 @@
 #include "panels/clarity.h"
+#include "core/theme.h"
 #include <QMouseEvent>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSettings>
 
-// ============================================================================
-// Color constants matching the prototype theme
-// ============================================================================
-static const char* BG      = "#1e1e2e";
-static const char* BG2     = "#2a2a3c";
-static const char* BG3     = "#333348";
-static const char* BG4     = "#3c3c54";
-static const char* FG      = "#cdd6f4";
-static const char* FG2     = "#a6adc8";
-static const char* FG3     = "#6c7086";
-static const char* ACCENT  = "#89b4fa";
-static const char* MAUVE   = "#cba6f7";
-static const char* BORDER  = "#45475a";
+using namespace Theme::Css;
 
 // Shared theme flag so ClarityEntry can pick up the current theme when built
 static bool s_isDark = true;

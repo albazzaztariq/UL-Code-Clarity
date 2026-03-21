@@ -1,16 +1,7 @@
 #include "panels/levels.h"
+#include "core/theme.h"
 
-static const char* BG3    = "#333348";
-static const char* FG     = "#cdd6f4";
-static const char* FG2    = "#a6adc8";
-static const char* BORDER = "#45475a";
-static const char* ACCENT = "#89b4fa";
-
-// Light theme equivalents
-static const char* L_BG    = "#e8e8e8";
-static const char* L_FG    = "#1e1e2e";
-static const char* L_FG2   = "#555555";
-static const char* L_BORDER= "#d0d0d0";
+using namespace Theme::Css;
 
 LevelSelector::LevelSelector(QWidget *parent)
     : QWidget(parent), m_level(1)
