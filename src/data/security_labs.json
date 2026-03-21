@@ -1,0 +1,69 @@
+{
+  "labs": [
+    {
+      "name": "Buffer Overflow",
+      "vulnType": "buffer_overflow",
+      "isPython": false,
+      "labProgram": "buffer_overflow",
+      "labProgram2": "buffer_overflow_fix",
+      "normalInput": "Hello!",
+      "attackInput": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "vulnCode": "#include <stdio.h>\n#include <string.h>\n\nint main(void) {\n    char buf[8];          // only 8 bytes on the stack\n    printf(\"Enter input: \");\n    gets(buf);            // UNSAFE: reads unlimited bytes!\n    printf(\"You said: %s\\n\", buf);\n    return 0;\n}\n",
+      "fixedCode": "#include <stdio.h>\n#include <string.h>\n\nint main(void) {\n    char buf[8];\n    printf(\"Enter input: \");\n    fgets(buf, sizeof(buf), stdin);  // SAFE: length-bounded\n    // strip trailing newline\n    size_t len = strlen(buf);\n    if (len > 0 && buf[len-1] == '\\n') buf[len-1] = '\\0';\n    printf(\"You said: %s\\n\", buf);\n    return 0;\n}\n",
+      "explanation": "gets() reads input with no length limit. You wrote more bytes than the buffer can hold. The extra bytes overwrite the return address on the stack — the value the CPU jumps to when the function returns. In a real attack those bytes would point to the attacker's shellcode, giving them full control of the process.",
+      "fixExplanation": "fgets() takes a length argument. It reads at most sizeof(buf)-1 characters, leaving room for the null terminator. No matter what the attacker types, the buffer cannot overflow."
+    },
+    {
+      "name": "Use After Free",
+      "vulnType": "use_after_free",
+      "isPython": false,
+      "labProgram": "uaf_demo",
+      "labProgram2": "uaf_demo_fix",
+      "normalInput": "",
+      "attackInput": "",
+      "vulnCode": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main(void) {\n    char* secret = malloc(32);\n    strcpy(secret, \"password=hunter2\");\n\n    free(secret);        // memory returned to allocator\n\n    char* reuse = malloc(32);       // same block reused!\n    strcpy(reuse, \"ATTACKER_DATA\");\n\n    printf(\"%s\\n\", secret);  // BUG: secret is freed!\n    free(reuse);\n}\n",
+      "fixedCode": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main(void) {\n    char* secret = malloc(32);\n    strcpy(secret, \"password=hunter2\");\n\n    free(secret);\n    secret = NULL;       // FIX: nullify immediately\n\n    if (secret != NULL) {\n        printf(\"%s\\n\", secret);\n    } else {\n        printf(\"[guard] pointer is NULL — use prevented\\n\");\n    }\n}\n",
+      "explanation": "After free(), the pointer variable still holds the old address. The allocator may give that memory to a different part of the program — or to a different request entirely. Reading through the freed pointer returns whatever was written there since, which could be attacker-controlled data. Writing through it silently corrupts live data structures.",
+      "fixExplanation": "Set the pointer to NULL immediately after free(). Any subsequent dereference crashes instantly (null dereference) — a loud, easy-to-find bug — rather than silently corrupting data in unpredictable ways."
+    },
+    {
+      "name": "SQL Injection",
+      "vulnType": "sql_injection",
+      "isPython": true,
+      "labProgram": "sqli_demo.py",
+      "labProgram2": "sqli_demo_fix.py",
+      "normalInput": "alice\npassword123",
+      "attackInput": "' OR '1'='1\nanypassword",
+      "vulnCode": "import sqlite3\n\ndef login(username, password):\n    # VULNERABLE: string concatenation\n    query = (\"SELECT * FROM users \"\n             \"WHERE username='\" + username + \"'\"\n             \" AND password='\" + password + \"'\")\n    cursor.execute(query)   # attacker controls query!\n    return cursor.fetchall()\n",
+      "fixedCode": "import sqlite3\n\ndef login(username, password):\n    # FIXED: parameterized query — ? are placeholders\n    query = (\"SELECT * FROM users \"\n             \"WHERE username=? AND password=?\")\n    cursor.execute(query, (username, password))  # safe!\n    return cursor.fetchall()\n",
+      "explanation": "The username field was pasted directly into the SQL string. Typing  ' OR '1'='1  closes the string early and adds a condition that is always true — so the database returns every user row. The attacker logs in as the first user (usually admin) without knowing any password. SQL injection is the #1 web vulnerability.",
+      "fixExplanation": "Parameterized queries (also called prepared statements) separate code from data. The ? placeholders are filled in by the database engine after the query is already compiled — so quotes in the input are treated as literal characters, never as SQL syntax."
+    },
+    {
+      "name": "Cross-Site Scripting (XSS)",
+      "vulnType": "xss",
+      "isPython": true,
+      "labProgram": "xss_demo.py",
+      "labProgram2": "xss_demo_fix.py",
+      "normalInput": "Hello, great article!",
+      "attackInput": "<script>document.cookie</script>",
+      "vulnCode": "// JavaScript — vulnerable page\nfunction postComment(text) {\n    // VULNERABLE: treats input as HTML\n    document.getElementById('comment')\n            .innerHTML = text;\n    //  ^ browser EXECUTES <script> tags!\n}\n",
+      "fixedCode": "// JavaScript — fixed page\nfunction postComment(text) {\n    // FIXED: textContent — always plain text\n    document.getElementById('comment')\n            .textContent = text;\n    //  ^ browser DISPLAYS <script> as text\n}\n\n// Server-side (Python):\nimport html\nsafe = html.escape(user_input)   # &lt;script&gt;\n",
+      "explanation": "innerHTML tells the browser to parse the string as HTML. A <script> tag is executed in the visitor's browser with full access to their cookies, local storage, and DOM. The attacker can steal session tokens (logging in as the victim), redirect to phishing pages, or mine cryptocurrency — all silently, in every visitor's browser.",
+      "fixExplanation": "textContent treats the value as plain text — angle brackets are displayed literally, never parsed as HTML. Server-side: html.escape() converts < to &lt; so even if innerHTML is used, the browser shows it as text."
+    },
+    {
+      "name": "Out of Memory (OOM)",
+      "vulnType": "oom",
+      "isPython": true,
+      "labProgram": "oom_demo.py",
+      "labProgram2": "oom_demo.py",
+      "normalInput": "normal",
+      "attackInput": "attack",
+      "vulnCode": "# VULNERABLE: unbounded allocation\ndata = []\nwhile True:\n    # each iteration: +1 MB\n    data.append('A' * 1_000_000)\n    # no exit condition — runs forever!\n    # OS kills process when RAM exhausted\n",
+      "fixedCode": "# FIXED: bounded allocation with cleanup\nMAX_MB = 100\ndata   = []\n\nfor _ in range(MAX_MB):\n    data.append('A' * 1_000_000)\n\n# Process data here...\nprocess(data)\n\n# Release when done\ndel data\ngc.collect()\n",
+      "explanation": "The loop allocates 1 MB per iteration with no upper bound. A single attacker request can exhaust all RAM on the server, causing the OS to kill the process (or the whole system to thrash). Every other user loses access instantly — a classic Denial of Service (DoS) attack exploiting missing resource limits.",
+      "fixExplanation": "Set an explicit cap on how much memory a single request can use. Process data in fixed-size chunks and release memory when done. On server endpoints, enforce per-request memory limits at the framework or OS level (e.g. resource.setrlimit on Linux, ulimit)."
+    }
+  ]
+}

@@ -60,7 +60,7 @@ private:
     QList<DepInfo> checkJSDeps(const QStringList& names);
     QList<DepInfo> checkRustDeps(const QStringList& names);
 
-    // ── Known package descriptions (top 50) ───────────────────────────────
+    // ── Known package descriptions (loaded from packages.json) ───────────
     static QMap<QString, QString> knownDescriptions();
 
     // ── Widgets ───────────────────────────────────────────────────────────

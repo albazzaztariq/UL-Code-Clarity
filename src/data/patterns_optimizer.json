@@ -1,0 +1,175 @@
+{
+  "python": [
+    {
+      "id": "unused_import",
+      "type": "unused_import",
+      "title": "Unused import",
+      "description_template": "'%1' is imported but never used anywhere in the file.",
+      "levels": {
+        "1": {
+          "why_it_matters": "Every time Python starts your program, it runs every import statement at the top of your file. Each import loads a module from disk, parses it, and sets up its contents in memory — even if you never use it.\n\nRemoving unused imports makes your program start faster, use less memory, and is less confusing for anyone reading the code (including your future self)."
+        },
+        "3": {
+          "why_it_matters": "Python executes import statements at module load time. Even unused imports incur the cost of disk I/O, bytecode compilation (or .pyc cache lookup), and insertion into sys.modules. On a cold start with many unused imports this compounds. Linters (ruff, pylint) flag this as F401."
+        }
+      },
+      "fix_template": "# Remove this line — %1 is never used:\n# %2"
+    },
+    {
+      "id": "string_concat_in_loop",
+      "type": "pattern",
+      "title": "String concatenation in loop",
+      "description_template": "Using '%1 +=' inside a loop is slow because strings in Python are immutable — every '+=' creates a brand-new string.",
+      "levels": {
+        "1": {
+          "why_it_matters_template": "Imagine you're writing a book by rewriting the entire thing from scratch every time you add a new sentence. That's what '%1 +=' does inside a loop — Python can't add to the end of an existing string, so it creates a completely new one and copies everything over.\n\nWith 100 loop iterations, you make 100 copies. With 10,000 iterations, you make 10,000 copies. Each copy gets bigger than the last, so the total work grows as n² (quadratic).\n\nThe fix: collect pieces in a list, then join them once at the end. A list can grow cheaply. ''.join(parts) does one single pass."
+        },
+        "3": {
+          "why_it_matters_template": "CPython strings are immutable; '%1 +=' allocates a new str object of size n+k on each iteration (where n is the current length and k is the appended chunk). Total allocations: O(n²). Using a list and str.join() amortises the cost: list.append() is O(1) amortised, and str.join() makes a single pass with one allocation."
+        }
+      },
+      "fix_template": "# Before the loop:\nparts = []\n\n# Inside the loop, replace '%1 += ...' with:\nparts.append(...)  # cheap list append\n\n# After the loop:\n%1 = ''.join(parts)  # one efficient string build"
+    },
+    {
+      "id": "list_membership",
+      "type": "pattern",
+      "title": "Use a set instead of a list for membership tests",
+      "description_template": "'if x in %1' checks every item in the list one by one to find a match.",
+      "levels": {
+        "1": {
+          "why_it_matters_template": "When you write 'if x in %1' and %1 is a list, Python has to look at each item from the beginning until it finds x (or reaches the end). If your list has 1,000 items, that's up to 1,000 comparisons for each check.\n\nA set works completely differently. It uses a hash table, which can jump directly to the right spot in memory — like having an index at the back of a book instead of reading every page. Converting the list to a set takes a moment, but after that every 'in' check is near-instant regardless of size."
+        },
+        "3": {
+          "why_it_matters_template": "list.__contains__ is O(n) — it does a linear scan. set.__contains__ is O(1) average via hash table lookup. If this check is inside a loop, the overall complexity drops from O(n²) to O(n). Convert %1 to a set once before the loop; the one-time O(n) cost of set() is amortised away."
+        }
+      },
+      "fix_template": "# Convert once, before any loop that checks membership:\n%1 = set(%1)\n\n# Then your existing check works unchanged and is now O(1):\n%2"
+    },
+    {
+      "id": "nested_loops_same_collection",
+      "type": "pattern",
+      "title": "O(n²) nested loop over the same collection",
+      "description_template": "Two nested loops both iterating over '%1' means the inner loop runs once for every item in the outer loop.",
+      "levels": {
+        "1": {
+          "why_it_matters_template": "If '%1' has 100 items, the inner loop runs 100 × 100 = 10,000 times. With 1,000 items it runs 1,000,000 times. The work grows as the square of the input size — this is called O(n²) (\"order n-squared\").\n\nA few alternatives depending on what you're doing:\n• Finding pairs: itertools.combinations(%1, 2) is cleaner and faster.\n• Looking something up: use a dictionary so each lookup is instant.\n• Comparing all vs all: sometimes unavoidable, but sort first and use two-pointer technique to reduce work."
+        },
+        "3": {
+          "why_it_matters_template": "Nested iteration over the same collection is O(n²). Depending on the goal: use itertools.combinations for pair enumeration (same complexity but Pythonic), a dict/set for O(1) lookup, or sort + two-pointer for two-sum style problems (O(n log n))."
+        }
+      },
+      "fix_template": "# Option 1 — if you need all pairs:\nimport itertools\nfor a, b in itertools.combinations(%1, 2):\n    ...\n\n# Option 2 — if you're searching for a match, use a set/dict:\nlookup = set(%1)\nfor item in %1:\n    if target in lookup:  # O(1) instead of O(n)\n        ..."
+    },
+    {
+      "id": "missing_type_hints",
+      "type": "pattern",
+      "title": "Missing type hints",
+      "description_template": "Function '%1' has parameters with no type annotations.",
+      "levels": {
+        "1": {
+          "why_it_matters": "Type hints are notes you add to your function that say what kind of data each parameter expects (a number, a string, a list, etc.).\n\nThey don't make the program faster by themselves, but they let tools like mypy check your code before you run it and catch mistakes early — like passing a string to a function that expects a number. They also make your code much easier to understand at a glance.\n\nExample: 'def add(a: int, b: int) -> int:' tells you and your tools that add() takes two integers and returns an integer."
+        },
+        "3": {
+          "why_it_matters": "Without type annotations, mypy and pyright cannot statically verify call sites. At runtime, CPython performs no type checking, but unannotated code prevents static analysis from catching AttributeError/TypeError bugs before deployment. Type hints also enable faster attribute lookup in some JIT implementations (PyPy, Cython typed mode)."
+        }
+      },
+      "fix_template": "# Add a type after each parameter name with a colon,\n# and a return type after the closing parenthesis with '->':\ndef %1(param_name: int, other: str) -> bool:\n    ..."
+    },
+    {
+      "id": "global_variable",
+      "type": "pattern",
+      "title": "Global variable access in function",
+      "description_template": "The 'global %1' keyword forces Python to look up '%1' in the module's global namespace on every access.",
+      "levels": {
+        "1": {
+          "why_it_matters_template": "Python has to search in two places for a variable: first locally inside the function, then globally in the module. When you use 'global %1', every read of %1 does that two-step search every single time.\n\nLocal variables are stored in a simple array and accessed by index — that's very fast. Global variables require a dictionary lookup — slower.\n\nThe fix is to pass the value as a function parameter instead. This makes it a local variable inside the function, which is faster and also makes your function easier to test and reuse."
+        },
+        "3": {
+          "why_it_matters_template": "CPython stores locals in a fast array (LOAD_FAST, O(1) array index). Globals are stored in the module's __dict__ (LOAD_GLOBAL, dict lookup). Inside a hot loop, the dict overhead per iteration compounds. Pass the value as a parameter to make it a local, or cache it: '_%1 = %1' at the top of the function."
+        }
+      },
+      "fix_template": "# Instead of 'global %1', pass it as a parameter:\ndef your_function(%1):  # receives the value directly\n    # use %1 here as a local variable\n    ..."
+    },
+    {
+      "id": "import_in_function",
+      "type": "pattern",
+      "title": "Import inside a function",
+      "description": "An import statement inside a function body runs the import machinery every time the function is called.",
+      "levels": {
+        "1": {
+          "why_it_matters": "Normally Python is smart: once a module is imported, it remembers it and reuses it next time. But when an import is inside a function, Python still has to check every single time the function runs — it looks up the module name, checks if it's already loaded, and finds it in memory.\n\nThis happens even though the module is already there. It's a small cost each time, but if your function is called thousands of times (e.g., in a loop), those small costs add up.\n\nMove the import to the top of the file. Python does the check once when the program starts, then never again."
+        },
+        "3": {
+          "why_it_matters": "Even though sys.modules caches loaded modules, each call still executes the import statement: the interpreter does a dict lookup in sys.modules, resolves the name, and stores the result. In a hot path this is measurable. Module-level imports run once at load time. Move them there."
+        }
+      },
+      "fix_template": "# Move this to the top of the file (line 1-ish):\n%1\n\n# Then remove it from inside the function."
+    }
+  ],
+  "cpp": [
+    {
+      "id": "non_const_variable",
+      "type": "pattern",
+      "title": "Variable could be const",
+      "description_template": "'%1' is set once and never changed — it should be marked 'const'.",
+      "levels": {
+        "1": {
+          "why_it_matters": "When you mark a variable 'const', you're telling the compiler \"this value will never change after it's set.\" That's a powerful promise, and the compiler can take advantage of it:\n\n• It can store the value in a CPU register permanently instead of reloading it from memory each time.\n• It can substitute the value directly into the code (constant folding).\n• It can eliminate branches that would never be taken.\n\nIt also protects you from accidentally changing the value later, which is a common source of hard-to-find bugs."
+        },
+        "3": {
+          "why_it_matters": "const enables the compiler to constant-fold, promote to register, and prove the value doesn't alias — opening up optimisations like loop hoisting and CSE (common subexpression elimination). With -O2 GCC/Clang will often optimise this anyway, but const is also a correctness guarantee and an aid to alias analysis."
+        }
+      },
+      "fix_prefix": "const "
+    },
+    {
+      "id": "malloc_single_object",
+      "type": "pattern",
+      "title": "Heap allocation for a single object",
+      "description_template": "malloc(sizeof(%1)) allocates one object on the heap when the stack would work just as well.",
+      "levels": {
+        "1": {
+          "why_it_matters_template": "Your computer has two main places to store data: the stack and the heap.\n\nThe stack is like your desk — fast to put things on, fast to clear off, and automatically tidied when a function ends. The heap is like a storage room — you can keep things there longer, but you have to fetch a key (ask the OS for memory with malloc), and you have to return it yourself (free()), or it leaks.\n\nFor a single %1, just declare it on the stack: '%1 obj;' — no malloc, no free, no risk of forgetting to clean up, and faster because the OS isn't involved at all."
+        },
+        "3": {
+          "why_it_matters_template": "malloc() calls into the allocator (ptmalloc/jemalloc/tcmalloc), which may acquire a lock, search free lists, and call brk/mmap. Stack allocation is a single SUB instruction on the stack pointer — effectively free. For a single-object %1 whose lifetime is function-scoped, stack allocation is always preferable. Also eliminates the need for free() and the risk of a memory leak."
+        }
+      },
+      "fix_template": "// Instead of:\n// %1* obj = malloc(sizeof(%1));\n// ...\n// free(obj);\n\n// Use stack allocation:\n%1 obj;  // automatically freed when this scope ends\n// access via obj.field instead of obj->field"
+    },
+    {
+      "id": "pass_by_value",
+      "type": "pattern",
+      "title": "Pass large type by value",
+      "description_template": "Passing '%1' by value makes a full copy of the object every time this function is called.",
+      "cpp_only": true,
+      "levels": {
+        "1": {
+          "why_it_matters_template": "When you pass an object to a function in C++, by default the function gets its own private copy — like handing someone a photocopy of a document instead of the original. For small things like int or double, this is fine. For larger objects like strings, vectors, or your own structs, copying can be expensive: it allocates memory, copies every field, and then destroys the copy when the function ends.\n\nUse 'const %1&' instead — this passes a reference (like handing over the original document to read). The function can read it but not accidentally change it, and no copy is made."
+        },
+        "3": {
+          "why_it_matters_template": "Pass-by-value invokes the copy constructor, which for non-trivial types may allocate heap memory (e.g., std::string, std::vector). Use 'const %1&' to pass a const reference: zero copy cost, same read access, compiler enforces immutability. If ownership transfer is needed, use move semantics ('%1&&' + std::move at call site)."
+        }
+      }
+    },
+    {
+      "id": "small_function_inline",
+      "type": "pattern",
+      "title": "Small function could be inlined",
+      "description_template": "'%1' has a short body (%2 lines) and is called %3 time(s). Adding 'inline' lets the compiler skip the function call overhead.",
+      "levels": {
+        "1": {
+          "why_it_matters": "Every time your program calls a function, there's a small cost: it saves the current position, jumps to the function's code, does the work, then jumps back. For tiny functions like getters or small helpers, this overhead can be as expensive as the actual work.\n\nThe 'inline' keyword asks the compiler to paste the function's code directly at each call site, eliminating those jumps entirely. The code becomes slightly larger, but the calls become faster — especially if the function is called inside a loop."
+        },
+        "3": {
+          "why_it_matters": "Function calls incur prologue/epilogue overhead: CALL instruction, stack frame setup, parameter passing (may spill registers), and RET. For a small body called multiple times, the overhead may dominate the actual work. 'inline' hints the compiler to expand the body at call sites; with -O2, GCC/Clang will often do this regardless, but the hint is useful for header-defined functions."
+        }
+      },
+      "fix_prefix": "inline "
+    }
+  ],
+  "cross_language_note": {
+    "level_1_2": "Python ran %1x slower than the %2 version.\n\nThat's not a bug — it's how these languages work. Python reads your code line by line every time it runs, which takes time. %2 is translated into direct CPU instructions before it runs, so it starts fast and stays fast.\n\nThink of it like this: Python is like reading a recipe out loud while you cook. %2 is like having the meal already prepared. For learning and quick experiments, Python is great. For programs that need to run many times or handle a lot of data quickly, a compiled language like C or Rust is the right choice.",
+    "level_3_4": "Python ran %1x slower than the %2 version.\n\nPython executes via CPython bytecode interpreted at runtime; %2 compiles to native machine code with compiler optimisations (-O2 here). The overhead is inherent to the dynamic dispatch, GIL, and reference counting in CPython.\n\nFor this workload, consider C, Rust, or UL (compiled to C) for production. Use Python for prototyping, scripting, and tasks where development speed matters more than execution speed."
+  }
+}

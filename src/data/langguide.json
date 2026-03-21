@@ -1,0 +1,496 @@
+{
+  "languages": [
+    {
+      "id": "python",
+      "title": "Python -- Language Reference",
+      "subtitle": "Interpreted, garbage-collected, dynamically typed. Great for beginners and data work. Slow for CPU-heavy tasks.",
+      "sections": [
+        {
+          "name": "Runtime",
+          "rows": [
+            {
+              "label": "Compiled or Interpreted",
+              "status": "info",
+              "value": "Interpreted (bytecode)",
+              "helpText": "Python compiles your .py to bytecode (.pyc), then the CPython interpreter reads it instruction by instruction. It never becomes native machine code unless you use tools like Nuitka or Cython."
+            },
+            {
+              "label": "Execution Speed",
+              "status": "partial",
+              "value": "Slow for CPU work",
+              "helpText": "Python is 10-100x slower than C for pure computation. The GIL, dynamic typing, and interpretation all contribute. Fine for I/O, scripting, and glue code."
+            },
+            {
+              "label": "Startup Time",
+              "status": "info",
+              "value": "~50ms",
+              "helpText": "Python loads the interpreter, imports modules, compiles bytecode. Heavier than C but lighter than Java."
+            }
+          ]
+        },
+        {
+          "name": "Memory",
+          "rows": [
+            {
+              "label": "Memory Model",
+              "status": "info",
+              "value": "Garbage Collected",
+              "helpText": "Python uses reference counting plus a cyclic garbage collector. You never call malloc or free. Objects are freed when nothing references them."
+            },
+            {
+              "label": "Manual Memory Control",
+              "status": "no",
+              "value": "No",
+              "helpText": "You cannot control when memory is allocated or freed. Python decides. This prevents memory leaks from programmer error but means you can't optimize memory usage."
+            },
+            {
+              "label": "Stack vs Heap",
+              "status": "info",
+              "value": "Everything on heap",
+              "helpText": "All Python objects live on the heap. Local variables are references (pointers) to heap objects. The stack only holds these references, not the data itself."
+            }
+          ]
+        },
+        {
+          "name": "Threading & Concurrency",
+          "rows": [
+            {
+              "label": "True Parallelism",
+              "status": "no",
+              "value": "No (GIL)",
+              "helpText": "The Global Interpreter Lock means only one thread executes Python at a time. For CPU parallelism, use multiprocessing (separate processes) or C extensions."
+            },
+            {
+              "label": "Async/Await",
+              "status": "yes",
+              "value": "Yes",
+              "helpText": "Python has native async/await for I/O concurrency. Good for network requests, file I/O, web servers. Not for CPU-bound work."
+            },
+            {
+              "label": "Threads",
+              "status": "partial",
+              "value": "Yes, but limited",
+              "helpText": "threading module exists but threads don't run in parallel for Python code due to the GIL. Useful only for I/O-bound waiting."
+            }
+          ]
+        },
+        {
+          "name": "Object-Oriented Features",
+          "rows": [
+            {
+              "label": "Classes",
+              "status": "yes",
+              "value": "Yes",
+              "helpText": "Full class support with constructors (__init__), methods, properties, class variables, static methods."
+            },
+            {
+              "label": "Inheritance",
+              "status": "yes",
+              "value": "Yes (multiple)",
+              "helpText": "Python supports multiple inheritance with MRO (Method Resolution Order). Can inherit from multiple classes."
+            },
+            {
+              "label": "Polymorphism",
+              "status": "yes",
+              "value": "Yes (duck typing)",
+              "helpText": "If it walks like a duck and quacks like a duck, it's a duck. No interfaces needed -- just implement the same methods."
+            },
+            {
+              "label": "Interfaces",
+              "status": "partial",
+              "value": "ABC only",
+              "helpText": "Python has Abstract Base Classes (abc module) but no formal interface keyword. Duck typing is the standard approach."
+            },
+            {
+              "label": "Encapsulation",
+              "status": "partial",
+              "value": "Convention only",
+              "helpText": "Python uses _ prefix for 'private' but nothing is truly private. It's a convention, not enforced by the language."
+            }
+          ]
+        },
+        {
+          "name": "Type System",
+          "rows": [
+            {
+              "label": "Static Types",
+              "status": "no",
+              "value": "No (optional hints)",
+              "helpText": "Python is dynamically typed. Type hints (PEP 484) exist but are not enforced at runtime -- they're for tools like mypy."
+            },
+            {
+              "label": "Generics",
+              "status": "partial",
+              "value": "Type hints only",
+              "helpText": "Generic type hints exist (list[int], dict[str, Any]) but are not enforced. The runtime doesn't check them."
+            },
+            {
+              "label": "Null Safety",
+              "status": "no",
+              "value": "No",
+              "helpText": "None can be assigned to anything. No compile-time null checks. NoneType errors are a top Python bug."
+            }
+          ]
+        },
+        {
+          "name": "Quirks & Gotchas",
+          "rows": [
+            {
+              "label": "Mutable Default Args",
+              "status": "partial",
+              "value": "Dangerous",
+              "helpText": "def f(items=[]): -- the default list is shared across ALL calls. A classic Python trap. Use None as default instead."
+            },
+            {
+              "label": "Indentation is Syntax",
+              "status": "info",
+              "value": "Yes",
+              "helpText": "Python uses indentation to define blocks. No braces. A misaligned line changes the program's meaning."
+            },
+            {
+              "label": "GIL",
+              "status": "partial",
+              "value": "Major limitation",
+              "helpText": "The Global Interpreter Lock is Python's biggest architectural constraint. It prevents true multi-threaded parallelism for CPU work."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c",
+      "title": "C -- Language Reference",
+      "subtitle": "Compiled to native code. Manual memory. Maximum control, maximum responsibility. The language that built operating systems.",
+      "sections": [
+        {
+          "name": "Runtime",
+          "rows": [
+            {
+              "label": "Compiled or Interpreted",
+              "status": "info",
+              "value": "Compiled (native binary)",
+              "helpText": "C compiles directly to machine code. No interpreter, no VM, no runtime. The output is a standalone binary the CPU executes directly."
+            },
+            {
+              "label": "Execution Speed",
+              "status": "yes",
+              "value": "Fastest possible",
+              "helpText": "C code runs at near-hardware speed. No overhead from garbage collection, interpretation, or dynamic dispatch. This is why OS kernels are written in C."
+            },
+            {
+              "label": "Startup Time",
+              "status": "yes",
+              "value": "Instant (~1ms)",
+              "helpText": "A C binary starts immediately. No runtime to load, no bytecode to compile, no modules to import."
+            }
+          ]
+        },
+        {
+          "name": "Memory",
+          "rows": [
+            {
+              "label": "Memory Model",
+              "status": "info",
+              "value": "Manual (malloc/free)",
+              "helpText": "You allocate memory with malloc() and free it with free(). Forget to free = memory leak. Free twice = crash. Free then use = undefined behavior."
+            },
+            {
+              "label": "Stack vs Heap",
+              "status": "info",
+              "value": "Both, you choose",
+              "helpText": "Local variables go on the stack (automatic, fast, limited size). Dynamic data goes on the heap (malloc, unlimited, you manage lifetime). Understanding this distinction is critical in C."
+            },
+            {
+              "label": "Pointers",
+              "status": "yes",
+              "value": "Yes (central concept)",
+              "helpText": "Pointers are memory addresses. C gives you direct access to memory through pointers. Powerful but dangerous -- invalid pointers cause segfaults and security vulnerabilities."
+            },
+            {
+              "label": "Buffer Overflows",
+              "status": "no",
+              "value": "No protection",
+              "helpText": "C does not check array bounds. Writing past the end of an array overwrites whatever is next in memory. This is the #1 source of security vulnerabilities in C code."
+            }
+          ]
+        },
+        {
+          "name": "Threading & Concurrency",
+          "rows": [
+            {
+              "label": "True Parallelism",
+              "status": "yes",
+              "value": "Yes (pthreads)",
+              "helpText": "C threads run truly in parallel on multiple CPU cores. No GIL. But you must handle synchronization (mutexes, race conditions) yourself."
+            },
+            {
+              "label": "Async/Await",
+              "status": "no",
+              "value": "No",
+              "helpText": "C has no built-in async. You can use libraries like libuv or write event loops manually, but it's not a language feature."
+            },
+            {
+              "label": "Data Races",
+              "status": "no",
+              "value": "No protection",
+              "helpText": "C does nothing to prevent two threads from writing to the same memory simultaneously. You must use mutexes and atomics correctly. Getting this wrong causes hard-to-debug crashes."
+            }
+          ]
+        },
+        {
+          "name": "Object-Oriented Features",
+          "rows": [
+            {
+              "label": "Classes",
+              "status": "no",
+              "value": "No",
+              "helpText": "C has no classes. You use structs for data grouping and function pointers for behavior. It's manual but possible."
+            },
+            {
+              "label": "Inheritance",
+              "status": "no",
+              "value": "No",
+              "helpText": "No language support. You can simulate it by embedding one struct inside another, but the compiler doesn't help you."
+            },
+            {
+              "label": "Polymorphism",
+              "status": "partial",
+              "value": "Manual (function ptrs)",
+              "helpText": "You can create vtable-like dispatch using arrays of function pointers, but it's entirely manual. No compiler support."
+            },
+            {
+              "label": "Interfaces",
+              "status": "no",
+              "value": "No",
+              "helpText": "No concept of interfaces. You use conventions and function pointer structs."
+            },
+            {
+              "label": "Encapsulation",
+              "status": "partial",
+              "value": "Header files only",
+              "helpText": "You can hide implementation in .c files and only expose declarations in .h headers. But anything in a struct is accessible."
+            }
+          ]
+        },
+        {
+          "name": "Type System",
+          "rows": [
+            {
+              "label": "Static Types",
+              "status": "yes",
+              "value": "Yes",
+              "helpText": "C is statically typed. Every variable has a declared type checked at compile time."
+            },
+            {
+              "label": "Generics",
+              "status": "no",
+              "value": "No",
+              "helpText": "C has no generics. You use void* (type-erased pointers) or preprocessor macros, both losing type safety."
+            },
+            {
+              "label": "Null Safety",
+              "status": "no",
+              "value": "No",
+              "helpText": "NULL can be assigned to any pointer. Dereferencing NULL = crash (segfault). No compile-time protection."
+            }
+          ]
+        },
+        {
+          "name": "Quirks & Gotchas",
+          "rows": [
+            {
+              "label": "Undefined Behavior",
+              "status": "no",
+              "value": "Everywhere",
+              "helpText": "C has hundreds of undefined behaviors -- signed overflow, null deref, use-after-free, buffer overflow. The compiler assumes these never happen and optimizes accordingly."
+            },
+            {
+              "label": "No Strings",
+              "status": "info",
+              "value": "char arrays + \\0",
+              "helpText": "C has no string type. Strings are null-terminated char arrays. You manage the memory, the length, and the null terminator yourself."
+            },
+            {
+              "label": "Header Files",
+              "status": "info",
+              "value": "Required",
+              "helpText": "C separates declarations (.h) from implementations (.c). You must manually keep them in sync. Forgetting an include causes cryptic errors."
+            },
+            {
+              "label": "Preprocessor",
+              "status": "partial",
+              "value": "Powerful but fragile",
+              "helpText": "#define macros are text substitution before compilation. They don't respect scope, types, or namespaces. Misuse causes baffling bugs."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ul",
+      "title": "UniLogic -- Language Reference",
+      "subtitle": "Compiled, configurable runtime, multi-target. Python's ease with C's output. Everything is tunable.",
+      "sections": [
+        {
+          "name": "Runtime",
+          "rows": [
+            {
+              "label": "Compiled or Interpreted",
+              "status": "info",
+              "value": "Compiled (multi-target)",
+              "helpText": "UL compiles to C (native binary), Python, JavaScript, WASM, or bytecode from the same source. You choose the target."
+            },
+            {
+              "label": "Execution Speed",
+              "status": "yes",
+              "value": "C-speed when targeting C",
+              "helpText": "When compiled to C -> native binary, UL code runs at the same speed as hand-written C. Other targets run at their platform's speed."
+            },
+            {
+              "label": "Memory Model",
+              "status": "yes",
+              "value": "You choose",
+              "helpText": "gc, manual, refcount, or arena -- all from one @dr line. Switch and recompile to see the difference. No other language lets you do this."
+            }
+          ]
+        },
+        {
+          "name": "Memory",
+          "rows": [
+            {
+              "label": "Garbage Collection",
+              "status": "yes",
+              "value": "Yes (gc mode)",
+              "helpText": "Using Boehm GC linked into the native binary. Automatic, no free() calls needed."
+            },
+            {
+              "label": "Manual Memory",
+              "status": "yes",
+              "value": "Yes (manual mode)",
+              "helpText": "memtake/memgive (malloc/free). You control allocation and deallocation."
+            },
+            {
+              "label": "Reference Counting",
+              "status": "yes",
+              "value": "Yes (refcount mode)",
+              "helpText": "Automatic increment/decrement. Freed when count hits zero."
+            },
+            {
+              "label": "Arena Allocation",
+              "status": "yes",
+              "value": "Yes (arena mode)",
+              "helpText": "Bulk allocate, free everything at once. Fast for batch processing."
+            }
+          ]
+        },
+        {
+          "name": "Threading & Concurrency",
+          "rows": [
+            {
+              "label": "True Parallelism",
+              "status": "yes",
+              "value": "Yes (threaded mode)",
+              "helpText": "pthreads when targeting C. Real OS threads, true parallelism."
+            },
+            {
+              "label": "Data Parallelism",
+              "status": "yes",
+              "value": "Yes (parallel mode)",
+              "helpText": "OpenMP-based parallel for loops. Automatic work distribution."
+            },
+            {
+              "label": "Async/Await",
+              "status": "yes",
+              "value": "Yes (async mode)",
+              "helpText": "Coroutine-based async. Non-blocking I/O."
+            },
+            {
+              "label": "Cooperative",
+              "status": "yes",
+              "value": "Yes (cooperative mode)",
+              "helpText": "Manual yield_now/schedule. Lightweight green threads."
+            }
+          ]
+        },
+        {
+          "name": "Object-Oriented Features",
+          "rows": [
+            {
+              "label": "Types (structs)",
+              "status": "yes",
+              "value": "Yes",
+              "helpText": "Zero-overhead C structs. Data only, no methods."
+            },
+            {
+              "label": "Objects (OOP)",
+              "status": "yes",
+              "value": "Yes (vtable dispatch)",
+              "helpText": "Full OOP with constructors, methods, vtable-based polymorphism."
+            },
+            {
+              "label": "Inheritance",
+              "status": "yes",
+              "value": "Yes (forks keyword)",
+              "helpText": "object Dog forks Animal -- copies and extends. Multiple inheritance supported."
+            },
+            {
+              "label": "Polymorphism",
+              "status": "yes",
+              "value": "Yes (automatic)",
+              "helpText": "Variable typed as parent, assigned child -- vtable dispatches correctly."
+            },
+            {
+              "label": "Interfaces",
+              "status": "yes",
+              "value": "Yes",
+              "helpText": "interface keyword. Semcheck enforces all methods present."
+            }
+          ]
+        },
+        {
+          "name": "Type System",
+          "rows": [
+            {
+              "label": "Static Types",
+              "status": "yes",
+              "value": "Yes (strict mode)",
+              "helpText": "Full compile-time type checking in strict mode."
+            },
+            {
+              "label": "Dynamic Types",
+              "status": "yes",
+              "value": "Yes (dynamic mode)",
+              "helpText": "Runtime type checking in dynamic mode. Switch with one @dr line."
+            },
+            {
+              "label": "Gradual Types",
+              "status": "yes",
+              "value": "Yes (gradual mode)",
+              "helpText": "Mix typed and untyped. Typed where you want safety, untyped where you want speed."
+            },
+            {
+              "label": "Null Safety",
+              "status": "yes",
+              "value": "Yes (@nullable)",
+              "helpText": "@nullable annotation. Non-nullable by default."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "explain_examples": {
+    "main.py": {
+      "language": "python",
+      "annotated_code": "# function returning float -- calculates total cost of a list of prices with tax applied\n# accepts: list of prices, optional tax rate (defaults to 10%)\ndef calculate_total(prices, tax_rate=0.10):\n    \"\"\"Calculate total price with tax.\"\"\"\n    # guard clause -- returns 0 immediately if the price list is empty, prevents errors downstream\n    if not prices:\n        return 0.0\n\n    # accumulator variable -- will hold the running sum of all prices\n    subtotal = 0\n    # loop through every item in the list by index -- adds each price to the running total\n    for i in range(len(prices)):\n        subtotal += prices[i]\n\n    # applies tax by multiplying subtotal by (1 + rate), e.g. 1.10 for 10% tax\n    total = subtotal * (1 + tax_rate)\n    # rounds to 2 decimal places to avoid floating point artifacts like 50.038999...\n    return round(total, 2)\n\n\n# entry point -- called when script runs directly, sets up test data and prints results\ndef main():\n    # test data -- five price values to sum\n    items = [12.99, 5.50, 3.75, 8.00, 15.25]\n    # calls calculate_total with default 10% tax\n    total = calculate_total(items)\n    # output -- sum() is a builtin that adds list elements, :.2f formats to 2 decimal places\n    print(f\"Subtotal: ${sum(items):.2f}\")\n    print(f\"Total with tax: ${total:.2f}\")\n    # len() returns the number of items in the list\n    print(f\"Items: {len(items)}\")\n\n\n# Python idiom -- only runs main() if this file is executed directly, not when imported\nif __name__ == \"__main__\":\n    main()"
+    },
+    "helpers.c": {
+      "language": "c",
+      "annotated_code": "#include <stdio.h>\n#include <stdlib.h>\n\n// struct definition -- groups a name string and price float into one data type\ntypedef struct {\n    char* name;    // pointer to the item's name string\n    double price;  // the item's price as a 64-bit float\n} Item;\n\n// function returning Item pointer -- allocates heap memory for one Item and sets its fields\n// caller is responsible for freeing the returned pointer\nItem* create_item(const char* name, double price) {\n    Item* item = malloc(sizeof(Item));  // allocates sizeof(Item) bytes on the heap\n    item->name = (char*)name;           // WARNING: stores pointer directly, doesn't copy the string\n    item->price = price;\n    return item;  // returns heap-allocated Item -- must be freed by caller\n}\n\n// function returning double -- sums the price field of each Item in the array\n// used by main() to get the total cost of all items\ndouble total_price(Item** items, int count) {\n    double total = 0;\n    for (int i = 0; i < count; i++) {\n        total += items[i]->price;  // arrow operator dereferences pointer to access price field\n    }\n    return total;\n}\n\n// entry point -- creates 3 items, prints their total, but never frees the allocated memory\nint main() {\n    Item* items[3];  // array of 3 pointers to Item structs (stack-allocated array of heap pointers)\n    items[0] = create_item(\"Widget\", 12.99);\n    items[1] = create_item(\"Gadget\", 5.50);\n    items[2] = create_item(\"Doohickey\", 3.75);\n\n    // %.2f formats the double to 2 decimal places\n    printf(\"Total: $%.2f\\n\", total_price(items, 3));\n\n    // BUG: memory leak -- 3 malloc'd Items are never free()'d before program exits\n    return 0;\n}"
+    },
+    "app.ul": {
+      "language": "ul",
+      "annotated_code": "// function returning float -- sums a list of prices and applies a tax multiplier\n// called by main() to compute the final cost\nfunction calculate_total(list float prices, float tax_rate) returns float\n    // guard clause -- returns 0 if the list is empty, avoids iterating over nothing\n    if size(prices) == 0\n        return 0.0\n    end if\n\n    // accumulator -- holds running sum, initialized to 0.0 (float)\n    float subtotal = 0.0\n    // for-each loop -- iterates every element in the prices list, adds to subtotal\n    for each p in prices\n        subtotal += p\n    end for\n\n    // multiplies subtotal by (1 + tax_rate) and returns the taxed total\n    return subtotal * (1.0 + tax_rate)\nend function\n\n// entry point -- sets up test data and prints the result\n// returns int (0 = success) as required by UL convention\nfunction main() returns int\n    // list literal -- 5 float prices\n    list float items = [12.99, 5.50, 3.75, 8.00, 15.25]\n    // calls calculate_total with 10% tax rate\n    float total = calculate_total(items, 0.10)\n    // change() casts float to string for concatenation -- UL has no string interpolation\n    print \"Total with tax: \" + change(total)->string\n    return 0\nend function"
+    }
+  }
+}

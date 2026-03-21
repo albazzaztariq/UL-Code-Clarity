@@ -11,6 +11,9 @@
 #include <QTextEdit>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QMap>
+#include <QString>
+#include "core/cvemonitor.h"
 
 // Represents a single saved model configuration
 struct SavedModel {
@@ -54,6 +57,12 @@ public:
 signals:
     // Emitted when the model list changes so AIChatPanel can refresh its dropdown
     void modelsChanged();
+    // Emitted when Tools menu item visibility changes
+    void menuVisibilityChanged();
+    // Emitted when news ticker settings change
+    void tickerSettingsChanged();
+    // Emitted when CVE monitoring settings change
+    void cveSettingsChanged();
 
 private slots:
     void onAddModel();
@@ -68,6 +77,9 @@ private:
     void buildModelsTab(QTabWidget *tabs);
     void buildAIBehaviorTab(QTabWidget *tabs);
     void buildPermissionsTab(QTabWidget *tabs);
+    void buildMenuCustomizationTab(QTabWidget *tabs);
+    void buildNewsTickerTab(QTabWidget *tabs);
+    void buildSecurityTab(QTabWidget *tabs);
 
     void loadSettings();
     void applySettings();
@@ -93,6 +105,22 @@ private:
 
     // Permissions
     QCheckBox  *m_disablePromptsChk = nullptr;
+
+    // Menu Customization
+    QMap<QString, QCheckBox*> m_menuVisCheckBoxes;
+
+    // Security / CVE
+    QCheckBox  *m_cveEnabledChk        = nullptr;
+    QComboBox  *m_cveFreqCombo         = nullptr;
+
+    // News Ticker
+    QCheckBox  *m_tickerEnabledChk     = nullptr;
+    QCheckBox  *m_tickerSubProgramming = nullptr;
+    QCheckBox  *m_tickerSubPython      = nullptr;
+    QCheckBox  *m_tickerSubJavascript  = nullptr;
+    QCheckBox  *m_tickerSubCProg       = nullptr;
+    QCheckBox  *m_tickerSubCpp         = nullptr;
+    QComboBox  *m_tickerPollCombo      = nullptr;
 
     // Network for test connection
     QNetworkAccessManager *m_nam = nullptr;

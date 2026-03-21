@@ -1,5 +1,7 @@
 #include "core/securitylab.h"
+#include "core/jsonloader.h"
 
+#include <QJsonArray>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSplitter>
@@ -54,262 +56,31 @@ static QString labsDir()
     return candidate; // best guess even if not found
 }
 
-// ── Built-in LabDefinitions ───────────────────────────────────────────────────
-
-static LabDefinition makeBufferOverflow()
-{
-    QString dir = labsDir();
-    LabDefinition d;
-    d.name        = "Buffer Overflow";
-    d.vulnType    = "buffer_overflow";
-    d.isPython    = false;
-    d.labProgram  = dir + "/buffer_overflow";     // compiled .exe on Windows
-    d.labProgram2 = dir + "/buffer_overflow_fix";
-    d.normalInput = "Hello!";
-    d.attackInput = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    d.vulnCode    =
-        "#include <stdio.h>\n"
-        "#include <string.h>\n"
-        "\n"
-        "int main(void) {\n"
-        "    char buf[8];          // only 8 bytes on the stack\n"
-        "    printf(\"Enter input: \");\n"
-        "    gets(buf);            // UNSAFE: reads unlimited bytes!\n"
-        "    printf(\"You said: %s\\n\", buf);\n"
-        "    return 0;\n"
-        "}\n";
-    d.fixedCode   =
-        "#include <stdio.h>\n"
-        "#include <string.h>\n"
-        "\n"
-        "int main(void) {\n"
-        "    char buf[8];\n"
-        "    printf(\"Enter input: \");\n"
-        "    fgets(buf, sizeof(buf), stdin);  // SAFE: length-bounded\n"
-        "    // strip trailing newline\n"
-        "    size_t len = strlen(buf);\n"
-        "    if (len > 0 && buf[len-1] == '\\n') buf[len-1] = '\\0';\n"
-        "    printf(\"You said: %s\\n\", buf);\n"
-        "    return 0;\n"
-        "}\n";
-    d.explanation =
-        "gets() reads input with no length limit. You wrote more bytes than "
-        "the buffer can hold. The extra bytes overwrite the return address on "
-        "the stack — the value the CPU jumps to when the function returns. "
-        "In a real attack those bytes would point to the attacker's shellcode, "
-        "giving them full control of the process.";
-    d.fixExplanation =
-        "fgets() takes a length argument. It reads at most sizeof(buf)-1 characters, "
-        "leaving room for the null terminator. No matter what the attacker types, "
-        "the buffer cannot overflow.";
-    return d;
-}
-
-static LabDefinition makeUseAfterFree()
-{
-    QString dir = labsDir();
-    LabDefinition d;
-    d.name        = "Use After Free";
-    d.vulnType    = "use_after_free";
-    d.isPython    = false;
-    d.labProgram  = dir + "/uaf_demo";
-    d.labProgram2 = dir + "/uaf_demo_fix";
-    d.normalInput = "";
-    d.attackInput = "";
-    d.vulnCode    =
-        "#include <stdio.h>\n"
-        "#include <stdlib.h>\n"
-        "#include <string.h>\n"
-        "\n"
-        "int main(void) {\n"
-        "    char* secret = malloc(32);\n"
-        "    strcpy(secret, \"password=hunter2\");\n"
-        "\n"
-        "    free(secret);        // memory returned to allocator\n"
-        "\n"
-        "    char* reuse = malloc(32);       // same block reused!\n"
-        "    strcpy(reuse, \"ATTACKER_DATA\");\n"
-        "\n"
-        "    printf(\"%s\\n\", secret);  // BUG: secret is freed!\n"
-        "    free(reuse);\n"
-        "}\n";
-    d.fixedCode   =
-        "#include <stdio.h>\n"
-        "#include <stdlib.h>\n"
-        "#include <string.h>\n"
-        "\n"
-        "int main(void) {\n"
-        "    char* secret = malloc(32);\n"
-        "    strcpy(secret, \"password=hunter2\");\n"
-        "\n"
-        "    free(secret);\n"
-        "    secret = NULL;       // FIX: nullify immediately\n"
-        "\n"
-        "    if (secret != NULL) {\n"
-        "        printf(\"%s\\n\", secret);\n"
-        "    } else {\n"
-        "        printf(\"[guard] pointer is NULL — use prevented\\n\");\n"
-        "    }\n"
-        "}\n";
-    d.explanation =
-        "After free(), the pointer variable still holds the old address. "
-        "The allocator may give that memory to a different part of the program "
-        "— or to a different request entirely. Reading through the freed pointer "
-        "returns whatever was written there since, which could be attacker-controlled "
-        "data. Writing through it silently corrupts live data structures.";
-    d.fixExplanation =
-        "Set the pointer to NULL immediately after free(). Any subsequent "
-        "dereference crashes instantly (null dereference) — a loud, easy-to-find "
-        "bug — rather than silently corrupting data in unpredictable ways.";
-    return d;
-}
-
-static LabDefinition makeSqlInjection()
-{
-    QString dir = labsDir();
-    LabDefinition d;
-    d.name        = "SQL Injection";
-    d.vulnType    = "sql_injection";
-    d.isPython    = true;
-    d.labProgram  = dir + "/sqli_demo.py";
-    d.labProgram2 = dir + "/sqli_demo_fix.py";
-    d.normalInput = "alice\npassword123";
-    d.attackInput = "' OR '1'='1\nanypassword";
-    d.vulnCode    =
-        "import sqlite3\n"
-        "\n"
-        "def login(username, password):\n"
-        "    # VULNERABLE: string concatenation\n"
-        "    query = (\"SELECT * FROM users \"\n"
-        "             \"WHERE username='\" + username + \"'\"\n"
-        "             \" AND password='\" + password + \"'\")\n"
-        "    cursor.execute(query)   # attacker controls query!\n"
-        "    return cursor.fetchall()\n";
-    d.fixedCode   =
-        "import sqlite3\n"
-        "\n"
-        "def login(username, password):\n"
-        "    # FIXED: parameterized query — ? are placeholders\n"
-        "    query = (\"SELECT * FROM users \"\n"
-        "             \"WHERE username=? AND password=?\")\n"
-        "    cursor.execute(query, (username, password))  # safe!\n"
-        "    return cursor.fetchall()\n";
-    d.explanation =
-        "The username field was pasted directly into the SQL string. "
-        "Typing  ' OR '1'='1  closes the string early and adds a condition "
-        "that is always true — so the database returns every user row. "
-        "The attacker logs in as the first user (usually admin) without "
-        "knowing any password. SQL injection is the #1 web vulnerability.";
-    d.fixExplanation =
-        "Parameterized queries (also called prepared statements) separate code "
-        "from data. The ? placeholders are filled in by the database engine after "
-        "the query is already compiled — so quotes in the input are treated as "
-        "literal characters, never as SQL syntax.";
-    return d;
-}
-
-static LabDefinition makeXss()
-{
-    QString dir = labsDir();
-    LabDefinition d;
-    d.name        = "Cross-Site Scripting (XSS)";
-    d.vulnType    = "xss";
-    d.isPython    = true;
-    d.labProgram  = dir + "/xss_demo.py";
-    d.labProgram2 = dir + "/xss_demo_fix.py";
-    d.normalInput = "Hello, great article!";
-    d.attackInput = "<script>document.cookie</script>";
-    d.vulnCode    =
-        "// JavaScript — vulnerable page\n"
-        "function postComment(text) {\n"
-        "    // VULNERABLE: treats input as HTML\n"
-        "    document.getElementById('comment')\n"
-        "            .innerHTML = text;\n"
-        "    //  ^ browser EXECUTES <script> tags!\n"
-        "}\n";
-    d.fixedCode   =
-        "// JavaScript — fixed page\n"
-        "function postComment(text) {\n"
-        "    // FIXED: textContent — always plain text\n"
-        "    document.getElementById('comment')\n"
-        "            .textContent = text;\n"
-        "    //  ^ browser DISPLAYS <script> as text\n"
-        "}\n"
-        "\n"
-        "// Server-side (Python):\n"
-        "import html\n"
-        "safe = html.escape(user_input)   # &lt;script&gt;\n";
-    d.explanation =
-        "innerHTML tells the browser to parse the string as HTML. "
-        "A <script> tag is executed in the visitor's browser with full "
-        "access to their cookies, local storage, and DOM. The attacker can "
-        "steal session tokens (logging in as the victim), redirect to phishing "
-        "pages, or mine cryptocurrency — all silently, in every visitor's browser.";
-    d.fixExplanation =
-        "textContent treats the value as plain text — angle brackets are displayed "
-        "literally, never parsed as HTML. Server-side: html.escape() converts < to "
-        "&lt; so even if innerHTML is used, the browser shows it as text.";
-    return d;
-}
-
-static LabDefinition makeOom()
-{
-    QString dir = labsDir();
-    LabDefinition d;
-    d.name        = "Out of Memory (OOM)";
-    d.vulnType    = "oom";
-    d.isPython    = true;
-    d.labProgram  = dir + "/oom_demo.py";
-    d.labProgram2 = dir + "/oom_demo.py";
-    d.normalInput = "normal";
-    d.attackInput = "attack";
-    d.vulnCode    =
-        "# VULNERABLE: unbounded allocation\n"
-        "data = []\n"
-        "while True:\n"
-        "    # each iteration: +1 MB\n"
-        "    data.append('A' * 1_000_000)\n"
-        "    # no exit condition — runs forever!\n"
-        "    # OS kills process when RAM exhausted\n";
-    d.fixedCode   =
-        "# FIXED: bounded allocation with cleanup\n"
-        "MAX_MB = 100\n"
-        "data   = []\n"
-        "\n"
-        "for _ in range(MAX_MB):\n"
-        "    data.append('A' * 1_000_000)\n"
-        "\n"
-        "# Process data here...\n"
-        "process(data)\n"
-        "\n"
-        "# Release when done\n"
-        "del data\n"
-        "gc.collect()\n";
-    d.explanation =
-        "The loop allocates 1 MB per iteration with no upper bound. "
-        "A single attacker request can exhaust all RAM on the server, "
-        "causing the OS to kill the process (or the whole system to thrash). "
-        "Every other user loses access instantly — a classic Denial of Service "
-        "(DoS) attack exploiting missing resource limits.";
-    d.fixExplanation =
-        "Set an explicit cap on how much memory a single request can use. "
-        "Process data in fixed-size chunks and release memory when done. "
-        "On server endpoints, enforce per-request memory limits at the framework "
-        "or OS level (e.g. resource.setrlimit on Linux, ulimit).";
-    return d;
-}
-
-// ── allLabs / forVulnType ─────────────────────────────────────────────────────
+// ── Lab definitions — loaded from data/security_labs.json ────────────────────
 
 QList<LabDefinition> SecurityLabWidget::allLabs()
 {
-    return {
-        makeBufferOverflow(),
-        makeUseAfterFree(),
-        makeSqlInjection(),
-        makeXss(),
-        makeOom(),
-    };
+    QString dir = labsDir();
+    QJsonArray arr = JsonLoader::loadArray("security_labs.json", "labs");
+    QList<LabDefinition> labs;
+    labs.reserve(arr.size());
+    for (const QJsonValue& v : arr) {
+        QJsonObject o = v.toObject();
+        LabDefinition d;
+        d.name           = o["name"].toString();
+        d.vulnType       = o["vulnType"].toString();
+        d.isPython       = o["isPython"].toBool();
+        d.labProgram     = dir + "/" + o["labProgram"].toString();
+        d.labProgram2    = dir + "/" + o["labProgram2"].toString();
+        d.normalInput    = o["normalInput"].toString();
+        d.attackInput    = o["attackInput"].toString();
+        d.vulnCode       = o["vulnCode"].toString();
+        d.fixedCode      = o["fixedCode"].toString();
+        d.explanation    = o["explanation"].toString();
+        d.fixExplanation = o["fixExplanation"].toString();
+        labs.append(d);
+    }
+    return labs;
 }
 
 SecurityLabWidget* SecurityLabWidget::forVulnType(const QString& vulnType, QWidget* parent)

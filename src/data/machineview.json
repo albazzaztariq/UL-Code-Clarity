@@ -1,0 +1,291 @@
+{
+  "patterns": [
+    {
+      "id": "import",
+      "match_starts_with": ["import ", "from ", "#include"],
+      "levels": {
+        "python": {
+          "1": { "headline": "Loading a module", "body": "Python finds the module file, runs it (if not cached), and makes its contents available under the import name." },
+          "2": { "headline": "Module import", "body": "Python checks sys.modules first. If not cached, it finds the .py file on sys.path, compiles it to bytecode (.pyc), executes the module body in a new namespace, and caches it. The name is bound in the current namespace." },
+          "3": { "headline": "PyImport_ImportModule", "body": "Calls PyImport_ImportModule → _find_and_load → _find_spec → SourceFileLoader.exec_module. Bytecode is compiled by compile() and executed via PyEval_EvalCode. Module added to sys.modules dict." },
+          "4": { "headline": "Import at address level", "body": "dlopen() / LoadLibrary equivalent for C extensions. For pure Python: read .py file → tokenize → parse → compile to code object → marshal to .pyc → PyEval_EvalCode in module dict." }
+        },
+        "c": {
+          "1": { "headline": "Including a header", "body": "The compiler copies the contents of that header file here, making its declarations available." },
+          "2": { "headline": "#include preprocessing", "body": "The C preprocessor (cpp) opens the header file, reads its text, and inserts it at this point in the translation unit before compilation begins." },
+          "3": { "headline": "Preprocessor directive", "body": "cpp opens the file at the specified include path, recursively processes its directives, and inlines the resulting token stream into the current translation unit. Guard macros (#ifndef) prevent re-inclusion." },
+          "4": { "headline": "Header inclusion", "body": "File read → token stream merged → symbol table entries added for each declaration. No machine instructions generated; purely a compile-time operation." }
+        }
+      }
+    },
+    {
+      "id": "print",
+      "match_starts_with": ["print(", "printf(", "puts(", "fprintf("],
+      "levels": {
+        "python": {
+          "1": { "headline": "Printing to the screen", "body": "Python converts whatever is inside print() to text and sends it to the terminal." },
+          "2": { "headline": "sys.stdout.write", "body": "Python converts each argument to a string using str(), joins them with sep (default space), appends end (default newline), and writes the result to sys.stdout. sys.stdout is usually a TextIOWrapper around file descriptor 1." },
+          "3": { "headline": "PyObject_CallMethod → write", "body": "print() calls sys.stdout.write(text + '\\n'). TextIOWrapper.write() encodes the string (e.g., UTF-8), then calls the underlying FileIO.write, which calls the write(1, buf, len) syscall." },
+          "4": { "headline": "write(1, buf, n) syscall", "body": "CALL write syscall: rax=1 (SYS_write), rdi=1 (stdout fd), rsi=ptr to UTF-8 buffer, rdx=byte count. Kernel copies buffer to terminal driver ring buffer." }
+        },
+        "c": {
+          "1": { "headline": "Printing to the screen", "body": "The program sends formatted text to the terminal output." },
+          "2": { "headline": "printf formatting", "body": "printf parses the format string, formats each argument according to its specifier (%d, %s, etc.), and writes the result to stdout (file descriptor 1) via the C library." },
+          "3": { "headline": "vfprintf → fwrite → write(1,...)", "body": "printf → vfprintf → __vfprintf_internal → buffer the formatted bytes in stdout's buffer. fflush or newline flushes via write(STDOUT_FILENO, buf, n)." },
+          "4": { "headline": "write syscall path", "body": "push args → call printf@PLT → format to internal buffer → call write(1, buf, len) → INT 0x80 / SYSCALL instruction → kernel writes to terminal." }
+        }
+      }
+    },
+    {
+      "id": "return",
+      "match_starts_with": ["return"],
+      "levels": {
+        "python": {
+          "1": { "headline": "Giving back a value", "body": "The function sends back the value to wherever it was called from, then stops running." },
+          "2": { "headline": "Function return", "body": "Python places the return value into the TOS (top of stack) slot, restores the previous frame's local variable table, and resumes execution at the call site." },
+          "3": { "headline": "RETURN_VALUE opcode", "body": "Bytecode: RETURN_VALUE. The eval loop pops TOS, stores it in the caller's frame->f_stacktop[0], decrements f_code->co_stacksize, pops the frame from the call stack, and DECREF's the old frame." },
+          "4": { "headline": "Stack frame teardown", "body": "mov rax, [return_value_ptr]  ; load return value\npop rbp                      ; restore caller's frame\nret                          ; jump to return address" }
+        },
+        "c": {
+          "1": { "headline": "Giving back a value", "body": "The function finishes and sends back the value to the caller." },
+          "2": { "headline": "Function return", "body": "The return value is placed in the return register (usually RAX for integers). The function cleans up its stack frame, restores saved registers, and jumps back to the caller." },
+          "3": { "headline": "Stack frame epilogue", "body": "Value moved to RAX (or XMM0 for float). Stack pointer restored: add rsp, frame_size. Callee-saved registers restored from stack. Return address popped from stack into RIP." },
+          "4": { "headline": "ret instruction", "body": "mov eax, val  ; return value in eax\nadd rsp, N   ; deallocate locals\npop rbp      ; restore base pointer\nret          ; pop rip from stack, jump to caller" }
+        }
+      }
+    },
+    {
+      "id": "if_else",
+      "match_starts_with": ["if ", "if(", "elif ", "else:", "else", "} else {"],
+      "match_starts_with_any": true,
+      "levels": {
+        "python": {
+          "1": { "headline": "Making a decision", "body": "Python checks the condition. If it's true, the indented block runs. Otherwise Python skips it (or runs the else block)." },
+          "2": { "headline": "Branch evaluation", "body": "Python evaluates the condition expression to a Python object, then calls bool() on it. If truthy, execution continues into the if block; otherwise the interpreter jumps to the elif/else branch or the next statement." },
+          "3": { "headline": "POP_JUMP_IF_FALSE opcode", "body": "Bytecode: evaluate condition → LOAD result → POP_JUMP_IF_FALSE <else_label>. Python calls PyObject_IsTrue(ob) which checks ob's tp_as_number->nb_bool or tp_as_mapping->mp_length." },
+          "4": { "headline": "Conditional jump", "body": "cmp rax, 0      ; test condition\nje  else_label   ; jump if zero (false)\n; ... if block ...\njmp end_label\nelse_label:" }
+        },
+        "c": {
+          "1": { "headline": "Making a decision", "body": "The computer checks the condition. If true, the block inside runs; otherwise it's skipped." },
+          "2": { "headline": "Conditional branch", "body": "The condition is evaluated (arithmetic, pointer comparison, etc.). The result sets flags in the processor's FLAGS register. A conditional jump instruction (JE, JNE, JL, etc.) checks those flags and jumps to the else branch or falls through." },
+          "3": { "headline": "FLAGS register + Jcc instruction", "body": "CMP/TEST sets ZF, SF, OF, CF flags. Jcc instruction reads flags and either increments RIP normally (branch not taken) or loads the target address into RIP (branch taken). Branch predictor caches the likely path." },
+          "4": { "headline": "Conditional jump x86", "body": "cmp operand1, operand2\njne  else_branch   ; or je/jl/jg depending on condition\n; true branch code\njmp  end_if\nelse_branch:\n; false branch code\nend_if:" }
+        }
+      }
+    },
+    {
+      "id": "for_loop",
+      "match_starts_with": ["for ", "for("],
+      "levels": {
+        "python": {
+          "1": { "headline": "Repeating for each item", "body": "Python goes through each item in the collection one at a time, running the indented block for each one." },
+          "2": { "headline": "Iterator protocol", "body": "Python calls iter() on the iterable to get an iterator object, then repeatedly calls next() on it. Each call to next() returns the next item or raises StopIteration to end the loop." },
+          "3": { "headline": "GET_ITER / FOR_ITER opcodes", "body": "GET_ITER: calls ob->ob_type->tp_iter(ob). FOR_ITER: calls iternextfunc (ob->ob_type->tp_iternext). If NULL returned and StopIteration raised, jump to after-loop target." },
+          "4": { "headline": "Iterator at address level", "body": "CALL tp_iter → PyListIter object allocated (heap). Loop: CALL tp_iternext → pointer arithmetic on array + index. Each return: INCREF new item, DECREF old item." }
+        },
+        "c": {
+          "1": { "headline": "Counting loop", "body": "The computer repeats the block, counting the variable through its range." },
+          "2": { "headline": "For loop structure", "body": "The initializer runs once. Before each iteration the condition is checked; if false the loop ends. The increment runs after each iteration body." },
+          "3": { "headline": "Counter register + conditional jump", "body": "Initializer sets counter register. Test via CMP + Jcc at top (or bottom) of loop. Increment: ADD/INC instruction. Modern compilers may unroll or vectorize hot loops." },
+          "4": { "headline": "Loop in assembly", "body": "mov ecx, N      ; counter\nloop_start:\n  ; body\n  dec ecx\n  jnz loop_start  ; jump if ecx != 0" }
+        }
+      }
+    },
+    {
+      "id": "while_loop",
+      "match_starts_with": ["while ", "while("],
+      "levels": {
+        "python": {
+          "1": { "headline": "Repeating while true", "body": "Python keeps running the indented block over and over as long as the condition remains true." },
+          "2": { "headline": "Condition re-evaluated each iteration", "body": "At the top of each loop iteration, Python re-evaluates the while condition. If it becomes false, the interpreter jumps past the loop body." },
+          "3": { "headline": "JUMP_BACKWARD opcode", "body": "At loop end: JUMP_BACKWARD to the condition test. Condition evaluates → POP_JUMP_IF_FALSE to after-loop. Hot loops may be compiled by the adaptive specializing interpreter." },
+          "4": { "headline": "Loop as conditional jump", "body": "loop_start:\n  ; evaluate condition\n  cmp rax, 0\n  je  loop_end\n  ; body\n  jmp loop_start\nloop_end:" }
+        },
+        "c": {
+          "1": { "headline": "While loop", "body": "The computer checks the condition, runs the block, then checks again — repeating until the condition is false." },
+          "2": { "headline": "Condition at top of loop", "body": "Each iteration begins with a condition evaluation. If false, a jump instruction transfers control past the loop body." },
+          "3": { "headline": "Conditional backward jump", "body": "while_top:\n  CMP operands → flags\n  Jcc while_end\n  ; body\n  JMP while_top\nwhile_end:" },
+          "4": { "headline": "While as jump sequence", "body": "while_top:\n  cmp condition\n  je while_end\n  ; body instructions\n  jmp while_top\nwhile_end:" }
+        }
+      }
+    },
+    {
+      "id": "string_concat",
+      "match_contains": ["+", "join("],
+      "require_string_hint": true,
+      "levels": {
+        "python": {
+          "1": { "headline": "Joining strings together", "body": "Python takes two or more strings and creates a brand new string that contains all of them combined in order." },
+          "2": { "headline": "String concatenation — new allocation", "body": "Python allocates a new string object large enough to hold both strings, copies the characters from each into the new object, and returns a pointer to it. The original strings are unchanged (strings are immutable)." },
+          "3": { "headline": "PyUnicode_Concat → PyObject_Malloc", "body": "PyUnicode_Concat: checks kinds, allocates new PyUnicodeObject of combined length via PyObject_Malloc(sizeof(PyUnicodeObject) + len). memcpy both string buffers in. INCREF result, DECREF operands." },
+          "4": { "headline": "Allocation + copy at address level", "body": "malloc(len_a + len_b + 1)    ; allocate result buffer\nmemcpy(dst, a, len_a)        ; copy first string\nmemcpy(dst+len_a, b, len_b)  ; copy second string\ndst[len_a+len_b] = '\\0'     ; null-terminate" }
+        }
+      }
+    },
+    {
+      "id": "list_append",
+      "match_contains": [".append("],
+      "levels": {
+        "python": {
+          "1": { "headline": "Adding an item to a list", "body": "Python adds the item to the end of the list. The list grows to hold the new item." },
+          "2": { "headline": "list.append — amortized O(1)", "body": "If the list has spare capacity, the item pointer is written at the next slot and the count is incremented. If capacity is full, Python reallocates the internal array at ~1.125x growth, copies existing pointers, then appends." },
+          "3": { "headline": "list_append_impl → list_resize", "body": "PyList_Append calls list_resize(). If ob_size < allocated: ob_item[ob_size++] = item; INCREF(item). Otherwise: realloc(ob_item, new_size * sizeof(PyObject*)); copy; append." },
+          "4": { "headline": "list.append at pointer level", "body": "if list->ob_size < list->allocated:\n  list->ob_item[list->ob_size] = ptr_to_item\n  INCREF(ptr_to_item)\n  list->ob_size += 1\nelse:\n  realloc(list->ob_item, new_capacity * 8)\n  copy + append" }
+        }
+      }
+    },
+    {
+      "id": "len_call",
+      "match_contains": ["len("],
+      "levels": {
+        "python": {
+          "1": { "headline": "Getting the length", "body": "Python counts how many items are in the collection and gives back that number." },
+          "2": { "headline": "len() — O(1) lookup", "body": "For lists, tuples, and strings, len() reads the pre-stored ob_size field from the object header. No counting is done — the size is always kept up to date." },
+          "3": { "headline": "mp_length / sq_length slot", "body": "len(ob) → PyObject_Size(ob) → ob->ob_type->tp_as_sequence->sq_length(ob). For PyListObject: returns ((PyVarObject*)op)->ob_size directly." },
+          "4": { "headline": "len as field read", "body": "mov rax, [list_ptr + ob_size_offset]  ; read ob_size field\n; rax now holds the length (integer)" }
+        }
+      }
+    },
+    {
+      "id": "list_literal",
+      "match_contains": ["= ["],
+      "levels": {
+        "python": {
+          "1": { "headline": "Creating a list", "body": "Python makes a new list and fills it with the items you specified inside the brackets." },
+          "2": { "headline": "List literal allocation", "body": "Python creates a new PyListObject, allocates an internal array of PyObject* pointers for the initial items, stores a reference to each item, and sets ob_size." },
+          "3": { "headline": "BUILD_LIST opcode", "body": "BUILD_LIST N: allocates PyListObject via PyList_New(N). Loops N times, popping TOS and storing pointer into ob_item[i], INCREFing each. Sets ob_size=N, allocated=N." },
+          "4": { "headline": "List allocation", "body": "PyListObject* list = malloc(sizeof(PyListObject))\nlist->ob_item = malloc(N * sizeof(PyObject*))\nfor i in 0..N: list->ob_item[i] = item_ptr[i]; INCREF\nlist->ob_size = N" }
+        }
+      }
+    },
+    {
+      "id": "arithmetic",
+      "match_contains": ["+", "-", "*", "/", "%"],
+      "require_assignment": true,
+      "exclude_strings": true,
+      "levels": {
+        "python": {
+          "1": { "headline": "Doing arithmetic", "body": "Python calculates the math expression on the right and stores the result in the variable on the left." },
+          "2": { "headline": "Integer arithmetic — PyObject", "body": "Python integers are objects. For small integers (-5 to 256), Python reuses pre-allocated singletons. For others, it may allocate a new PyLongObject. The arithmetic operator dispatches through the number protocol (nb_add, nb_mul, etc.)." },
+          "3": { "headline": "BINARY_OP opcode + nb_add", "body": "BINARY_OP: pops two operands from the stack, calls ob_type->tp_as_number->nb_add(a, b). For int: PyLong_AsLong if fits, else BigInt path. Result INCREF'd and pushed. DECREF both operands." },
+          "4": { "headline": "Arithmetic at object level", "body": "LOAD a → push ptr_a\nLOAD b → push ptr_b\nnb_add(ptr_a, ptr_b) → new PyLongObject\nINCREF result; DECREF ptr_a; DECREF ptr_b\nSTORE result → local variable table[idx]" }
+        },
+        "c": {
+          "1": { "headline": "Doing arithmetic", "body": "The processor computes the math and puts the result in the variable." },
+          "2": { "headline": "CPU arithmetic instruction", "body": "The compiler translates the expression into one or more ADD, SUB, IMUL, IDIV instructions. Values are loaded into CPU registers, the operation is performed, and the result is stored back to the variable's stack slot or register." },
+          "3": { "headline": "ALU operation in registers", "body": "Values loaded from memory into registers (MOV rax, [rbp-offset]). ALU performs the operation in a single clock cycle (ADD/SUB) or ~3 cycles (IMUL) or ~20-40 cycles (IDIV). Result stored via MOV [rbp-offset], rax." },
+          "4": { "headline": "Assembly arithmetic", "body": "mov eax, [var_a]   ; load a\nadd eax, [var_b]   ; a + b  (or sub/imul/idiv)\nmov [result], eax  ; store result" }
+        }
+      }
+    },
+    {
+      "id": "function_call",
+      "match_regex": "[A-Za-z_][A-Za-z0-9_.]*\\(",
+      "exclude_starts_with": ["print("],
+      "levels": {
+        "python": {
+          "1": { "headline": "Calling a function", "body": "Python runs the code inside the named function, using the values you put in the brackets, and may give back a result." },
+          "2": { "headline": "Function call — new frame", "body": "Python looks up the function object, creates a new stack frame with the function's local variable table, copies arguments into it, and starts executing the function's bytecode. When done, the frame is removed and the return value is left on the stack." },
+          "3": { "headline": "CALL opcode → _PyEval_EvalFrameDefault", "body": "CALL: pushes a new PyFrameObject onto the call stack. _PyEval_EvalFrameDefault enters a new eval loop iteration with the function's code object. Arguments placed into fast locals (LOAD_FAST slots). On return, PyFrameObject is freed/recycled." },
+          "4": { "headline": "Frame creation at address level", "body": "PyFrameObject* frame = _PyFrame_New_NoTrack(tstate, code, globals, locals)\nframe->f_locals[0..n] = arg_ptrs[0..n]\nINCREF each arg\npush frame onto tstate->frame_stack\ncall PyEval_EvalFrameEx(frame)" }
+        },
+        "c": {
+          "1": { "headline": "Calling a function", "body": "The program jumps to the function's code, runs it with the given inputs, and comes back to continue from here." },
+          "2": { "headline": "Function call — stack frame", "body": "Arguments are pushed onto the stack (or placed in registers per the calling convention). A new stack frame is created (RSP adjusted). The CALL instruction pushes the return address and jumps to the function's code." },
+          "3": { "headline": "CALL instruction + calling convention", "body": "System V AMD64: first 6 integer args in RDI, RSI, RDX, RCX, R8, R9; rest on stack. CALL pushes RIP+1 onto stack, JMPs to function. Callee: PUSH RBP; MOV RBP, RSP; SUB RSP, frame_size." },
+          "4": { "headline": "CALL instruction", "body": "; Place arguments\nmov edi, arg1    ; first arg in RDI\nmov esi, arg2    ; second arg in RSI\ncall function    ; push return addr, jump\n; return value in RAX" }
+        }
+      }
+    },
+    {
+      "id": "variable_assignment",
+      "match_contains": ["="],
+      "exclude_starts_with": ["if", "while", "for"],
+      "exclude_contains": ["=="],
+      "levels": {
+        "python": {
+          "1": { "headline": "Storing a value in a variable", "body": "Python creates a value from the right side and labels it with the variable name. From now on, the name refers to that value." },
+          "2": { "headline": "Variable binding", "body": "Python evaluates the right-hand expression to produce a Python object. The variable is a name in the current namespace (local variable table or global dict). Assigning makes it point to the new object. The old object's reference count is decremented." },
+          "3": { "headline": "STORE_FAST opcode", "body": "STORE_FAST: pops TOS (the new object), INCREFs it, stores its pointer into fastlocals[index]. DECREFs the old object that was in fastlocals[index]. If old refcount reaches 0, calls tp_dealloc." },
+          "4": { "headline": "Assignment at memory level", "body": "old_ptr = frame->fastlocals[var_idx]\nframe->fastlocals[var_idx] = new_ptr\nINCREF(new_ptr)\nDECREF(old_ptr)  ; if refcount==0: free(old_ptr)" }
+        },
+        "c": {
+          "1": { "headline": "Storing a value", "body": "The computer puts the value into the variable in memory." },
+          "2": { "headline": "Memory write", "body": "The right-hand value is computed (possibly loading from memory or a register). The result is written to the variable's storage location — either a register (if optimized) or a stack slot at a fixed offset from the base pointer." },
+          "3": { "headline": "MOV to stack slot", "body": "If the variable is local: MOV [rbp - offset], value. If global: MOV [global_addr], value. Compiler may keep it in a register and never write to memory if it proves no aliasing." },
+          "4": { "headline": "MOV instruction", "body": "mov [rbp - var_offset], rax  ; store rhs result into variable's stack slot" }
+        }
+      }
+    },
+    {
+      "id": "c_declaration",
+      "language": "c",
+      "match_regex": "^(int|char|float|double|long|short|unsigned|void|size_t|uint\\w*|int\\w*)\\s+\\*?[A-Za-z_]",
+      "exclude_if_contains_no_assign_and_has_paren": true,
+      "levels": {
+        "c": {
+          "1": { "headline": "Declaring a variable", "body": "The program reserves a small slot of memory and gives it a name. The type tells the computer how many bytes to use." },
+          "2": { "headline": "Stack allocation", "body": "Local variables are allocated on the call stack. The compiler calculates the total size of all locals and subtracts that amount from RSP (stack pointer) at the function's prologue. Each variable gets a fixed offset from RBP." },
+          "3": { "headline": "Stack frame slot assignment", "body": "During compilation: variable assigned to [rbp - N] slot. At runtime: the slot already exists (RSP was decremented at prologue). If initialised, a MOV stores the initial value. No separate allocation call needed." },
+          "4": { "headline": "Stack slot", "body": "Compiler assigns rbp-offset. At runtime:\nsub rsp, frame_size       ; done once in prologue\n; variable lives at [rbp - N] for its lifetime\nmov [rbp - N], initial_val  ; if initialised" }
+        }
+      }
+    },
+    {
+      "id": "c_pointer",
+      "language": "c",
+      "match_contains_star_or_amp": true,
+      "require_assign_or_arrow": true,
+      "levels": {
+        "c": {
+          "1": { "headline": "Working with a pointer / address", "body": "A pointer holds the memory address of another value. Dereferencing (*) reads or writes the value at that address. & gives you the address of a variable." },
+          "2": { "headline": "Pointer indirection", "body": "The pointer variable holds a memory address (a number). Dereferencing loads that address into a register, then reads/writes the memory at that location. & (address-of) loads the variable's own address into a register." },
+          "3": { "headline": "MOV with memory indirection", "body": "Load pointer: MOV rax, [rbp - ptr_offset]  (loads address stored in pointer)\nDereference read: MOV rbx, [rax]  (reads 4/8 bytes at the address)\nDereference write: MOV [rax], value\n& (address-of): LEA rax, [rbp - var_offset]" },
+          "4": { "headline": "Pointer ops in assembly", "body": "lea rax, [rbp - var]   ; & — load effective address\nmov rbx, [rax]         ; * — dereference (read)\nmov [rax], rcx         ; * — dereference (write)\nmov rax, [rbp - ptr]   ; load pointer value\nmov rdx, [rax + 8]     ; ptr->field (8-byte offset)" }
+        }
+      }
+    },
+    {
+      "id": "c_malloc",
+      "language": "c",
+      "match_contains_any": ["malloc(", "calloc(", "realloc("],
+      "levels": {
+        "c": {
+          "1": { "headline": "Asking for memory from the heap", "body": "malloc asks the operating system for a block of memory of the requested size. It gives back a pointer to that block, which you must free later." },
+          "2": { "headline": "Heap allocation", "body": "malloc looks in its free-list for a block of the requested size. If found, it splits/returns it. If not, it asks the OS for more memory via sbrk() or mmap(). The returned pointer points to usable memory; the bookkeeping is stored just before it." },
+          "3": { "headline": "glibc malloc → ptmalloc2", "body": "malloc(n): rounds up to alignment boundary. Checks tcache (thread-local fast bins) first — O(1) pop. Falls back to fastbins, smallbins, unsorted bin, then top chunk. Top chunk extends via sbrk(). Returns ptr to user data (chunk_start + 16)." },
+          "4": { "headline": "malloc at address level", "body": "CALL malloc@PLT\n; arg: rdi = requested_bytes\n; internally: check tcache → bins → top_chunk → sbrk()\n; return: rax = ptr to allocated block\n; [rax - 8] = chunk size + flags (bookkeeping)\nmov [rbp - ptr_offset], rax  ; save pointer" }
+        }
+      }
+    },
+    {
+      "id": "c_free",
+      "language": "c",
+      "match_starts_with": ["free("],
+      "levels": {
+        "c": {
+          "1": { "headline": "Releasing memory back to the heap", "body": "free gives the memory block back so it can be reused. After calling free, you should not use the pointer again." },
+          "2": { "headline": "Heap deallocation", "body": "free reads the chunk metadata stored just before the pointer to find the block's size. It then places the block back into the appropriate free-list bin. No memory is actually returned to the OS unless the top chunk shrinks past a threshold." },
+          "3": { "headline": "free → return to bin", "body": "free(ptr): reads chunk header at ptr-16 for size+flags. If size fits tcache: push to tcache list. Else merge with adjacent free chunks (coalescing). Insert into unsorted bin or fastbin. Optionally call sbrk(-n) to return to OS." },
+          "4": { "headline": "free at address level", "body": "CALL free@PLT\n; arg: rdi = ptr_to_free\n; reads [rdi - 8] for chunk size\n; inserts chunk into tcache/fastbin/unsorted bin\n; may coalesce with neighbours\n; ptr is now invalid — do NOT use it" }
+        }
+      }
+    },
+    {
+      "id": "c_array",
+      "language": "c",
+      "match_contains_brackets": true,
+      "exclude_starts_with": ["//", "if", "while"],
+      "levels": {
+        "c": {
+          "1": { "headline": "Accessing an array element", "body": "The computer jumps to the correct slot in the array (numbered from 0) and reads or writes the value there." },
+          "2": { "headline": "Array indexing — pointer arithmetic", "body": "An array name is a pointer to the first element. arr[i] is exactly *(arr + i). The index is multiplied by the element size (e.g., 4 for int) and added to the base address to get the element's address." },
+          "3": { "headline": "Address computation", "body": "lea rax, [arr_base]          ; base address\nimul rbx, index, elem_size   ; index * sizeof(element)\nadd rax, rbx                 ; final address\nmov ecx, [rax]               ; read element (or mov [rax], val to write)" },
+          "4": { "headline": "Array access in assembly", "body": "Base address in register (e.g., rdi = &arr[0])\nIndex scaled: lea rax, [rdi + rsi*4]  ; for int array (4 bytes)\nRead: mov eax, [rax]           ; loads 4 bytes\nWrite: mov [rdi + rsi*4], ecx  ; stores 4 bytes" }
+        }
+      }
+    }
+  ],
+  "empty_line_message": "no operation",
+  "no_explanation_message": "No detailed explanation available for this pattern."
+}

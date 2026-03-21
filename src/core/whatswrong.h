@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QString>
 #include <QList>
+#include <QVector>
+#include <QJsonObject>
 
 // ── PossibleCause ─────────────────────────────────────────────────────────
 struct PossibleCause {
@@ -14,8 +16,9 @@ struct PossibleCause {
 
 // ── WhatsWrongAnalyzer ────────────────────────────────────────────────────
 // Pattern-matching analyzer for common runtime errors.
+// Error patterns are loaded from data/errors.json at construction time.
 // Given an error message, source code, and the line where it crashed,
-// returns a ranked list of PossibleCause objects.
+// returns a list of PossibleCause objects.
 //
 // Usage:
 //   WhatsWrongAnalyzer a;
@@ -32,18 +35,5 @@ public:
                                        int crashLine) const;
 
 private:
-    // Individual pattern handlers
-    PossibleCause nameError(const QString& msg, int line) const;
-    PossibleCause indexError(const QString& msg, const QString& code, int line) const;
-    PossibleCause typeError(const QString& msg, int line) const;
-    PossibleCause zeroDivisionError(int line) const;
-    PossibleCause attributeError(const QString& msg, int line) const;
-    PossibleCause fileNotFoundError(const QString& msg, int line) const;
-    PossibleCause segfaultError(int line) const;
-    PossibleCause valueError(const QString& msg, int line) const;
-    PossibleCause keyError(const QString& msg, int line) const;
-    PossibleCause recursionError(int line) const;
-    PossibleCause importError(const QString& msg, int line) const;
-    PossibleCause indentationError(int line) const;
-    PossibleCause syntaxError(int line) const;
+    QVector<QJsonObject> m_errorTypes;  // loaded from data/errors.json
 };

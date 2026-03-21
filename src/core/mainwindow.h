@@ -6,7 +6,13 @@
 #include <QMenu>
 #include <QCloseEvent>
 #include <QPushButton>
+#include <QComboBox>
+#include <QMap>
+#include <QAction>
 #include "core/aipermissions.h"
+#include "core/custompipeline.h"
+#include "core/favoritesbar.h"
+#include "core/buildchain.h"
 
 class BuildSystem;
 class EditorWidget;
@@ -37,6 +43,8 @@ class CostVisualizer;
 class CostVisualizerPanel;
 class TypeFlowFrame;
 class MachineViewPanel;
+class CVEMonitor;
+class NewsTicker;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -55,6 +63,8 @@ public:
 
 private:
     void createMenuBar();
+    void createLearningMenu();
+    void buildToolsMenu();
     void createStatusBar();
     void setupCentralLayout();
     void wireSignals();
@@ -62,8 +72,14 @@ private:
     void restoreSession();
     void addToRecentWorkspaces(const QString& path);
     void rebuildRecentWorkspacesMenu();
+    void rebuildSavedPipelinesMenu();
+    void applyToolsMenuVisibility();
     void applyTheme();
-    QString currentLangKey() const;  // map editor language display → buildsystem key
+    void setupFavoritesBar();
+    void runBuildChain();
+    void runPipeline(const PipelineConfig& cfg);
+    void showCVENotificationBar(int count, const QStringList& packages);
+    QString currentLangKey() const;
 
     EditorWidget*   m_editor      = nullptr;
     FileTreeWidget* m_fileTree    = nullptr;
@@ -72,8 +88,8 @@ private:
 
     // Right panel: two side-by-side columns (Clarity + AI Chat)
     QSplitter*      m_rightSplitter = nullptr;
-    QWidget*        m_clarityColumn = nullptr;  // panels agent fills this
-    QWidget*        m_chatColumn    = nullptr;   // panels agent fills this
+    QWidget*        m_clarityColumn = nullptr;
+    QWidget*        m_chatColumn    = nullptr;
     QSplitter*      m_mainSplitter  = nullptr;
 
     // Panels
@@ -102,8 +118,29 @@ private:
     TypeFlowFrame*        m_typeFlow       = nullptr;
     MachineViewPanel*     m_machineView    = nullptr;
 
-    // Recent Workspaces submenu
-    QMenu* m_recentMenu = nullptr;
+    // News ticker
+    NewsTicker*   m_newsTicker    = nullptr;
+
+    // Favorites bar
+    FavoritesBar* m_favoritesBar  = nullptr;
+
+    // Build chain
+    BuildChainConfig  m_activeBuildChain;
+    QComboBox*        m_chainCombo = nullptr;
+
+    // CVE monitoring
+    CVEMonitor*   m_cveMonitor    = nullptr;
+    QWidget*      m_cveBar        = nullptr;
+    QLabel*       m_cveBarLabel   = nullptr;
+    QStringList   m_cveBarPackages;
+
+    // Menus
+    QMenu*  m_recentMenu        = nullptr;
+    QMenu*  m_toolsMenu         = nullptr;
+    QMenu*  m_savedPipelinesMenu = nullptr;
+
+    // Tools menu actions (keyed by settings key for visibility control)
+    QMap<QString, QAction*> m_toolsActions;
 
     // Status bar labels
     QLabel* m_statusReady = nullptr;
@@ -120,10 +157,10 @@ private:
     // Permissions system
     AIPermissions m_aiPermissions;
 
-    // Build system — toolchain detection + run/build execution
+    // Build system
     BuildSystem*  m_buildSystem = nullptr;
 
-    // Explain button state: stored original code before inline annotation
+    // Explain state
     QString m_preExplainCode;
     bool    m_explainActive = false;
 };

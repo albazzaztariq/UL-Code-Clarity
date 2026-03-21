@@ -1,0 +1,183 @@
+{
+  "metrics": [
+    {
+      "id": "complexity",
+      "name": "Complexity",
+      "description": "Cyclomatic complexity (McCabe score) — how many independent execution paths exist in each function.",
+      "score_thresholds": {
+        "green": "All functions CC < 10",
+        "yellow": "Some functions CC 10-15",
+        "red": "Any function CC > 15"
+      },
+      "summaries": {
+        "green": "All functions within acceptable complexity (max %1).",
+        "yellow": "Some functions are moderately complex (max %1).",
+        "red": "High complexity detected (max %1). Functions are hard to test."
+      },
+      "finding_threshold": 10,
+      "finding_template": "Cyclomatic complexity %1 — consider splitting this function.",
+      "decision_keywords": ["if", "else if", "elif", "for", "while", "case", "catch", "&&", "||"],
+      "help_text": "Cyclomatic complexity counts the number of independent paths through a function. CC of 1 means one straight path. Each if/for/while/case adds 1. High CC means the function is hard to test and easy to have bugs in. Target: CC < 10 per function."
+    },
+    {
+      "id": "readability",
+      "name": "Readability",
+      "description": "Function length, nesting depth, parameter counts, and single-letter variable names.",
+      "checks": [
+        {
+          "id": "function_length",
+          "title": "Function too long",
+          "threshold": 30,
+          "detail_template": "Function is %1 lines long (recommended max 30).",
+          "help_text": "Long functions are harder to understand and test. Aim for functions that do one thing and fit on one screen (30 lines or less)."
+        },
+        {
+          "id": "parameter_count",
+          "title": "Too many parameters",
+          "threshold": 5,
+          "detail_template": "%1 parameters (recommended max 5). Consider grouping into a struct/object.",
+          "help_text": "Functions with many parameters are hard to call correctly and easy to misuse. Group related parameters into a struct or class."
+        },
+        {
+          "id": "nesting_depth",
+          "title": "Deep nesting",
+          "threshold": 4,
+          "detail_template": "Maximum nesting depth %1 (recommended max 4). Consider early returns.",
+          "help_text": "Deeply nested code is hard to read. Use early returns (guard clauses) to reduce nesting."
+        },
+        {
+          "id": "single_letter_vars",
+          "title": "Single-letter variable name",
+          "allowed": ["i", "j", "k", "n", "x", "y"],
+          "detail": "Single-letter variable name makes code harder to understand.",
+          "help_text": "Variable names should describe what they hold. Single letters (except loop counters i/j/k) make code unreadable."
+        }
+      ],
+      "score_thresholds": {
+        "green": "No readability issues",
+        "yellow": "Worst function length 30-60 or depth 5-6",
+        "red": "Function length > 60 or depth > 6"
+      },
+      "summaries": {
+        "green": "Code is easy to read. Good function lengths and clear structure.",
+        "yellow": "Some readability issues — long functions or deep nesting detected.",
+        "red": "Serious readability issues. Functions are too long or too deeply nested."
+      }
+    },
+    {
+      "id": "duplication",
+      "name": "Duplication",
+      "description": "Detects repeated code blocks (copy-paste debt).",
+      "min_block_lines": 4,
+      "min_occurrences": 2,
+      "score_thresholds": {
+        "green": "No duplicate blocks found",
+        "yellow": "1-2 duplicate blocks",
+        "red": "3+ duplicate blocks"
+      },
+      "summaries": {
+        "green": "No significant code duplication detected.",
+        "yellow": "Some duplicated code blocks — consider extracting a shared function.",
+        "red": "Significant duplication detected. Duplicated code is harder to maintain."
+      },
+      "finding_template": "Block of ~%1 lines appears %2 times (first at line %3).",
+      "help_text": "Duplicated code means bugs must be fixed in multiple places. Extract repeated code into a function and call it from all the places that need it."
+    },
+    {
+      "id": "dead_code",
+      "name": "Dead Code",
+      "description": "Variables defined but never read, and functions defined but never called.",
+      "checks": [
+        {
+          "id": "unused_variable",
+          "title": "Unused variable",
+          "detail_template": "'%1' is assigned but never read after line %2.",
+          "help_text": "Unused variables clutter the code and confuse readers. Remove them or rename with _ prefix if intentionally ignored."
+        },
+        {
+          "id": "unused_function",
+          "title": "Unused function",
+          "detail_template": "'%1' is defined but never called.",
+          "help_text": "Unused functions add dead weight to the codebase. Remove them or check if they should be called but aren't."
+        }
+      ],
+      "score_thresholds": {
+        "green": "No dead code found",
+        "yellow": "1-3 unused items",
+        "red": "4+ unused items"
+      },
+      "summaries": {
+        "green": "No dead code detected.",
+        "yellow": "Some unused variables or functions detected.",
+        "red": "Multiple dead code items found. Clean up unused variables and functions."
+      }
+    },
+    {
+      "id": "naming",
+      "name": "Naming",
+      "description": "Whether identifiers follow accepted conventions for the language.",
+      "conventions": {
+        "python": {
+          "variables": "snake_case",
+          "functions": "snake_case",
+          "classes": "PascalCase",
+          "constants": "UPPER_SNAKE_CASE"
+        },
+        "c": {
+          "variables": "snake_case",
+          "functions": "snake_case",
+          "structs": "PascalCase or snake_case",
+          "macros": "UPPER_SNAKE_CASE"
+        },
+        "cpp": {
+          "variables": "camelCase or snake_case",
+          "functions": "camelCase",
+          "classes": "PascalCase",
+          "members": "m_ prefix preferred"
+        }
+      },
+      "checks": [
+        {
+          "id": "python_camel_case_function",
+          "language": "python",
+          "regex": "^\\s*def\\s+([A-Z][a-zA-Z0-9]*|[a-z][a-z0-9]*[A-Z][a-zA-Z0-9]*)\\s*\\(",
+          "title": "Function name should be snake_case",
+          "detail_template": "'%1' looks like camelCase or PascalCase — Python convention is snake_case.",
+          "help_text": "Python functions should use snake_case (words separated by underscores). E.g., calculate_total not calculateTotal."
+        },
+        {
+          "id": "python_class_snake_case",
+          "language": "python",
+          "regex": "^\\s*class\\s+([a-z][a-zA-Z0-9]*)\\s*[:(]",
+          "title": "Class name should be PascalCase",
+          "detail_template": "'%1' starts with lowercase — Python class convention is PascalCase.",
+          "help_text": "Python classes should use PascalCase (each word starts with uppercase). E.g., DataProcessor not data_processor."
+        }
+      ],
+      "score_thresholds": {
+        "green": "No naming convention violations",
+        "yellow": "1-3 violations",
+        "red": "4+ violations"
+      },
+      "summaries": {
+        "green": "Names follow conventions for this language.",
+        "yellow": "Some naming convention issues detected.",
+        "red": "Multiple naming convention violations. Consistent naming improves readability."
+      }
+    }
+  ],
+  "grade_thresholds": {
+    "A": "All metrics Green",
+    "B": "1 metric Yellow, rest Green",
+    "C": "2+ metrics Yellow or 1 Red",
+    "D": "2 metrics Red",
+    "F": "3+ metrics Red"
+  },
+  "grade_descriptions": {
+    "A": "Excellent — clean, readable, maintainable code.",
+    "B": "Good — minor improvements possible.",
+    "C": "Fair — several areas need attention.",
+    "D": "Poor — significant technical debt.",
+    "F": "Critical — major cleanup required."
+  }
+}

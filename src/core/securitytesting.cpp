@@ -152,6 +152,112 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
 
     m_tabs->addTab(m_dastTab, "Dynamic Testing (DAST)");
 
+    // ── CVE Auto-Check Tab ────────────────────────────────────────────────────
+    m_cveTab = new QWidget;
+    m_cveTab->setStyleSheet("background: #181825;");
+    auto* cveLayout = new QVBoxLayout(m_cveTab);
+    cveLayout->setContentsMargins(16, 16, 16, 16);
+    cveLayout->setSpacing(12);
+
+    // Section title
+    auto* cveTitleLbl = new QLabel("CVE Vulnerability Monitoring");
+    cveTitleLbl->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;"
+                               " background: transparent;");
+    cveLayout->addWidget(cveTitleLbl);
+
+    auto* cveDescLbl = new QLabel(
+        "Runs pip-audit in the background to check your Python dependencies for "
+        "known CVEs (Common Vulnerabilities and Exposures). Only runs when enabled.");
+    cveDescLbl->setWordWrap(true);
+    cveDescLbl->setStyleSheet("color: #a6adc8; font-size: 12px; background: transparent;");
+    cveLayout->addWidget(cveDescLbl);
+
+    // Separator
+    auto* cveSep = new QFrame;
+    cveSep->setFrameShape(QFrame::HLine);
+    cveSep->setStyleSheet("color: #313244; background: #313244;");
+    cveLayout->addWidget(cveSep);
+
+    // Enable toggle
+    m_cveEnabledChk = new QCheckBox("Enable Auto CVE Check");
+    m_cveEnabledChk->setStyleSheet(
+        "QCheckBox { color: #cdd6f4; font-size: 13px; background: transparent; }"
+        "QCheckBox::indicator { width: 16px; height: 16px; border-radius: 3px;"
+        " border: 1px solid #45475a; background: #313244; }"
+        "QCheckBox::indicator:checked { background: #89b4fa; border-color: #89b4fa; }");
+    m_cveEnabledChk->setChecked(CVEMonitor::loadEnabled());
+    connect(m_cveEnabledChk, &QCheckBox::toggled, this, &SecurityTestingFrame::onCVEToggled);
+    cveLayout->addWidget(m_cveEnabledChk);
+
+    // Frequency row
+    auto* freqRow = new QHBoxLayout;
+    freqRow->setSpacing(10);
+    auto* freqLabel = new QLabel("Check Frequency:");
+    freqLabel->setStyleSheet("color: #cdd6f4; font-size: 12px; background: transparent;");
+    freqRow->addWidget(freqLabel);
+
+    m_cveFreqCombo = new QComboBox;
+    m_cveFreqCombo->addItem("Every 5 minutes",  static_cast<int>(CVEMonitor::Every5Min));
+    m_cveFreqCombo->addItem("Every 30 minutes", static_cast<int>(CVEMonitor::Every30Min));
+    m_cveFreqCombo->addItem("Hourly",            static_cast<int>(CVEMonitor::Hourly));
+    m_cveFreqCombo->addItem("Daily (Default)",   static_cast<int>(CVEMonitor::Daily));
+    m_cveFreqCombo->addItem("Weekly",            static_cast<int>(CVEMonitor::Weekly));
+    m_cveFreqCombo->setStyleSheet(
+        "QComboBox { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+        " border-radius: 4px; padding: 4px 10px; font-size: 12px; }"
+        "QComboBox::drop-down { border: none; }"
+        "QComboBox QAbstractItemView { background: #313244; color: #cdd6f4;"
+        " selection-background-color: #45475a; }");
+    // Select saved frequency
+    {
+        int savedMs = CVEMonitor::loadFrequencyMs();
+        for (int i = 0; i < m_cveFreqCombo->count(); ++i) {
+            if (m_cveFreqCombo->itemData(i).toInt() == savedMs) {
+                m_cveFreqCombo->setCurrentIndex(i);
+                break;
+            }
+        }
+        // Default to Daily if no match
+        if (m_cveFreqCombo->currentIndex() < 0) m_cveFreqCombo->setCurrentIndex(3);
+    }
+    connect(m_cveFreqCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &SecurityTestingFrame::onCVEFrequencyChanged);
+    freqRow->addWidget(m_cveFreqCombo);
+    freqRow->addStretch();
+    cveLayout->addLayout(freqRow);
+
+    // Manual run button
+    m_cveRunNowBtn = new QPushButton("Check Now");
+    m_cveRunNowBtn->setFixedHeight(32);
+    m_cveRunNowBtn->setFixedWidth(120);
+    m_cveRunNowBtn->setCursor(Qt::PointingHandCursor);
+    m_cveRunNowBtn->setStyleSheet(
+        "QPushButton { background: #f38ba8; color: #1e1e2e; border: none;"
+        " border-radius: 4px; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background: #f5a3b7; }"
+        "QPushButton:disabled { background: #313244; color: #6c7086; }");
+    connect(m_cveRunNowBtn, &QPushButton::clicked, this, &SecurityTestingFrame::onRunCVENow);
+    cveLayout->addWidget(m_cveRunNowBtn);
+
+    // Status label
+    m_cveStatusLabel = new QLabel("Not checked yet.");
+    m_cveStatusLabel->setStyleSheet("color: #a6adc8; font-size: 12px; background: transparent;");
+    m_cveStatusLabel->setWordWrap(true);
+    cveLayout->addWidget(m_cveStatusLabel);
+
+    cveLayout->addStretch();
+
+    // Note about pip-audit requirement
+    auto* noteLabel = new QLabel(
+        "Requires pip-audit to be installed: pip install pip-audit\n"
+        "Results also appear in the Dependency Analysis frame.");
+    noteLabel->setWordWrap(true);
+    noteLabel->setStyleSheet("color: #585b70; font-size: 11px; font-style: italic;"
+                             " background: transparent;");
+    cveLayout->addWidget(noteLabel);
+
+    m_tabs->addTab(m_cveTab, "CVE Auto-Check");
+
     root->addWidget(m_tabs, 1);
 }
 
@@ -494,4 +600,81 @@ QString SecurityTestingFrame::severityLabel(SecurityFinding::Severity sev)
     case SecurityFinding::LOW:      return "LOW";
     }
     return "LOW";
+}
+
+// ── CVE Auto-Check wiring ─────────────────────────────────────────────────────
+
+void SecurityTestingFrame::setCVEMonitor(CVEMonitor* monitor)
+{
+    m_cveMonitor = monitor;
+    if (m_cveMonitor) {
+        connect(m_cveMonitor, &CVEMonitor::auditCompleted,
+                this, &SecurityTestingFrame::onCVEAuditCompleted,
+                Qt::UniqueConnection);
+    }
+}
+
+void SecurityTestingFrame::reloadCVESettings()
+{
+    if (m_cveEnabledChk)
+        m_cveEnabledChk->setChecked(CVEMonitor::loadEnabled());
+    if (m_cveFreqCombo) {
+        int ms = CVEMonitor::loadFrequencyMs();
+        for (int i = 0; i < m_cveFreqCombo->count(); ++i) {
+            if (m_cveFreqCombo->itemData(i).toInt() == ms) {
+                m_cveFreqCombo->setCurrentIndex(i);
+                break;
+            }
+        }
+    }
+}
+
+void SecurityTestingFrame::onCVEToggled(bool enabled)
+{
+    CVEMonitor::saveEnabled(enabled);
+    if (m_cveMonitor) {
+        m_cveMonitor->setEnabled(enabled);
+        if (enabled) {
+            m_cveStatusLabel->setText("Monitoring enabled. Next check will run on schedule.");
+        } else {
+            m_cveStatusLabel->setText("Monitoring disabled.");
+        }
+    }
+    emit cveSettingsChanged();
+}
+
+void SecurityTestingFrame::onCVEFrequencyChanged(int index)
+{
+    if (!m_cveFreqCombo) return;
+    int ms = m_cveFreqCombo->itemData(index).toInt();
+    CVEMonitor::saveFrequencyMs(ms);
+    if (m_cveMonitor)
+        m_cveMonitor->setFrequencyMs(ms);
+    emit cveSettingsChanged();
+}
+
+void SecurityTestingFrame::onRunCVENow()
+{
+    if (!m_cveMonitor) {
+        m_cveStatusLabel->setText("CVE monitor not available.");
+        return;
+    }
+    m_cveStatusLabel->setText("Running pip-audit...");
+    m_cveRunNowBtn->setEnabled(false);
+    m_cveMonitor->runNow();
+}
+
+void SecurityTestingFrame::onCVEAuditCompleted(int count, const QStringList& packages)
+{
+    m_cveRunNowBtn->setEnabled(true);
+    if (count == 0) {
+        m_cveStatusLabel->setText("Last check: No vulnerabilities found.");
+        m_cveStatusLabel->setStyleSheet("color: #a6e3a1; font-size: 12px; background: transparent;");
+    } else {
+        m_cveStatusLabel->setText(
+            QString("Last check: %1 CVE(s) found in: %2")
+                .arg(count)
+                .arg(packages.join(", ")));
+        m_cveStatusLabel->setStyleSheet("color: #f38ba8; font-size: 12px; background: transparent;");
+    }
 }

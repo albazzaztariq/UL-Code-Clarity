@@ -13,6 +13,12 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 set(SOURCES
     main.cpp
     core/mainwindow.cpp
+    core/mainwindow_menus.cpp
+    core/mainwindow_layout.cpp
+    core/mainwindow_signals.cpp
+    core/custompipeline.cpp
+    core/cvemonitor.cpp
+    core/newsticker.cpp
     core/workspace.cpp
     core/aibackend.cpp
     core/setupwizard.cpp
@@ -55,12 +61,20 @@ set(SOURCES
     core/errorjournal.cpp
     core/typeflow.cpp
     core/machineview.cpp
+    core/favoritesbar.cpp
+    core/buildchain.cpp
+    core/jsonloader.cpp
+    core/analysisframe.cpp
+    core/fullreport.cpp
 )
 
 
 set(HEADERS
     core/theme.h
     core/mainwindow.h
+    core/custompipeline.h
+    core/cvemonitor.h
+    core/newsticker.h
     core/workspace.h
     core/aibackend.h
     core/setupwizard.h
@@ -103,6 +117,11 @@ set(HEADERS
     core/errorjournal.h
     core/typeflow.h
     core/machineview.h
+    core/favoritesbar.h
+    core/buildchain.h
+    core/jsonloader.h
+    core/analysisframe.h
+    core/fullreport.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────
@@ -119,6 +138,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE shell32 ole32 dwmapi psapi)
 endif()
+
+# ── Copy data/ directory next to executable ──────────────────────────────
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/data"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/data"
+    COMMENT "Copying data/ to output directory"
+)
 
 # ── Strip release builds (MinGW/GCC) ────────────────────────────────────
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

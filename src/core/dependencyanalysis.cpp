@@ -1,4 +1,5 @@
 #include "core/dependencyanalysis.h"
+#include "core/jsonloader.h"
 #include "core/theme.h"
 
 #include <QVBoxLayout>
@@ -13,80 +14,19 @@
 #include <QRegularExpression>
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Known package descriptions — top ~50 popular packages
+// Known package descriptions — loaded from data/packages.json
 // ─────────────────────────────────────────────────────────────────────────────
 QMap<QString, QString> DependencyAnalysisFrame::knownDescriptions()
 {
-    static QMap<QString, QString> db = {
-        // Python
-        {"requests",        "HTTP library for humans — makes web requests simple and intuitive."},
-        {"flask",           "Lightweight WSGI web framework for Python."},
-        {"django",          "Full-stack web framework with ORM, admin, and auth built-in."},
-        {"numpy",           "Fundamental package for scientific computing and array operations."},
-        {"pandas",          "Data analysis and manipulation library with DataFrames."},
-        {"scipy",           "Scientific computing — optimization, integration, interpolation."},
-        {"matplotlib",      "2D/3D plotting library — charts, graphs, figures."},
-        {"seaborn",         "Statistical data visualization built on top of matplotlib."},
-        {"scikit-learn",    "Machine learning — classification, regression, clustering."},
-        {"tensorflow",      "Google's deep learning framework for neural networks."},
-        {"torch",           "PyTorch — deep learning framework from Meta."},
-        {"keras",           "High-level neural network API (runs on TensorFlow)."},
-        {"sqlalchemy",      "SQL toolkit and Object Relational Mapper for Python."},
-        {"pillow",          "Python Imaging Library fork — image open/save/manipulate."},
-        {"pytest",          "Testing framework — write simple tests, get detailed reports."},
-        {"pydantic",        "Data validation using Python type hints."},
-        {"fastapi",         "Modern, fast web API framework based on Python type hints."},
-        {"aiohttp",         "Async HTTP client/server for asyncio."},
-        {"click",           "Composable command-line interface creation kit."},
-        {"rich",            "Rich text and beautiful formatting in the terminal."},
-        {"loguru",          "Python logging made simple and powerful."},
-        {"cryptography",    "Cryptographic recipes and primitives for Python."},
-        {"boto3",           "Amazon Web Services SDK for Python."},
-        {"paramiko",        "SSH2 protocol library for Python."},
-        {"celery",          "Distributed task queue for async job execution."},
-        {"redis",           "Python client for the Redis key-value store."},
-        {"pymongo",         "Python driver for MongoDB."},
-        {"psycopg2",        "PostgreSQL adapter for Python."},
-        {"httpx",           "Fully featured HTTP client for Python with async support."},
-        {"attrs",           "Classes without boilerplate — attributes made easy."},
-        {"jinja2",          "Template engine for Python (used by Flask, Ansible, etc)."},
-        {"yaml",            "YAML parser and emitter for Python (PyYAML)."},
-        {"toml",            "TOML file parser for Python configuration files."},
-        {"dotenv",          "Reads key-value pairs from a .env file into environment variables."},
-        {"tqdm",            "Fast, extensible progress bar for Python loops."},
-        {"colorama",        "Cross-platform colored terminal text output."},
-        {"arrow",           "Better dates and times for Python."},
-        {"pyinstaller",     "Freezes Python applications into standalone executables."},
-        {"setuptools",      "Easily download, build, install and upload Python packages."},
-        {"wheel",           "Built-package format for Python — faster installs."},
-        {"pip",             "Package installer for Python."},
-        {"virtualenv",      "Tool to create isolated Python environments."},
-        // JS/Node
-        {"express",         "Fast, minimalist web framework for Node.js."},
-        {"lodash",          "Utility library for JavaScript arrays, objects, strings."},
-        {"axios",           "Promise-based HTTP client for the browser and Node.js."},
-        {"react",           "JavaScript library for building user interfaces."},
-        {"vue",             "Progressive JavaScript framework for building UIs."},
-        {"typescript",      "Typed superset of JavaScript that compiles to plain JS."},
-        {"webpack",         "Module bundler for JavaScript applications."},
-        // C standard headers
-        {"stdio.h",         "C standard I/O — printf, scanf, fopen, fclose."},
-        {"stdlib.h",        "C standard library — malloc, free, exit, atoi."},
-        {"string.h",        "C string operations — strcpy, strlen, strcmp, memcpy."},
-        {"math.h",          "C math functions — sin, cos, sqrt, pow, fabs."},
-        {"time.h",          "C time functions — time, clock, difftime, strftime."},
-        {"pthread.h",       "POSIX threads — thread creation, mutexes, condition variables."},
-        {"errno.h",         "C error reporting — errno variable and error codes."},
-        // Rust crates
-        {"serde",           "Serialization/deserialization framework for Rust data structures."},
-        {"tokio",           "Async runtime for Rust — async/await, tasks, I/O."},
-        {"reqwest",         "Ergonomic, batteries-included HTTP client for Rust."},
-        {"clap",            "Command-line argument parser for Rust."},
-        {"log",             "Lightweight logging facade for Rust."},
-        {"rand",            "Random number generation for Rust."},
-        {"anyhow",          "Flexible error handling for Rust applications."},
-        {"thiserror",       "Derive macro for error types in Rust."},
-    };
+    static QMap<QString, QString> db;
+    static bool loaded = false;
+    if (!loaded) {
+        loaded = true;
+        QJsonObject obj = JsonLoader::loadObject("packages.json");
+        QJsonObject descs = obj["descriptions"].toObject();
+        for (auto it = descs.begin(); it != descs.end(); ++it)
+            db[it.key()] = it.value().toString();
+    }
     return db;
 }
 

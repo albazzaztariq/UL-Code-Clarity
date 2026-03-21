@@ -1,0 +1,26 @@
+{
+  "function_hints": [
+    { "contains": "init",    "hint": "initialization / setup" },
+    { "contains": "setup",   "hint": "initialization / setup" },
+    { "contains": "main",    "hint": "program entry point" },
+    { "contains": "get",     "hint": "retrieves data" },
+    { "contains": "fetch",   "hint": "retrieves data" },
+    { "contains": "set",     "hint": "modifies state" },
+    { "contains": "update",  "hint": "modifies state" },
+    { "contains": "calc",    "hint": "computes a value" },
+    { "contains": "compute", "hint": "computes a value" },
+    { "contains": "total",   "hint": "computes a value" },
+    { "contains": "sum",     "hint": "computes a value" },
+    { "contains": "print",   "hint": "outputs to screen" },
+    { "contains": "display", "hint": "outputs to screen" },
+    { "contains": "show",    "hint": "outputs to screen" },
+    { "contains": "parse",   "hint": "reads / parses input" },
+    { "contains": "read",    "hint": "reads / parses input" }
+  ],
+  "language_notes": {
+    "c":      "C: manual memory management — check malloc/free pairing.",
+    "cpp":    "C++: RAII applies — destructors run on scope exit.",
+    "python": "Python: GC + GIL — threaded IO-bound is fine, CPU-bound is not.",
+    "rust":   "Rust: borrow checker enforces memory safety at compile time."
+  }
+}

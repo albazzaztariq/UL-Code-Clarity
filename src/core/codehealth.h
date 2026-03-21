@@ -55,8 +55,9 @@ struct HealthReport {
     HealthScore  overallScore;   // drives grade colour
 };
 
-// Free helper used by MetricCard and CodeHealthFrame
+// Free helpers used by MetricCard, CodeHealthFrame, and FullReportFrame
 QString healthScoreColor(HealthScore s);
+HealthReport healthBuildReport(const QStringList& lines, const QString& lang);
 
 // ── Metric card widget (click to expand/collapse) ────────────────────────────
 class MetricCard : public QWidget {
@@ -84,6 +85,9 @@ public:
     // Provide code + language before showing
     void setCode(const QString& code, const QString& language);
 
+    // Public for use by FullReportFrame via healthBuildReport()
+    static HealthReport buildReport(const QStringList& lines, const QString& lang);
+
 signals:
     void backToEditor();
 
@@ -99,7 +103,6 @@ private:
     static MetricResult analyzeDuplication(const QStringList& lines);
     static MetricResult analyzeDeadCode(const QStringList& lines, const QString& lang);
     static MetricResult analyzeNaming(const QStringList& lines, const QString& lang);
-    static HealthReport buildReport(const QStringList& lines, const QString& lang);
 
     // ── UI helpers ───────────────────────────────────────────────────────────
     void populateGrade(const HealthReport& report);

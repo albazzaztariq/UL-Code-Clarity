@@ -1,0 +1,151 @@
+{
+  "error_types": [
+    {
+      "id": "name_error",
+      "match": "nameerror",
+      "title": "Variable not defined",
+      "regex": "name '([^']+)' is not defined",
+      "capture_group": 1,
+      "explanation_with_var": "'%1' doesn't exist at this point — it was never created, or was created in a different scope (e.g. inside a function).",
+      "fix_with_var": "Check that '%1' is spelled correctly and created before this line.",
+      "explanation_generic": "A variable name was used before it was created, or was misspelled.",
+      "fix_generic": "Check spelling and that the variable is created before use."
+    },
+    {
+      "id": "index_error",
+      "match": "indexerror",
+      "title": "Array index out of bounds",
+      "explanation_generic": "You accessed a position in a list/array that doesn't exist. Lists start at index 0, so a list of 5 items has indices 0-4.",
+      "fix_generic": "Check the array length before accessing. Use len(arr) and make sure your index < len(arr)."
+    },
+    {
+      "id": "type_error",
+      "match": "typeerror",
+      "title": "Wrong type",
+      "patterns": [
+        {
+          "regex": "unsupported operand type\\(s\\) for ([^:]+): '([^']+)' and '([^']+)'",
+          "explanation_template": "Cannot use '%1' between a %2 and a %3.",
+          "fix": "Convert one side to the right type, e.g. int(x) or str(x)."
+        },
+        {
+          "regex": "'([^']+)' object is not (\\w+)",
+          "explanation_template": "A '%1' object cannot be %2 here.",
+          "fix": "Check the types of all values on this line using type(x)."
+        }
+      ],
+      "explanation_generic": "A value of the wrong type was passed or used. E.g. a number was expected but a string was given.",
+      "fix_generic": "Check the types of all values on this line using type(x)."
+    },
+    {
+      "id": "zero_division_error",
+      "match": "zerodivisionerror",
+      "title": "Division by zero",
+      "explanation_generic": "The program divided a number by zero, which is mathematically undefined.",
+      "fix_generic": "Add a check before dividing: if denominator != 0: ... else: handle_zero()"
+    },
+    {
+      "id": "attribute_error",
+      "match": "attributeerror",
+      "title": "Attribute does not exist",
+      "patterns": [
+        {
+          "regex": "'NoneType' object has no attribute '([^']+)'",
+          "explanation_template": "The variable is None (empty/null), so calling .%1 on it fails. The function that was supposed to return an object returned None instead.",
+          "fix": "Check that the object was actually created and is not None before calling methods on it."
+        },
+        {
+          "regex": "'([^']+)' object has no attribute '([^']+)'",
+          "explanation_template": "A '%1' object doesn't have an attribute called '%2'. Check the object type and its available attributes.",
+          "fix": "Use dir(obj) to see what attributes are available."
+        }
+      ],
+      "explanation_generic": "Called a method or accessed a field that doesn't exist on this object.",
+      "fix_generic": "Use dir(obj) to see what attributes are available."
+    },
+    {
+      "id": "file_not_found_error",
+      "match_any": ["filenotfounderror", "no such file"],
+      "title": "File not found",
+      "patterns": [
+        {
+          "regex": "No such file or directory: '([^']+)'",
+          "explanation_template": "The file '%1' doesn't exist at that path. The path may be wrong, or the file hasn't been created yet.",
+          "fix": "Check the file path is correct. Use an absolute path or verify the working directory."
+        }
+      ],
+      "explanation_generic": "A file path was provided that doesn't exist on disk.",
+      "fix_generic": "Check the file path is correct. Use an absolute path or verify the working directory."
+    },
+    {
+      "id": "segfault",
+      "match_any": ["segmentation fault", "segfault", "access violation"],
+      "title": "Memory access violation (segfault)",
+      "explanation_generic": "The program tried to access memory it doesn't own. Common causes: buffer overflow, writing past the end of an array, or following a null/dangling pointer.",
+      "fix_generic": "Check all array accesses are within bounds. Verify pointers are not NULL before dereferencing."
+    },
+    {
+      "id": "value_error",
+      "match": "valueerror",
+      "title": "Invalid value",
+      "patterns": [
+        {
+          "regex": "invalid literal for (\\w+)\\(\\) with base \\d+: '([^']+)'",
+          "explanation_template": "'%2' cannot be converted to %1. The string contains characters that are not a valid number.",
+          "fix": "Validate the input before converting, e.g. if x.isdigit(): int(x)"
+        }
+      ],
+      "explanation_generic": "A value was passed that is the right type but outside the acceptable range or format.",
+      "fix_generic": "Check what values are valid for this function and validate input before passing it."
+    },
+    {
+      "id": "key_error",
+      "match": "keyerror",
+      "title": "Dictionary key not found",
+      "patterns": [
+        {
+          "regex": "KeyError: '?([^'\"\\n]+)'?",
+          "explanation_template": "The key '%1' doesn't exist in the dictionary at this point.",
+          "fix_template": "Use dict.get('%1', default) instead of dict['%1'] to avoid the crash."
+        }
+      ],
+      "explanation_generic": "Tried to access a dictionary key that doesn't exist.",
+      "fix_generic": "Use 'key in dict' to check before accessing, or use dict.get(key, default)."
+    },
+    {
+      "id": "recursion_error",
+      "match_any": ["recursionerror", "maximum recursion"],
+      "title": "Infinite recursion",
+      "explanation_generic": "A function kept calling itself without stopping. The call stack grew until Python ran out of room.",
+      "fix_generic": "Make sure your recursive function has a base case that stops recursion. Check that the base case is reachable."
+    },
+    {
+      "id": "import_error",
+      "match_any": ["importerror", "modulenotfounderror"],
+      "title": "Module not found",
+      "patterns": [
+        {
+          "regex": "No module named '([^']+)'",
+          "explanation_template": "Python can't find the module '%1'. It may not be installed, or the name might be misspelled.",
+          "fix_template": "Run: pip install %1"
+        }
+      ],
+      "explanation_generic": "A required module or package is missing.",
+      "fix_generic": "Check the module name and install it if needed with pip install <name>."
+    },
+    {
+      "id": "indentation_error",
+      "match": "indentationerror",
+      "title": "Indentation error",
+      "explanation_generic": "Python is very strict about indentation (spaces/tabs at the start of lines). A line is not indented consistently with the block it belongs to.",
+      "fix_generic": "Use 4 spaces per indent level consistently. Don't mix tabs and spaces."
+    },
+    {
+      "id": "syntax_error",
+      "match": "syntaxerror",
+      "title": "Syntax error",
+      "explanation_generic": "Python couldn't parse the code — something is written incorrectly. Common causes: missing colon after if/for/def, mismatched parentheses, or a typo in a keyword.",
+      "fix_generic": "Check the line and the line before it for missing colons, brackets, or quotes."
+    }
+  ]
+}

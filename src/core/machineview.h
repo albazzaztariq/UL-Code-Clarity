@@ -7,6 +7,7 @@
 #include <QPushButton>
 #include <QString>
 #include <QVector>
+#include <QHash>
 
 // ============================================================================
 // MachineViewPanel — "What does the computer actually do?" mode
@@ -21,14 +22,12 @@
 //   Level 3 — C-level detail: "PyObject_Malloc, memcpy, INCREF/DECREF..."
 //   Level 4 — Address-level: "malloc(12) → memcpy(0x...) → ptr update"
 //
-// Explanations are all local text — no model required.
-// Covers ~30 common code patterns for both Python and C.
+// Explanations loaded from machineview.json — no model required.
 // ============================================================================
 
-// One explanation card result
 struct MachineExplanation {
-    QString headline;   // short title
-    QString body;       // full explanation (may contain newlines)
+    QString headline;
+    QString body;
     bool    isEmpty() const { return headline.isEmpty(); }
 };
 
@@ -37,46 +36,51 @@ class MachineViewPanel : public QWidget {
 public:
     explicit MachineViewPanel(QWidget* parent = nullptr);
 
-    // Set assist level (1–4) — affects explanation verbosity
     void setLevel(int level);
-
-    // Set language being edited ("python" / "c" / "ul" etc.)
     void setLanguage(const QString& lang);
-
-    // Called when user clicks a line in the editor
     void explainLine(int lineNumber, const QString& lineText);
-
-    // Clear the panel (no line selected)
     void clearExplanation();
-
     void applyTheme(bool isDark);
 
 signals:
     void closeRequested();
 
 private:
+    // Text for one pattern at one level
+    struct LevelText {
+        QString headline;
+        QString body;
+    };
+
+    // One loaded pattern entry from JSON
+    struct PatternEntry {
+        QString  id;
+        QString  language;              // "" = any, "python" / "c"
+        QStringList startsWithAny;
+        QStringList containsAny;
+        QStringList excludeStartsWith;
+        QStringList excludeContains;
+        QString  matchRegex;
+
+        bool requireAssignment          = false;
+        bool requireStringHint          = false;
+        bool excludeStrings             = false;
+        bool matchContainsStarOrAmp     = false;
+        bool requireAssignOrArrow       = false;
+        bool matchContainsBrackets      = false;
+        bool excludeIfNoAssignAndHasParen = false;
+
+        // levels[langKey][levelNumber] = LevelText
+        QHash<QString, QHash<int, LevelText>> levels;
+    };
+
+    void loadPatterns();
     MachineExplanation generateExplanation(const QString& line,
                                            const QString& lang,
                                            int level) const;
 
-    // Pattern matchers — return empty explanation if pattern doesn't match
-    MachineExplanation tryVariableAssignment(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryStringConcat(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryFunctionCall(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryReturn(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryIfElse(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryLoop(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryListOp(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryImport(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryPrint(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryArithmetic(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryCDeclaration(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryCPointer(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryCMalloc(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryCFree(const QString& line, const QString& lang, int level) const;
-    MachineExplanation tryCArray(const QString& line, const QString& lang, int level) const;
+    QVector<PatternEntry> m_patterns;
 
-    // Widgets
     QPushButton* m_closeBtn    = nullptr;
     QLabel*      m_titleLabel  = nullptr;
     QLabel*      m_lineLabel   = nullptr;
@@ -84,7 +88,6 @@ private:
     QLabel*      m_bodyLabel   = nullptr;
     QLabel*      m_emptyLabel  = nullptr;
 
-    // State
     int     m_level   = 1;
     QString m_lang    = "python";
     bool    m_isDark  = true;

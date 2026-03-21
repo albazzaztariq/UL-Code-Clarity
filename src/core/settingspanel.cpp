@@ -187,6 +187,9 @@ SettingsPanel::SettingsPanel(QWidget *parent)
     buildModelsTab(m_tabs);
     buildAIBehaviorTab(m_tabs);
     buildPermissionsTab(m_tabs);
+    buildMenuCustomizationTab(m_tabs);
+    buildNewsTickerTab(m_tabs);
+    buildSecurityTab(m_tabs);
     mainLayout->addWidget(m_tabs, 1);
 
     // Bottom bar
@@ -436,6 +439,139 @@ void SettingsPanel::buildPermissionsTab(QTabWidget *tabs)
     tabs->addTab(page, "Permissions");
 }
 
+void SettingsPanel::buildMenuCustomizationTab(QTabWidget *tabs)
+{
+    auto *page = new QWidget;
+    auto *layout = new QVBoxLayout(page);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(12);
+
+    auto *title = new QLabel("Tools Menu Items", page);
+    title->setStyleSheet(QString("font-size: 13px; font-weight: 700; color: %1;").arg(ACCENT));
+    layout->addWidget(title);
+
+    auto *desc = new QLabel(
+        "Check which items are visible in the Tools menu. "
+        "Hidden items are still accessible via keyboard shortcuts.", page);
+    desc->setWordWrap(true);
+    desc->setStyleSheet(QString("color: %1; font-size: 11px;").arg(FG2));
+    layout->addWidget(desc);
+
+    auto *sep = new QFrame(page);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet(QString("color: %1;").arg(BORDER));
+    layout->addWidget(sep);
+
+    // Map of settings key -> display label (matches the keys in buildToolsMenu)
+    static const QList<QPair<QString,QString>> menuItems = {
+        {"langGuide",       "Language Guide"},
+        {"expander",        "Statement Expander"},
+        {"interactiveTut",  "Interactive Basics Tutorial"},
+        {"quickRef",        "Quick Reference"},
+        {"explainCodebase", "Explain Codebase"},
+        {"runtimeInfo",     "Runtime Info"},
+        {"securityTesting", "Security Testing"},
+        {"runtimeAnalysis", "Runtime Analysis"},
+        {"memoryAnalysis",  "Memory Analysis"},
+        {"depAnalysis",     "Dependency Analysis"},
+        {"securityLabs",    "Security Labs"},
+        {"codeHealth",      "Code Health"},
+        {"debugger",        "Debugger"},
+        {"traceVar",        "Trace This Variable"},
+        {"errorJournal",    "Error Journal"},
+        {"typeFlow",        "Type Flow"},
+        {"machineView",     "Machine View"},
+        {"execCost",        "Show Execution Cost"},
+        {"customPipeline",  "Run Custom Pipeline"},
+    };
+
+    QSettings s("CodeClarity", "CodeClarity");
+    m_menuVisCheckBoxes.clear();
+
+    auto *scroll = new QScrollArea(page);
+    scroll->setWidgetResizable(true);
+    scroll->setStyleSheet("QScrollArea { border: none; background: transparent; }");
+    auto *inner = new QWidget;
+    auto *innerLay = new QVBoxLayout(inner);
+    innerLay->setSpacing(6);
+    innerLay->setContentsMargins(0, 0, 0, 0);
+
+    for (const auto& item : menuItems) {
+        auto *cb = new QCheckBox(item.second, inner);
+        bool visible = s.value("menuvis/" + item.first, true).toBool();
+        cb->setChecked(visible);
+        m_menuVisCheckBoxes[item.first] = cb;
+        innerLay->addWidget(cb);
+    }
+    innerLay->addStretch();
+    scroll->setWidget(inner);
+    layout->addWidget(scroll, 1);
+
+    tabs->addTab(page, "Menu");
+}
+
+void SettingsPanel::buildNewsTickerTab(QTabWidget *tabs)
+{
+    auto *page = new QWidget;
+    auto *layout = new QVBoxLayout(page);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(14);
+
+    auto *title = new QLabel("News Ticker", page);
+    title->setStyleSheet(QString("font-size: 13px; font-weight: 700; color: %1;").arg(ACCENT));
+    layout->addWidget(title);
+
+    auto *desc = new QLabel(
+        "Shows a scrolling strip of Reddit programming news below the menu bar. "
+        "Titles are clickable and open in your browser.", page);
+    desc->setWordWrap(true);
+    desc->setStyleSheet(QString("color: %1; font-size: 11px;").arg(FG2));
+    layout->addWidget(desc);
+
+    auto *sep = new QFrame(page);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet(QString("color: %1;").arg(BORDER));
+    layout->addWidget(sep);
+
+    m_tickerEnabledChk = new QCheckBox("Enable News Ticker", page);
+    layout->addWidget(m_tickerEnabledChk);
+
+    auto *subLabel = new QLabel("Subreddits:", page);
+    subLabel->setStyleSheet(QString("color: %1; font-size: 11px; font-weight: 600;").arg(FG));
+    layout->addWidget(subLabel);
+
+    m_tickerSubProgramming = new QCheckBox("r/programming", page);
+    m_tickerSubPython      = new QCheckBox("r/Python", page);
+    m_tickerSubJavascript  = new QCheckBox("r/javascript", page);
+    m_tickerSubCProg       = new QCheckBox("r/C_Programming", page);
+    m_tickerSubCpp         = new QCheckBox("r/cpp", page);
+
+    layout->addWidget(m_tickerSubProgramming);
+    layout->addWidget(m_tickerSubPython);
+    layout->addWidget(m_tickerSubJavascript);
+    layout->addWidget(m_tickerSubCProg);
+    layout->addWidget(m_tickerSubCpp);
+
+    auto *sep2 = new QFrame(page);
+    sep2->setFrameShape(QFrame::HLine);
+    sep2->setStyleSheet(QString("color: %1;").arg(BORDER));
+    layout->addWidget(sep2);
+
+    auto *pollRow = new QHBoxLayout;
+    auto *pollLabel = new QLabel("Refresh every:", page);
+    pollLabel->setStyleSheet(QString("color: %1; font-size: 11px;").arg(FG2));
+    pollRow->addWidget(pollLabel);
+
+    m_tickerPollCombo = new QComboBox(page);
+    m_tickerPollCombo->addItems({"5 minutes", "10 minutes", "15 minutes", "30 minutes"});
+    pollRow->addWidget(m_tickerPollCombo);
+    pollRow->addStretch();
+    layout->addLayout(pollRow);
+
+    layout->addStretch();
+    tabs->addTab(page, "News Ticker");
+}
+
 // ── Settings load/save ────────────────────────────────────────────────────
 
 void SettingsPanel::loadSettings()
@@ -459,6 +595,31 @@ void SettingsPanel::loadSettings()
 
     // Permissions
     m_disablePromptsChk->setChecked(s.value("permissions/disablePrompts", false).toBool());
+
+    // CVE Monitor
+    if (m_cveEnabledChk)
+        m_cveEnabledChk->setChecked(CVEMonitor::loadEnabled());
+    if (m_cveFreqCombo) {
+        int ms = CVEMonitor::loadFrequencyMs();
+        for (int i = 0; i < m_cveFreqCombo->count(); ++i) {
+            if (m_cveFreqCombo->itemData(i).toInt() == ms) {
+                m_cveFreqCombo->setCurrentIndex(i);
+                break;
+            }
+        }
+    }
+
+    // News Ticker
+    m_tickerEnabledChk->setChecked(s.value("ticker/enabled", true).toBool());
+    m_tickerSubProgramming->setChecked(s.value("ticker/sub/programming", true).toBool());
+    m_tickerSubPython->setChecked(s.value("ticker/sub/Python", false).toBool());
+    m_tickerSubJavascript->setChecked(s.value("ticker/sub/javascript", false).toBool());
+    m_tickerSubCProg->setChecked(s.value("ticker/sub/C_Programming", false).toBool());
+    m_tickerSubCpp->setChecked(s.value("ticker/sub/cpp", false).toBool());
+    static const QList<int> pollValues = {5, 10, 15, 30};
+    int pollMin = s.value("ticker/intervalMin", 10).toInt();
+    int pollIdx = pollValues.indexOf(pollMin);
+    m_tickerPollCombo->setCurrentIndex(pollIdx >= 0 ? pollIdx : 1);
 }
 
 void SettingsPanel::applySettings()
@@ -473,6 +634,28 @@ void SettingsPanel::applySettings()
     s.setValue("ai/customSystemPrompt", m_systemPromptEdit->toPlainText());
 
     s.setValue("permissions/disablePrompts", m_disablePromptsChk->isChecked());
+
+    // Menu visibility
+    for (auto it = m_menuVisCheckBoxes.begin(); it != m_menuVisCheckBoxes.end(); ++it) {
+        s.setValue("menuvis/" + it.key(), it.value()->isChecked());
+    }
+
+    // News Ticker
+    s.setValue("ticker/enabled",             m_tickerEnabledChk->isChecked());
+    s.setValue("ticker/sub/programming",     m_tickerSubProgramming->isChecked());
+    s.setValue("ticker/sub/Python",          m_tickerSubPython->isChecked());
+    s.setValue("ticker/sub/javascript",      m_tickerSubJavascript->isChecked());
+    s.setValue("ticker/sub/C_Programming",   m_tickerSubCProg->isChecked());
+    s.setValue("ticker/sub/cpp",             m_tickerSubCpp->isChecked());
+    static const QList<int> pollValues = {5, 10, 15, 30};
+    int pollIdx = m_tickerPollCombo->currentIndex();
+    s.setValue("ticker/intervalMin", pollValues.value(pollIdx, 10));
+
+    // CVE Monitor
+    if (m_cveEnabledChk)
+        CVEMonitor::saveEnabled(m_cveEnabledChk->isChecked());
+    if (m_cveFreqCombo)
+        CVEMonitor::saveFrequencyMs(m_cveFreqCombo->currentData().toInt());
 
     // Save model list
     saveModels(m_models);
@@ -502,6 +685,9 @@ void SettingsPanel::onSaveClicked()
 
     applySettings();
     emit modelsChanged();
+    emit menuVisibilityChanged();
+    emit tickerSettingsChanged();
+    emit cveSettingsChanged();
     accept();
 }
 
@@ -804,4 +990,64 @@ QString ModelEditDialog::defaultModel(const QString &provider) const
     if (provider == "Google")    return "gemini-2.0-flash";
     if (provider == "Ollama")    return "llama3";
     return "gpt-4o";
+}
+
+// ── Security Tab ──────────────────────────────────────────────────────────────
+
+void SettingsPanel::buildSecurityTab(QTabWidget *tabs)
+{
+    auto *page = new QWidget;
+    auto *layout = new QVBoxLayout(page);
+    layout->setContentsMargins(20, 20, 20, 20);
+    layout->setSpacing(14);
+
+    auto *title = new QLabel("Security", page);
+    title->setStyleSheet(QString("font-size: 13px; font-weight: 700; color: %1;").arg(ACCENT));
+    layout->addWidget(title);
+
+    auto *desc = new QLabel(
+        "Configure automatic CVE monitoring. When enabled, pip-audit runs silently "
+        "in the background to check your Python dependencies for known vulnerabilities. "
+        "Results appear as a notification bar and in the Dependency Analysis frame.", page);
+    desc->setWordWrap(true);
+    desc->setStyleSheet(QString("color: %1; font-size: 11px;").arg(FG2));
+    layout->addWidget(desc);
+
+    auto *sep = new QFrame(page);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setStyleSheet(QString("color: %1;").arg(BORDER));
+    layout->addWidget(sep);
+
+    // Enable toggle
+    m_cveEnabledChk = new QCheckBox("Enable Auto CVE Check", page);
+    m_cveEnabledChk->setStyleSheet(QString("color: %1;").arg(FG));
+    layout->addWidget(m_cveEnabledChk);
+
+    // Frequency row
+    auto *freqRow = new QHBoxLayout;
+    auto *freqLbl = new QLabel("Frequency:", page);
+    freqLbl->setStyleSheet(QString("color: %1; font-size: 11px;").arg(FG2));
+    freqRow->addWidget(freqLbl);
+
+    m_cveFreqCombo = new QComboBox(page);
+    m_cveFreqCombo->addItem("Every 5 minutes",  static_cast<int>(CVEMonitor::Every5Min));
+    m_cveFreqCombo->addItem("Every 30 minutes", static_cast<int>(CVEMonitor::Every30Min));
+    m_cveFreqCombo->addItem("Hourly",            static_cast<int>(CVEMonitor::Hourly));
+    m_cveFreqCombo->addItem("Daily (Default)",   static_cast<int>(CVEMonitor::Daily));
+    m_cveFreqCombo->addItem("Weekly",            static_cast<int>(CVEMonitor::Weekly));
+    m_cveFreqCombo->setCurrentIndex(3); // Daily default
+    freqRow->addWidget(m_cveFreqCombo);
+    freqRow->addStretch();
+    layout->addLayout(freqRow);
+
+    auto *noteLabel = new QLabel(
+        "Requires pip-audit: pip install pip-audit\n"
+        "Only runs on Python workspaces (workspaces containing .py files).", page);
+    noteLabel->setWordWrap(true);
+    noteLabel->setStyleSheet(
+        QString("color: %1; font-size: 10px; font-style: italic;").arg(FG3));
+    layout->addWidget(noteLabel);
+
+    layout->addStretch();
+    tabs->addTab(page, "Security");
 }

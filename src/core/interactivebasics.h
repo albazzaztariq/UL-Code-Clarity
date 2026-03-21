@@ -18,6 +18,7 @@
 #include <QStringList>
 #include <QVector>
 #include <QTimer>
+#include <QJsonObject>
 
 // ============================================================================
 // InteractiveBasicsDialog
@@ -120,13 +121,7 @@ private:
 
     // Page builders
     QWidget* buildLangPage();
-    QWidget* buildTopic1Page();   // Types & Variables
-    QWidget* buildTopic2Page();   // Functions
-    QWidget* buildTopic3Page();   // If/Else
-    QWidget* buildTopic4Page();   // Loops
-    QWidget* buildTopic5Page();   // Collections
-    QWidget* buildTopic6Page();   // Objects & Inheritance
-    QWidget* buildTopic7Page();   // Language Deep Dive
+    QWidget* buildTopicPage(const QJsonObject &topic, int stepIndex);
     QWidget* buildDonePage();
 
     // Teaching / code block widgets

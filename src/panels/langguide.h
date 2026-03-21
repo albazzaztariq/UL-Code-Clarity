@@ -11,6 +11,7 @@
 #include <QFrame>
 #include <QMap>
 #include <QStringList>
+#include <QHBoxLayout>
 
 // One row in the language guide feature matrix
 struct LangGuideRow {
@@ -42,7 +43,10 @@ public:
     // Show guide for a specific language
     void showForLanguage(const QString &lang);
 
-    // Static data getters (ported from prototype LANG_TUTORIALS)
+    // Load guide data for a language from langguide.json
+    static LangGuideData loadLanguageData(const QString &lang);
+
+    // Convenience wrappers kept for API compatibility
     static LangGuideData pythonGuide();
     static LangGuideData cGuide();
     static LangGuideData ulGuide();
