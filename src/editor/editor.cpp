@@ -7,6 +7,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QTextStream>
+#include <QFileDialog>
 
 // ═══════════════════════════════════════════════════════════════════════
 // CodeEditor — QPlainTextEdit with line numbers
@@ -446,12 +447,35 @@ void EditorWidget::openFile(const QString& filePath)
     emit fileOpened(filePath);
 }
 
+void EditorWidget::newUntitled()
+{
+    int idx = m_tabBar->count();
+    m_tabs[idx] = { QString(), QString(), "text", 0 };
+
+    m_tabBar->blockSignals(true);
+    int addedIdx = m_tabBar->addTab("untitled");
+    m_tabBar->setTabButton(addedIdx, QTabBar::RightSide, makeCloseButton(addedIdx));
+    m_tabBar->blockSignals(false);
+    Q_UNUSED(addedIdx);
+
+    hideWelcome();
+    m_tabBar->setCurrentIndex(idx);
+    m_codeEditor->clear();
+}
+
 void EditorWidget::saveCurrentFile()
 {
     if (m_currentTab < 0 || !m_tabs.contains(m_currentTab))
         return;
 
     auto& tab = m_tabs[m_currentTab];
+
+    // If untitled, delegate to saveAs
+    if (tab.filePath.isEmpty()) {
+        saveCurrentFileAs();
+        return;
+    }
+
     tab.content = m_codeEditor->toPlainText();
 
     QFile file(tab.filePath);
@@ -460,6 +484,35 @@ void EditorWidget::saveCurrentFile()
         stream << tab.content;
         file.close();
     }
+}
+
+void EditorWidget::saveCurrentFileAs()
+{
+    if (m_currentTab < 0 || !m_tabs.contains(m_currentTab))
+        return;
+
+    QString path = QFileDialog::getSaveFileName(
+        this, "Save As", QString(),
+        "All Files (*);;Python (*.py);;C (*.c);;C Header (*.h);;UniLogic (*.ul);;Text (*.txt)");
+    if (path.isEmpty())
+        return;
+
+    auto& tab = m_tabs[m_currentTab];
+    tab.filePath = path;
+    tab.content  = m_codeEditor->toPlainText();
+    tab.language  = detectLanguage(path);
+
+    QFile file(path);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream stream(&file);
+        stream << tab.content;
+        file.close();
+    }
+
+    QFileInfo fi(path);
+    m_tabBar->setTabText(m_currentTab, fi.fileName());
+    updateLanguageBadge();
+    emit fileOpened(path);
 }
 
 void EditorWidget::undo() { m_codeEditor->undo(); }

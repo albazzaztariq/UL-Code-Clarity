@@ -53,7 +53,11 @@ SetupWizard::SetupWizard(QWidget *parent)
         "QComboBox { background: %3; color: %2; border: 1px solid %4;"
         "  border-radius: 4px; padding: 4px 8px; font-size: 11px; }"
         "QComboBox::drop-down { border: none; }"
-        "QComboBox QAbstractItemView { background: %3; color: %2; border: none; outline: none; }"
+        "QComboBox QAbstractItemView { background: %3; color: %2;"
+        "  border: none; outline: none; margin: 0; padding: 0;"
+        "  selection-background-color: #3c3c54; }"
+        "QComboBox QAbstractItemView::item { border: none; padding: 4px 8px; }"
+        "QComboBox QFrame { border: none; }"
     ).arg(BG2, FG, BG3, BORDER));
 
     // Main layout

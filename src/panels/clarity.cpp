@@ -40,10 +40,10 @@ ClarityEntry::ClarityEntry(const QString &title, const QString &time,
         ).arg(BG3, ACCENT, BG4));
     } else {
         setStyleSheet(
-            "ClarityEntry { background: #ffffff; border-radius: 6px;"
-            " border: 1px solid #e8e8e8; border-left: 3px solid #2563eb; }"
-            "ClarityEntry:hover { background: #f0f4ff;"
-            " border: 1px solid #c0cfe8; border-left: 3px solid #2563eb; }");
+            "ClarityEntry { background: transparent; border-radius: 0;"
+            " border: none; border-left: 3px solid #2563eb; margin-bottom: 8px; }"
+            "ClarityEntry:hover { background: transparent;"
+            " border: none; border-left: 3px solid #2563eb; margin-bottom: 8px; }");
     }
 
     auto *layout = new QVBoxLayout(this);
@@ -52,15 +52,15 @@ ClarityEntry::ClarityEntry(const QString &title, const QString &time,
 
     m_titleLabel = new QLabel(title, this);
     m_titleLabel->setStyleSheet(s_isDark
-        ? QString("font-size: 12px; font-weight: 600; color: %1;").arg(FG)
-        : "font-size: 12px; font-weight: 600; color: #1e1e2e;");
+        ? QString("font-size: 12px; font-weight: 600; color: %1; background: transparent;").arg(FG)
+        : "font-size: 12px; font-weight: 600; color: #1e1e2e; background: transparent;");
     m_titleLabel->setWordWrap(true);
     layout->addWidget(m_titleLabel);
 
     m_timeLabel = new QLabel(time, this);
     m_timeLabel->setStyleSheet(s_isDark
-        ? QString("font-size: 10px; color: %1;").arg(FG2)
-        : "font-size: 10px; color: #666666;");
+        ? QString("font-size: 10px; color: %1; background: transparent;").arg(FG2)
+        : "font-size: 10px; color: #666666; background: transparent;");
     layout->addWidget(m_timeLabel);
 
     // Detail section (hidden by default)
@@ -78,13 +78,13 @@ void ClarityEntry::buildDetailContent(const QString &detailHtml)
 
     m_detailWidget->setStyleSheet(s_isDark
         ? QString("background: %1; border-radius: 6px;").arg(BG)
-        : "background: #f8f8f8; border-radius: 6px;");
+        : "background: transparent;");
 
     auto *detailLabel = new QLabel(detailHtml, m_detailWidget);
     detailLabel->setStyleSheet(s_isDark
-        ? QString("font-size: 11px; line-height: 1.5; color: %1;"
+        ? QString("font-size: 11px; line-height: 1.5; color: %1; background: transparent;"
                   "QLabel a { color: #74c7ec; }").arg(FG2)
-        : "font-size: 11px; line-height: 1.5; color: #444444;"
+        : "font-size: 11px; line-height: 1.5; color: #444444; background: transparent;"
           "QLabel a { color: #2563eb; }");
     detailLabel->setWordWrap(true);
     detailLabel->setTextFormat(Qt::RichText);

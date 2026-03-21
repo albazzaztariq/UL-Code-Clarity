@@ -103,10 +103,23 @@ BuildBar::BuildBar(QWidget* parent)
     m_barSep->setStyleSheet("color: #313244;");
     barLayout->addWidget(m_barSep);
 
-    // Target label + combo + help button
+    // Target label + help button + combo
     m_targetLabel = new QLabel("Build Target:");
     m_targetLabel->setStyleSheet("QLabel { color: #a6adc8; font-size: 11px; }");
     barLayout->addWidget(m_targetLabel);
+
+    m_targetHelpBtn = new QPushButton("?");
+    auto* targetHelpBtn = m_targetHelpBtn;
+    targetHelpBtn->setFixedSize(24, 24);
+    targetHelpBtn->setCursor(Qt::PointingHandCursor);
+    targetHelpBtn->setStyleSheet(
+        "QPushButton { background: transparent; color: #a6adc8;"
+        " border-radius: 12px; font-size: 14px; padding: 0; border: none; }"
+        "QPushButton:hover { color: #cdd6f4; }");
+    targetHelpBtn->setToolTip(
+        "Select your compilation target. Native targets produce standalone binaries. "
+        "Language targets produce source code in that language.");
+    barLayout->addWidget(targetHelpBtn);
 
     m_targetCombo = new QComboBox;
     m_targetCombo->setFixedHeight(26);
@@ -126,19 +139,6 @@ BuildBar::BuildBar(QWidget* parent)
     m_targetCombo->addItem("Bytecode VM");
     m_targetCombo->setCurrentIndex(0);  // Default: Windows x64
     barLayout->addWidget(m_targetCombo);
-
-    m_targetHelpBtn = new QPushButton("?");
-    auto* targetHelpBtn = m_targetHelpBtn;
-    targetHelpBtn->setFixedSize(24, 24);
-    targetHelpBtn->setCursor(Qt::PointingHandCursor);
-    targetHelpBtn->setStyleSheet(
-        "QPushButton { background: transparent; color: #a6adc8;"
-        " border-radius: 12px; font-size: 14px; padding: 0; border: none; }"
-        "QPushButton:hover { color: #cdd6f4; }");
-    targetHelpBtn->setToolTip(
-        "Select your compilation target. Native targets produce standalone binaries. "
-        "Language targets produce source code in that language.");
-    barLayout->addWidget(targetHelpBtn);
 
     barLayout->addStretch();
 

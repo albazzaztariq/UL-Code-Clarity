@@ -61,7 +61,9 @@ public:
     explicit EditorWidget(QWidget* parent = nullptr);
 
     void openFile(const QString& filePath);
+    void newUntitled();
     void saveCurrentFile();
+    void saveCurrentFileAs();
     void undo();
     void redo();
 

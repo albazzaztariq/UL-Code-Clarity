@@ -34,6 +34,11 @@
 #include <QTimer>
 #include <QPushButton>
 #include <QDateTime>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QLineEdit>
+#include <QScrollArea>
+#include <QGridLayout>
 #include <QDesktopServices>
 #include <QUrl>
 #include <QMessageBox>
@@ -103,6 +108,9 @@ void MainWindow::createMenuBar()
     auto* fileMenu = mb->addMenu("&File");
     auto* newFile = fileMenu->addAction("New File");
     newFile->setShortcut(QKeySequence("Ctrl+N"));
+    connect(newFile, &QAction::triggered, this, [this]() {
+        if (m_editor) m_editor->newUntitled();
+    });
 
     auto* openFile = fileMenu->addAction("Open File...");
     openFile->setShortcut(QKeySequence("Ctrl+O"));
@@ -140,6 +148,9 @@ void MainWindow::createMenuBar()
 
     auto* saveAs = fileMenu->addAction("Save As...");
     saveAs->setShortcut(QKeySequence("Ctrl+Shift+S"));
+    connect(saveAs, &QAction::triggered, this, [this]() {
+        if (m_editor) m_editor->saveCurrentFileAs();
+    });
 
     fileMenu->addSeparator();
 
@@ -178,9 +189,92 @@ void MainWindow::createMenuBar()
 
     auto* find = editMenu->addAction("Find");
     find->setShortcut(QKeySequence("Ctrl+F"));
+    connect(find, &QAction::triggered, this, [this]() {
+        if (!m_editor) return;
+        auto *dlg = new QDialog(this);
+        dlg->setWindowTitle("Find");
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        dlg->setMinimumWidth(340);
+        auto *layout = new QVBoxLayout(dlg);
+        layout->setSpacing(8);
+        auto *row = new QHBoxLayout;
+        auto *lbl = new QLabel("Find:", dlg);
+        auto *input = new QLineEdit(dlg);
+        input->setPlaceholderText("Search text...");
+        row->addWidget(lbl);
+        row->addWidget(input, 1);
+        layout->addLayout(row);
+        auto *btnRow = new QHBoxLayout;
+        auto *prevBtn = new QPushButton("Previous", dlg);
+        auto *nextBtn = new QPushButton("Next", dlg);
+        auto *closeBtn = new QPushButton("Close", dlg);
+        btnRow->addWidget(prevBtn);
+        btnRow->addWidget(nextBtn);
+        btnRow->addStretch();
+        btnRow->addWidget(closeBtn);
+        layout->addLayout(btnRow);
+        connect(nextBtn, &QPushButton::clicked, dlg, [this, input]() {
+            if (!m_editor) return;
+            m_editor->codeEditor()->find(input->text());
+        });
+        connect(prevBtn, &QPushButton::clicked, dlg, [this, input]() {
+            if (!m_editor) return;
+            m_editor->codeEditor()->find(input->text(), QTextDocument::FindBackward);
+        });
+        connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
+        connect(input, &QLineEdit::returnPressed, nextBtn, &QPushButton::click);
+        dlg->show();
+        input->setFocus();
+    });
 
     auto* replace = editMenu->addAction("Replace");
     replace->setShortcut(QKeySequence("Ctrl+H"));
+    connect(replace, &QAction::triggered, this, [this]() {
+        if (!m_editor) return;
+        auto *dlg = new QDialog(this);
+        dlg->setWindowTitle("Find & Replace");
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        dlg->setMinimumWidth(360);
+        auto *layout = new QVBoxLayout(dlg);
+        layout->setSpacing(8);
+        auto *grid = new QGridLayout;
+        grid->addWidget(new QLabel("Find:", dlg),    0, 0);
+        auto *findInput = new QLineEdit(dlg);
+        findInput->setPlaceholderText("Search text...");
+        grid->addWidget(findInput, 0, 1);
+        grid->addWidget(new QLabel("Replace:", dlg), 1, 0);
+        auto *replInput = new QLineEdit(dlg);
+        replInput->setPlaceholderText("Replacement text...");
+        grid->addWidget(replInput, 1, 1);
+        layout->addLayout(grid);
+        auto *btnRow = new QHBoxLayout;
+        auto *replNext = new QPushButton("Replace Next", dlg);
+        auto *replAll  = new QPushButton("Replace All", dlg);
+        auto *closeBtn = new QPushButton("Close", dlg);
+        btnRow->addWidget(replNext);
+        btnRow->addWidget(replAll);
+        btnRow->addStretch();
+        btnRow->addWidget(closeBtn);
+        layout->addLayout(btnRow);
+        connect(replNext, &QPushButton::clicked, dlg, [this, findInput, replInput]() {
+            if (!m_editor) return;
+            auto *ed = m_editor->codeEditor();
+            if (ed->find(findInput->text())) {
+                QTextCursor cur = ed->textCursor();
+                cur.insertText(replInput->text());
+            }
+        });
+        connect(replAll, &QPushButton::clicked, dlg, [this, findInput, replInput]() {
+            if (!m_editor) return;
+            auto *ed = m_editor->codeEditor();
+            QString text = ed->toPlainText();
+            text.replace(findInput->text(), replInput->text());
+            ed->setPlainText(text);
+        });
+        connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
+        dlg->show();
+        findInput->setFocus();
+    });
 
     // Tools
     auto* toolsMenu = mb->addMenu("&Tools");
@@ -231,9 +325,40 @@ void MainWindow::createMenuBar()
 
     // Help
     auto* helpMenu = mb->addMenu("&Help");
-    helpMenu->addAction("Getting Started");
-    helpMenu->addAction("Keyboard Shortcuts");
-    helpMenu->addAction("About Code Clarity");
+
+    auto* gettingStarted = helpMenu->addAction("Getting Started");
+    connect(gettingStarted, &QAction::triggered, this, [this]() {
+        QMessageBox::information(this, "Getting Started",
+            "1. Set up your AI model (File > Settings > Models)\n"
+            "2. Open a folder or file\n"
+            "3. Ask the AI to build something in the chat\n"
+            "4. Read the Clarity panel to learn what happened\n"
+            "5. Use Explain or Walk Me Through for deeper understanding");
+    });
+
+    auto* keyboardShortcuts = helpMenu->addAction("Keyboard Shortcuts");
+    connect(keyboardShortcuts, &QAction::triggered, this, [this]() {
+        QMessageBox::information(this, "Keyboard Shortcuts",
+            "Ctrl+N    New File\n"
+            "Ctrl+O    Open File\n"
+            "Ctrl+Shift+O    Open Folder\n"
+            "Ctrl+S    Save\n"
+            "Ctrl+Shift+S    Save As\n"
+            "Ctrl+,    Settings\n"
+            "Ctrl+F    Find\n"
+            "Ctrl+H    Replace");
+    });
+
+    auto* aboutAction = helpMenu->addAction("About Code Clarity");
+    connect(aboutAction, &QAction::triggered, this, [this]() {
+        QMessageBox::about(this, "About Code Clarity",
+            "Code Clarity v0.1.0\n\n"
+            "A code editor and learning platform for those new to programming or anyone looking to tie explicit learning to their coding work.\n\n"
+            "https://github.com/albazzaztariq/UL-Code-Clarity\n\n"
+            "Built with Qt 6.8.3\n"
+            "© 2026 UniLogic Project");
+    });
+
     helpMenu->addSeparator();
 
     auto* reportIssue = helpMenu->addAction("Report an Issue...");

@@ -144,12 +144,13 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
 
     headerLayout->addStretch();
 
-    m_collapseBtn = new QPushButton(QString::fromUtf8("\xe2\x97\xbe"));  // ◾ collapse indicator
-    m_collapseBtn->setFixedSize(20, 20);
+    m_collapseBtn = new QPushButton(QString::fromUtf8("\xe2\x97\x80"));  // ◀ collapse (pointing left = collapse)
+    m_collapseBtn->setFixedSize(22, 22);
+    m_collapseBtn->setToolTip("Collapse Explorer");
     m_collapseBtn->setStyleSheet(
-        "QPushButton { color: #6c7086; background: transparent;"
-        " font-size: 12px; border: none; padding: 0; }"
-        "QPushButton:hover { color: #cdd6f4; }");
+        "QPushButton { color: #a6adc8; background: transparent;"
+        " font-size: 14px; border: none; padding: 0; }"
+        "QPushButton:hover { color: #cdd6f4; background: #3c3c54; border-radius: 4px; }");
     headerLayout->addWidget(m_collapseBtn);
 
     layout->addWidget(m_header);
@@ -354,7 +355,8 @@ void FileTreeWidget::collapse()
     m_collapsed = true;
     m_stack->hide();
     m_headerLabel->hide();
-    m_collapseBtn->setText(QString::fromUtf8("\xe2\x96\xb8"));  // ▸ right triangle
+    m_collapseBtn->setText(QString::fromUtf8("\xe2\x96\xb6"));  // ▶ right-pointing = expand
+    m_collapseBtn->setToolTip("Expand Explorer");
     setMaximumWidth(32);
     setMinimumWidth(32);
 }
@@ -364,7 +366,8 @@ void FileTreeWidget::expand()
     m_collapsed = false;
     m_stack->show();
     m_headerLabel->show();
-    m_collapseBtn->setText(QString::fromUtf8("\xe2\x96\xbe"));  // ▾ down triangle
+    m_collapseBtn->setText(QString::fromUtf8("\xe2\x97\x80"));  // ◀ left-pointing = collapse
+    m_collapseBtn->setToolTip("Collapse Explorer");
     setMaximumWidth(400);
     setMinimumWidth(140);
 }
@@ -382,9 +385,9 @@ void FileTreeWidget::applyTheme(bool isDark)
             "QLabel { color: #a6adc8; font-size: 10px; font-weight: 700;"
             " letter-spacing: 1px; }");
         m_collapseBtn->setStyleSheet(
-            "QPushButton { color: #6c7086; background: transparent;"
-            " font-size: 12px; border: none; padding: 0; }"
-            "QPushButton:hover { color: #cdd6f4; }");
+            "QPushButton { color: #a6adc8; background: transparent;"
+            " font-size: 14px; border: none; padding: 0; }"
+            "QPushButton:hover { color: #cdd6f4; background: #3c3c54; border-radius: 4px; }");
         m_emptyPage->setStyleSheet("background: #2a2a3c;");
         m_emptyPage->findChild<QLabel*>()->setStyleSheet(
             "QLabel { color: #a6adc8; font-size: 12px; }");
@@ -415,9 +418,9 @@ void FileTreeWidget::applyTheme(bool isDark)
             "QLabel { color: #666666; font-size: 10px; font-weight: 700;"
             " letter-spacing: 1px; background: transparent; }");
         m_collapseBtn->setStyleSheet(
-            "QPushButton { color: #999999; background: transparent;"
-            " font-size: 12px; border: none; padding: 0; }"
-            "QPushButton:hover { color: #1e1e2e; }");
+            "QPushButton { color: #666666; background: transparent;"
+            " font-size: 14px; border: none; padding: 0; }"
+            "QPushButton:hover { color: #1e1e2e; background: #e0e0e0; border-radius: 4px; }");
         m_emptyPage->setStyleSheet("background: #f5f5f5;");
         m_emptyPage->findChild<QLabel*>()->setStyleSheet(
             "QLabel { color: #666666; font-size: 12px; }");

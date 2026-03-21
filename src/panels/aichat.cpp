@@ -153,7 +153,11 @@ AIChatPanel::AIChatPanel(QWidget *parent)
         "QComboBox { font-size: 10px; background: %1; color: %2; "
         "border: 1px solid %3; border-radius: 4px; padding: 2px 6px; }"
         "QComboBox::drop-down { border: none; }"
-        "QComboBox QAbstractItemView { background: %1; color: %2; border: none; outline: none; }"
+        "QComboBox QAbstractItemView { background: %1; color: %2;"
+        " border: none; outline: none; margin: 0; padding: 0;"
+        " selection-background-color: #3c3c54; }"
+        "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
+        "QComboBox QFrame { border: none; }"
     ).arg(BG3, FG, BORDER));
     connect(m_modelSelector, &QComboBox::currentTextChanged,
             this, &AIChatPanel::modelChanged);
@@ -581,7 +585,11 @@ void AIChatPanel::applyTheme(bool isDark)
             "QComboBox { font-size: 10px; background: %1; color: %2; "
             "border: 1px solid %3; border-radius: 4px; padding: 2px 6px; }"
             "QComboBox::drop-down { border: none; }"
-            "QComboBox QAbstractItemView { background: %1; color: %2; border: none; outline: none; }"
+            "QComboBox QAbstractItemView { background: %1; color: %2;"
+            " border: none; outline: none; margin: 0; padding: 0;"
+            " selection-background-color: #3c3c54; }"
+            "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
+            "QComboBox QFrame { border: none; }"
         ).arg(BG3, FG, BORDER));
         m_configButton->setStyleSheet(QString(
             "QPushButton { background: none; color: %1; font-size: 13px; border: none; }"
@@ -620,10 +628,12 @@ void AIChatPanel::applyTheme(bool isDark)
         m_modelSelector->setStyleSheet(
             "QComboBox { font-size: 10px; background: #fafafa; color: #333333; "
             "border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px 6px; }"
-            "QComboBox::drop-down { background: #fafafa; border-left: 1px solid #e0e0e0; }"
+            "QComboBox::drop-down { border: none; }"
             "QComboBox QAbstractItemView { background: #ffffff; color: #333333;"
-            " border: none; outline: none; selection-background-color: #e0e8ff;"
-            " selection-color: #1e1e2e; }");
+            " border: none; outline: none; margin: 0; padding: 0;"
+            " selection-background-color: #e0e8ff; selection-color: #1e1e2e; }"
+            "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
+            "QComboBox QFrame { border: none; }");
         m_configButton->setStyleSheet(
             "QPushButton { background: none; color: #666666; font-size: 13px; border: none; }"
             "QPushButton:hover { color: #333333; }");
