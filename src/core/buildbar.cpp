@@ -1,9 +1,13 @@
 #include "core/buildbar.h"
 #include "core/theme.h"
+#include "core/tutorial.h"
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFrame>
+#include <QDialog>
+#include <QLabel>
+#include <QPushButton>
 
 BuildBar::BuildBar(QWidget* parent)
     : QWidget(parent)
@@ -116,9 +120,50 @@ BuildBar::BuildBar(QWidget* parent)
         "QPushButton { background: transparent; color: #a6adc8;"
         " border-radius: 12px; font-size: 14px; padding: 0; border: none; }"
         "QPushButton:hover { color: #cdd6f4; }");
-    targetHelpBtn->setToolTip(
-        "Select your compilation target. Native targets produce standalone binaries. "
-        "Language targets produce source code in that language.");
+    connect(targetHelpBtn, &QPushButton::clicked, this, [this]() {
+        auto* dlg = new QDialog(this);
+        dlg->setWindowTitle("Build Target");
+        dlg->setModal(true);
+        dlg->setMinimumWidth(400);
+        dlg->setStyleSheet("background: #1e1e2e;");
+        auto* lay = new QVBoxLayout(dlg);
+        lay->setContentsMargins(22, 18, 22, 18);
+        lay->setSpacing(14);
+        auto* desc = new QLabel(
+            "Build Target tells the compiler what kind of output to produce — a native binary "
+            "for a specific OS, or source code in another language. "
+            "Different targets run on different machines.");
+        desc->setWordWrap(true);
+        desc->setStyleSheet("QLabel { color: #cdd6f4; font-size: 13px; }");
+        lay->addWidget(desc);
+        auto* btnRow = new QHBoxLayout;
+        btnRow->setSpacing(8);
+        auto* launchBtn = new QPushButton("Launch Tutorial");
+        launchBtn->setStyleSheet(
+            "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
+            " border-radius: 6px; padding: 0 18px; font-size: 13px; font-weight: bold; min-height: 30px; }"
+            "QPushButton:hover { background: #b4d0fb; }");
+        launchBtn->setCursor(Qt::PointingHandCursor);
+        connect(launchBtn, &QPushButton::clicked, dlg, [dlg, this]() {
+            dlg->accept();
+            auto* tut = TutorialDialog::buildTarget(this);
+            tut->exec();
+            tut->deleteLater();
+        });
+        btnRow->addWidget(launchBtn);
+        auto* closeBtn = new QPushButton("Close");
+        closeBtn->setStyleSheet(
+            "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+            " border-radius: 6px; padding: 0 14px; font-size: 13px; min-height: 30px; }"
+            "QPushButton:hover { background: #45475a; }");
+        closeBtn->setCursor(Qt::PointingHandCursor);
+        connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
+        btnRow->addStretch();
+        btnRow->addWidget(closeBtn);
+        lay->addLayout(btnRow);
+        dlg->exec();
+        dlg->deleteLater();
+    });
     barLayout->addWidget(targetHelpBtn);
 
     m_targetCombo = new QComboBox;

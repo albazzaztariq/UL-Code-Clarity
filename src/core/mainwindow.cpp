@@ -1,6 +1,9 @@
 #include "core/mainwindow.h"
 #include "core/securitytesting.h"
+#include "core/securitylab.h"
 #include "core/runtimeanalysis.h"
+#include "core/memoryanalysis.h"
+#include "core/dependencyanalysis.h"
 #include "core/theme.h"
 #include "core/buildbar.h"
 #include "core/buildsystem.h"
@@ -355,7 +358,127 @@ void MainWindow::createMenuBar()
         // Hide editor layout, show runtime analysis frame
         m_mainSplitter->setVisible(false);
         if (m_securityFrame) m_securityFrame->setVisible(false);
+        if (m_memoryAnalysis) m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis) m_depAnalysis->setVisible(false);
         m_runtimeAnalysis->setVisible(true);
+    });
+
+    auto* memoryAnalysisAction = toolsMenu->addAction("Memory Analysis...");
+    memoryAnalysisAction->setShortcut(QKeySequence("Ctrl+Shift+M"));
+    connect(memoryAnalysisAction, &QAction::triggered, this, [this]() {
+        if (!m_memoryAnalysis) return;
+        QString sourceFile, binaryFile, lang;
+        if (m_editor) {
+            sourceFile = m_editor->currentFilePath();
+            lang       = currentLangKey();
+        }
+        // For compiled langs, try the build system for binary path (use empty if unavailable)
+        m_memoryAnalysis->setFileInfo(sourceFile, binaryFile, lang);
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame) m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis) m_runtimeAnalysis->setVisible(false);
+        if (m_depAnalysis) m_depAnalysis->setVisible(false);
+        m_memoryAnalysis->setVisible(true);
+    });
+
+    auto* depAnalysisAction = toolsMenu->addAction("Dependency Analysis...");
+    depAnalysisAction->setShortcut(QKeySequence("Ctrl+Shift+D"));
+    connect(depAnalysisAction, &QAction::triggered, this, [this]() {
+        if (!m_depAnalysis) return;
+        QString code, lang, filePath;
+        if (m_editor) {
+            code     = m_editor->currentContent();
+            lang     = currentLangKey();
+            filePath = m_editor->currentFilePath();
+        }
+        m_depAnalysis->setCode(code, lang, filePath);
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame) m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis) m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis) m_memoryAnalysis->setVisible(false);
+        m_depAnalysis->setVisible(true);
+    });
+
+    toolsMenu->addSeparator();
+
+    auto* securityLabsAction = toolsMenu->addAction("Security Labs...");
+    securityLabsAction->setShortcut(QKeySequence("Ctrl+Shift+L"));
+    connect(securityLabsAction, &QAction::triggered, this, [this]() {
+        // Show a dialog listing all available labs to pick from
+        auto* dlg = new QDialog(this);
+        dlg->setWindowTitle("Security Labs");
+        dlg->setModal(true);
+        dlg->setMinimumWidth(440);
+        dlg->setStyleSheet("background: #1e1e2e; color: #cdd6f4;");
+
+        auto* lay = new QVBoxLayout(dlg);
+        lay->setContentsMargins(20, 16, 20, 16);
+        lay->setSpacing(10);
+
+        auto* title = new QLabel("Interactive Security Labs");
+        title->setStyleSheet("color: #cdd6f4; font-size: 16px; font-weight: bold;");
+        lay->addWidget(title);
+
+        auto* sub = new QLabel(
+            "Experience vulnerabilities first-hand. Type the attack input and\n"
+            "watch what happens — then see the fix.");
+        sub->setStyleSheet("color: #a6adc8; font-size: 12px;");
+        lay->addWidget(sub);
+
+        auto* sep = new QFrame;
+        sep->setFrameShape(QFrame::HLine);
+        sep->setStyleSheet("color: #313244;");
+        lay->addWidget(sep);
+
+        for (const auto& lab : SecurityLabWidget::allLabs()) {
+            auto* btn = new QPushButton(lab.name);
+            btn->setFixedHeight(34);
+            btn->setCursor(Qt::PointingHandCursor);
+            btn->setStyleSheet(
+                "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+                " border-radius: 4px; padding: 0 14px; font-size: 13px; text-align: left; }"
+                "QPushButton:hover { background: #45475a; }");
+            QString vt = lab.vulnType;
+            connect(btn, &QPushButton::clicked, dlg, [this, dlg, vt]() {
+                dlg->accept();
+                // Reuse same openLab logic
+                if (m_securityLab) {
+                    m_securityLab->setVisible(false);
+                    m_securityLab->deleteLater();
+                    m_securityLab = nullptr;
+                }
+                m_securityLab = SecurityLabWidget::forVulnType(vt, centralWidget());
+                if (!m_securityLab) return;
+                auto* cl = qobject_cast<QVBoxLayout*>(centralWidget()->layout());
+                if (cl) cl->insertWidget(cl->count() - 1, m_securityLab);
+                connect(m_securityLab, &SecurityLabWidget::closeRequested, this, [this]() {
+                    if (m_securityLab) m_securityLab->setVisible(false);
+                    m_mainSplitter->setVisible(true);
+                });
+                m_mainSplitter->setVisible(false);
+                if (m_securityFrame) m_securityFrame->setVisible(false);
+                if (m_runtimeAnalysis) m_runtimeAnalysis->setVisible(false);
+                if (m_memoryAnalysis) m_memoryAnalysis->setVisible(false);
+                if (m_depAnalysis) m_depAnalysis->setVisible(false);
+                m_securityLab->setVisible(true);
+            });
+            lay->addWidget(btn);
+        }
+
+        auto* closeBtn = new QPushButton("Close");
+        closeBtn->setStyleSheet(
+            "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+            " border-radius: 6px; padding: 0 18px; font-size: 13px; min-height: 30px; }"
+            "QPushButton:hover { background: #45475a; }");
+        closeBtn->setCursor(Qt::PointingHandCursor);
+        connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
+        auto* btnRow = new QHBoxLayout;
+        btnRow->addStretch();
+        btnRow->addWidget(closeBtn);
+        lay->addLayout(btnRow);
+
+        dlg->exec();
+        dlg->deleteLater();
     });
 
     // Help
@@ -598,6 +721,20 @@ void MainWindow::setupCentralLayout()
     m_runtimeAnalysis = new RuntimeAnalysisFrame;
     m_runtimeAnalysis->setVisible(false);
     mainLayout->addWidget(m_runtimeAnalysis);
+
+    // Memory Analysis Frame — hidden by default
+    m_memoryAnalysis = new MemoryAnalysisFrame;
+    m_memoryAnalysis->setVisible(false);
+    mainLayout->addWidget(m_memoryAnalysis);
+
+    // Dependency Analysis Frame — hidden by default
+    m_depAnalysis = new DependencyAnalysisFrame;
+    m_depAnalysis->setVisible(false);
+    mainLayout->addWidget(m_depAnalysis);
+
+    // Security Lab Widget — swapped in per lab, hidden by default
+    // Created lazily in openSecurityLab(); placeholder registered here
+    m_securityLab = nullptr;  // built on demand
 
     // Build bar at bottom
     m_buildBar = new BuildBar;
@@ -964,6 +1101,43 @@ void MainWindow::wireSignals()
             ed->setTextCursor(cursor);
             ed->centerCursor();
         }
+    });
+    // "Try It Yourself" button on SAST finding cards → open the lab
+    connect(m_securityFrame, &SecurityTestingFrame::openLab, this,
+        [this](const QString& vulnType) {
+            // Destroy previous lab widget if it was for a different vuln type
+            if (m_securityLab) {
+                m_securityLab->setVisible(false);
+                m_securityLab->deleteLater();
+                m_securityLab = nullptr;
+            }
+            m_securityLab = SecurityLabWidget::forVulnType(vulnType, centralWidget());
+            if (!m_securityLab) return;
+            // Insert into the central widget's layout (same slot as other frames)
+            auto* cl = qobject_cast<QVBoxLayout*>(centralWidget()->layout());
+            if (cl) cl->insertWidget(cl->count() - 1, m_securityLab);
+            connect(m_securityLab, &SecurityLabWidget::closeRequested, this, [this]() {
+                if (m_securityLab) m_securityLab->setVisible(false);
+                m_securityFrame->setVisible(true);
+            });
+            m_mainSplitter->setVisible(false);
+            m_securityFrame->setVisible(false);
+            if (m_runtimeAnalysis) m_runtimeAnalysis->setVisible(false);
+            if (m_memoryAnalysis) m_memoryAnalysis->setVisible(false);
+            if (m_depAnalysis) m_depAnalysis->setVisible(false);
+            m_securityLab->setVisible(true);
+        });
+
+    // Memory Analysis Frame signals
+    connect(m_memoryAnalysis, &MemoryAnalysisFrame::backToEditor, this, [this]() {
+        m_memoryAnalysis->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+
+    // Dependency Analysis Frame signals
+    connect(m_depAnalysis, &DependencyAnalysisFrame::backToEditor, this, [this]() {
+        m_depAnalysis->setVisible(false);
+        m_mainSplitter->setVisible(true);
     });
 
     // AI Chat: keep editor context in sync so the AI knows the current file

@@ -23,7 +23,10 @@ class ExplainHandler;
 class WalkThroughHandler;
 class BuildFromScratchMode;
 class SecurityTestingFrame;
+class SecurityLabWidget;
 class RuntimeAnalysisFrame;
+class MemoryAnalysisFrame;
+class DependencyAnalysisFrame;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -74,7 +77,10 @@ private:
     WalkThroughHandler* m_walkHandler   = nullptr;
     BuildFromScratchMode* m_bfsMode     = nullptr;
     SecurityTestingFrame* m_securityFrame = nullptr;
+    SecurityLabWidget*    m_securityLab   = nullptr;
     RuntimeAnalysisFrame* m_runtimeAnalysis = nullptr;
+    MemoryAnalysisFrame*  m_memoryAnalysis  = nullptr;
+    DependencyAnalysisFrame* m_depAnalysis  = nullptr;
 
     // Recent Workspaces submenu
     QMenu* m_recentMenu = nullptr;

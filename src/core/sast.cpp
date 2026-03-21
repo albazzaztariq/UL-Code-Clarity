@@ -216,6 +216,7 @@ QList<SecurityFinding> StaticAnalyzer::runCppcheck(const QString& filePath, int 
         } else if (id == "useAfterFree") {
             f.title    = "Use After Free";
             f.severity = SecurityFinding::CRITICAL;
+            f.vulnType = "use_after_free";
             switch (level) {
             case 1:
                 f.description   = "The program uses memory after it has been freed — that memory may now hold different data.";
@@ -567,6 +568,7 @@ QList<SecurityFinding> StaticAnalyzer::scanPython(const QStringList& lines, int 
             f.severity   = SecurityFinding::CRITICAL;
             f.title      = "SQL Injection Risk";
             f.lineNumber = i + 1;
+            f.vulnType   = "sql_injection";
             switch (level) {
             case 1:
                 f.description  = "This line lets someone put dangerous commands in your database query. An attacker could steal all your data or delete everything.";
@@ -698,6 +700,7 @@ QList<SecurityFinding> StaticAnalyzer::scanC(const QStringList& lines, int level
             f.severity   = SecurityFinding::HIGH;
             f.title      = "Buffer Overflow via strcpy()";
             f.lineNumber = i + 1;
+            f.vulnType   = "buffer_overflow";
             switch (level) {
             case 1:
                 f.description  = "strcpy() copies text without checking if it fits. Too much text overflows into other memory.";
@@ -748,6 +751,7 @@ QList<SecurityFinding> StaticAnalyzer::scanC(const QStringList& lines, int level
             f.severity   = SecurityFinding::CRITICAL;
             f.title      = "Critical Buffer Overflow via gets()";
             f.lineNumber = i + 1;
+            f.vulnType   = "buffer_overflow";
             switch (level) {
             case 1:
                 f.description  = "gets() reads input with no limit at all — it will overflow any buffer. It was removed from the C standard because it is so dangerous.";
@@ -930,6 +934,7 @@ QList<SecurityFinding> StaticAnalyzer::scanJavaScript(const QStringList& lines, 
             f.severity   = SecurityFinding::HIGH;
             f.title      = "XSS via innerHTML";
             f.lineNumber = i + 1;
+            f.vulnType   = "xss";
             switch (level) {
             case 1:
                 f.description  = "Putting user text into innerHTML can run hidden scripts. An attacker can steal session cookies.";

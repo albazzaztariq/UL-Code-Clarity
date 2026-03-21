@@ -39,6 +39,7 @@ public:
 signals:
     void backToEditor();
     void jumpToLine(int lineNumber);
+    void openLab(const QString& vulnType);  // emitted when "Try It Yourself" clicked
 
 private slots:
     void onRunSast();

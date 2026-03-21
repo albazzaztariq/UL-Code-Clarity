@@ -1,6 +1,7 @@
 #include "core/securitytesting.h"
 #include "core/sast.h"
 #include "core/dast.h"
+#include "core/tutorial.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -13,6 +14,7 @@
 #include <QSizePolicy>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QDialog>
 
 // ── Constructor ──────────────────────────────────────────────────────────────
 SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
@@ -173,20 +175,56 @@ void SecurityTestingFrame::setExePath(const QString& exePath)
 // ── Help dialog ──────────────────────────────────────────────────────────────
 void SecurityTestingFrame::onHelpClicked()
 {
-    auto* dlg = new QMessageBox(this);
-    dlg->setWindowTitle("What are SAST and DAST?");
-    dlg->setIcon(QMessageBox::Information);
-    dlg->setText(
-        "<b>Static Analysis (SAST)</b><br>"
-        "Scans your source code <i>without running it</i>. Looks for security vulnerabilities, "
-        "dangerous patterns, and common mistakes that hackers exploit. Think of it as a security "
-        "expert reading your code line by line.<br><br>"
-        "<b>Dynamic Testing (DAST)</b><br>"
-        "Runs your program and watches what happens. Tests it with bad inputs, unexpected data, "
-        "and attack patterns to see if it breaks or leaks information. Think of it as someone "
-        "trying to hack your program while it runs."
-    );
+    auto* dlg = new QDialog(this);
+    dlg->setWindowTitle("Security Testing");
+    dlg->setModal(true);
+    dlg->setMinimumWidth(420);
+    dlg->setStyleSheet("background: #1e1e2e;");
+
+    auto* lay = new QVBoxLayout(dlg);
+    lay->setContentsMargins(22, 18, 22, 18);
+    lay->setSpacing(14);
+
+    auto* desc = new QLabel(
+        "Security testing checks your code for weaknesses that hackers could exploit to "
+        "steal data, crash your program, or take control of your computer. "
+        "SAST scans your source code without running it. "
+        "DAST runs your program and attacks it with bad inputs.");
+    desc->setWordWrap(true);
+    desc->setStyleSheet("QLabel { color: #cdd6f4; font-size: 13px; }");
+    lay->addWidget(desc);
+
+    auto* btnRow = new QHBoxLayout;
+    btnRow->setSpacing(8);
+
+    auto* launchBtn = new QPushButton("Launch Tutorial");
+    launchBtn->setStyleSheet(
+        "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
+        " border-radius: 6px; padding: 0 18px; font-size: 13px; font-weight: bold; min-height: 30px; }"
+        "QPushButton:hover { background: #b4d0fb; }");
+    launchBtn->setCursor(Qt::PointingHandCursor);
+    connect(launchBtn, &QPushButton::clicked, dlg, [dlg, this]() {
+        dlg->accept();
+        auto* tut = TutorialDialog::security(this);
+        tut->exec();
+        tut->deleteLater();
+    });
+    btnRow->addWidget(launchBtn);
+
+    btnRow->addStretch();
+
+    auto* closeBtn = new QPushButton("Close");
+    closeBtn->setStyleSheet(
+        "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+        " border-radius: 6px; padding: 0 14px; font-size: 13px; min-height: 30px; }"
+        "QPushButton:hover { background: #45475a; }");
+    closeBtn->setCursor(Qt::PointingHandCursor);
+    connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
+    btnRow->addWidget(closeBtn);
+
+    lay->addLayout(btnRow);
     dlg->exec();
+    dlg->deleteLater();
 }
 
 // ── Run SAST ─────────────────────────────────────────────────────────────────
@@ -410,6 +448,26 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
         fixRow->addWidget(fixLabel, 1);
 
         cardLayout->addLayout(fixRow);
+    }
+
+    // ── "Try It Yourself" button ──────────────────────────────────────────────
+    if (!f.vulnType.isEmpty()) {
+        auto* tryRow = new QHBoxLayout;
+        tryRow->addStretch(1);
+
+        auto* tryBtn = new QPushButton("Try It Yourself \u2192");
+        tryBtn->setFixedHeight(24);
+        tryBtn->setCursor(Qt::PointingHandCursor);
+        tryBtn->setStyleSheet(
+            "QPushButton { background: none; color: #89b4fa; border: 1px solid #45475a;"
+            " border-radius: 4px; padding: 0 10px; font-size: 12px; }"
+            "QPushButton:hover { background: #313244; color: #b4d0fb; }");
+        QString vt = f.vulnType;
+        connect(tryBtn, &QPushButton::clicked, this, [this, vt]() {
+            emit openLab(vt);
+        });
+        tryRow->addWidget(tryBtn);
+        cardLayout->addLayout(tryRow);
     }
 
     return card;

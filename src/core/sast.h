@@ -16,6 +16,7 @@ struct SecurityFinding {
     int      lineNumber    = -1; // 1-based, -1 = unknown
     QString  fixSuggestion;  // What to change
     QString  matchedText;    // The offending snippet
+    QString  vulnType;       // Lab key: "buffer_overflow", "sql_injection", "xss", etc.
 };
 
 // ============================================================================

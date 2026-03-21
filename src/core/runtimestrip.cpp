@@ -1,8 +1,13 @@
 #include "core/runtimestrip.h"
 #include "core/theme.h"
+#include "core/tutorial.h"
 
 #include <QToolTip>
 #include <QCursor>
+#include <QDialog>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 
 RuntimeStrip::RuntimeStrip(QWidget* parent)
     : QWidget(parent)
@@ -215,8 +220,50 @@ void RuntimeStrip::addItem(QHBoxLayout* layout, const RuntimeRow& row)
               "QPushButton:hover { color: #333333; }");
         QString title = row.helpTitle;
         QString body = row.helpBody;
-        connect(helpBtn, &QPushButton::clicked, this, [this, helpBtn, title, body]() {
-            showHelpTooltip(helpBtn, title, body);
+        bool isMemory = (title == "Memory Model" || title == "GC" || title == "RAII"
+                         || title == "Manual Memory" || title == "Ownership");
+        connect(helpBtn, &QPushButton::clicked, this, [this, title, body, isMemory]() {
+            auto* dlg = new QDialog(this);
+            dlg->setWindowTitle(title);
+            dlg->setModal(true);
+            dlg->setMinimumWidth(380);
+            dlg->setStyleSheet("background: #1e1e2e;");
+            auto* lay = new QVBoxLayout(dlg);
+            lay->setContentsMargins(20, 16, 20, 16);
+            lay->setSpacing(12);
+            auto* desc = new QLabel(body);
+            desc->setWordWrap(true);
+            desc->setStyleSheet("QLabel { color: #cdd6f4; font-size: 13px; }");
+            lay->addWidget(desc);
+            auto* btnRow = new QHBoxLayout;
+            btnRow->setSpacing(8);
+            if (isMemory) {
+                auto* launchBtn = new QPushButton("Launch Tutorial");
+                launchBtn->setStyleSheet(
+                    "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
+                    " border-radius: 6px; padding: 0 14px; font-size: 13px; font-weight: bold; min-height: 28px; }"
+                    "QPushButton:hover { background: #b4d0fb; }");
+                launchBtn->setCursor(Qt::PointingHandCursor);
+                connect(launchBtn, &QPushButton::clicked, dlg, [dlg, this]() {
+                    dlg->accept();
+                    auto* tut = TutorialDialog::memory(this);
+                    tut->exec();
+                    tut->deleteLater();
+                });
+                btnRow->addWidget(launchBtn);
+            }
+            btnRow->addStretch();
+            auto* closeBtn = new QPushButton("Close");
+            closeBtn->setStyleSheet(
+                "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
+                " border-radius: 6px; padding: 0 12px; font-size: 13px; min-height: 28px; }"
+                "QPushButton:hover { background: #45475a; }");
+            closeBtn->setCursor(Qt::PointingHandCursor);
+            connect(closeBtn, &QPushButton::clicked, dlg, &QDialog::accept);
+            btnRow->addWidget(closeBtn);
+            lay->addLayout(btnRow);
+            dlg->exec();
+            dlg->deleteLater();
         });
         layout->addWidget(helpBtn);
     }

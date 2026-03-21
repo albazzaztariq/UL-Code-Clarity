@@ -37,6 +37,10 @@ set(SOURCES
     core/sast.cpp
     core/dast.cpp
     core/securitytesting.cpp
+    core/securitylab.cpp
+    core/tutorial.cpp
+    core/memoryanalysis.cpp
+    core/dependencyanalysis.cpp
 )
 
 set(HEADERS
@@ -66,6 +70,10 @@ set(HEADERS
     core/sast.h
     core/dast.h
     core/securitytesting.h
+    core/securitylab.h
+    core/tutorial.h
+    core/memoryanalysis.h
+    core/dependencyanalysis.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────
@@ -80,7 +88,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # ── Windows system libraries ────────────────────────────────────────────
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE shell32 ole32 dwmapi)
+    target_link_libraries(${PROJECT_NAME} PRIVATE shell32 ole32 dwmapi psapi)
 endif()
 
 # ── Strip release builds (MinGW/GCC) ────────────────────────────────────
