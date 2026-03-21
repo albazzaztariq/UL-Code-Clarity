@@ -77,6 +77,7 @@ private:
     QVBoxLayout *m_entriesLayout;
     QScrollArea *m_scrollArea;
     QLabel *m_headerLabel;
+    QLabel *m_titleLabel;
     QWidget *m_columnHeader;
     QPushButton *m_closeButton;
     QVector<ClarityEntry*> m_entries;

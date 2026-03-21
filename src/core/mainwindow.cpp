@@ -1,6 +1,7 @@
 #include "core/mainwindow.h"
 #include "core/theme.h"
 #include "core/buildbar.h"
+#include "core/buildsystem.h"
 #include "core/runtimestrip.h"
 #include "core/setupwizard.h"
 #include "core/settingspanel.h"
@@ -35,6 +36,10 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QMessageBox>
+#include <QTemporaryFile>
+#include <QProcess>
+#include <QTextCursor>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
@@ -67,6 +72,10 @@ MainWindow::MainWindow(QWidget* parent)
     setupCentralLayout();
     createStatusBar();
     wireSignals();
+
+    // Build system — detect toolchains now; long probes run fast on first call
+    m_buildSystem = new BuildSystem(this);
+
     restoreSession();
     // Re-apply theme now that all widgets exist (constructors use dark defaults)
     applyTheme();
@@ -276,7 +285,8 @@ void MainWindow::createStatusBar()
     sb->addPermanentWidget(m_levelSelector);
 
     // Gear icon — opens Settings dialog
-    auto* settingsGearBtn = new QPushButton(QString::fromUtf8("\xe2\x9a\x99"), this); // ⚙
+    m_settingsGearBtn = new QPushButton(QString::fromUtf8("\xe2\x9a\x99"), this); // ⚙
+    auto* settingsGearBtn = m_settingsGearBtn;
     settingsGearBtn->setFixedSize(22, 22);
     settingsGearBtn->setCursor(Qt::PointingHandCursor);
     settingsGearBtn->setToolTip("Settings");
@@ -464,9 +474,146 @@ void MainWindow::setupCentralLayout()
         if (m_clarityPanel) m_clarityPanel->markExamplesSeen();
     });
 
-    // Connect build bar to editor
+    // ── Build system wiring ──────────────────────────────────────────────
+
+    // BuildSystem → output pane: append HTML chunks
+    connect(m_buildSystem, &BuildSystem::outputReady, this,
+        [this](const QString& html) {
+            // Append to results pane (raw HTML — BuildBar displays as rich text)
+            QTextEdit* te = m_buildBar->resultsContent();
+            if (te) {
+                te->moveCursor(QTextCursor::End);
+                te->insertHtml(html);
+            }
+        });
+
+    // BuildSystem → finished
+    connect(m_buildSystem, &BuildSystem::finished, this,
+        [this](bool success) {
+            Q_UNUSED(success);
+            // Re-enable run/build buttons (could gray them during run)
+        });
+
+    // BuildSystem → missing python deps → prompt to install
+    connect(m_buildSystem, &BuildSystem::missingDepsDetected, this,
+        [this](const QStringList& pkgs, const QString& installCmd) {
+            int level = m_levelSelector ? m_levelSelector->currentLevel() : 1;
+            QString body;
+            if (level <= 2) {
+                body = QString(
+                    "This file needs the following packages which aren't installed:\n\n"
+                    "  %1\n\n"
+                    "Do you want to install them now?"
+                ).arg(pkgs.join(", "));
+            } else {
+                body = QString("Missing packages: %1\n\nRun: %2\n\nInstall now?")
+                       .arg(pkgs.join(", "), installCmd);
+            }
+            auto reply = QMessageBox::question(this, "Missing Packages", body,
+                             QMessageBox::Yes | QMessageBox::No);
+            if (reply == QMessageBox::Yes) {
+                // Install via pip then re-run
+                QString filePath = m_editor ? m_editor->currentFilePath() : QString();
+                QString lang = currentLangKey();
+                m_buildBar->clearResults();
+
+                // Launch pip install
+                QProcess* pip = new QProcess(this);
+                pip->setProcessChannelMode(QProcess::MergedChannels);
+                QStringList pipArgs = {"-m", "pip", "install"};
+                pipArgs << pkgs;
+                connect(pip, &QProcess::readyRead, this, [this, pip]() {
+                    QTextEdit* te = m_buildBar->resultsContent();
+                    if (te) {
+                        te->moveCursor(QTextCursor::End);
+                        te->insertPlainText(QString::fromUtf8(pip->readAll()));
+                    }
+                });
+                connect(pip, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                    this, [this, pip, filePath, lang]
+                    (int exitCode, QProcess::ExitStatus) {
+                        pip->deleteLater();
+                        if (exitCode == 0 && !filePath.isEmpty()) {
+                            int lvl = m_levelSelector ? m_levelSelector->currentLevel() : 1;
+                            m_buildSystem->runFile(filePath, lang, lvl);
+                        }
+                    });
+                m_buildBar->showResults();
+                pip->start("python", pipArgs);
+                if (!pip->waitForStarted(3000))
+                    pip->start("py", pipArgs);
+            }
+        });
+
+    // BuildSystem → toolchain missing → show install link
+    connect(m_buildSystem, &BuildSystem::toolchainMissing, this,
+        [this](const QString& lang, const QString& url) {
+            Q_UNUSED(lang);
+            int level = m_levelSelector ? m_levelSelector->currentLevel() : 1;
+            QString title = "Toolchain Not Found";
+            QString body;
+            if (level <= 2) {
+                body = QString(
+                    "To run this type of file, you need to install additional software.\n\n"
+                    "Would you like to open the download page?"
+                );
+            } else {
+                body = QString("Required toolchain not found.\nInstall URL: %1\n\nOpen?").arg(url);
+            }
+            if (!url.isEmpty()) {
+                auto reply = QMessageBox::question(this, title, body,
+                                 QMessageBox::Yes | QMessageBox::No);
+                if (reply == QMessageBox::Yes)
+                    QDesktopServices::openUrl(QUrl(url));
+            } else {
+                QMessageBox::warning(this, title, body);
+            }
+        });
+
+    // Run button — save file first, then run
     connect(m_buildBar, &BuildBar::runRequested, this, [this]() {
-        m_buildBar->showOutput("Program output would appear here.\n");
+        if (!m_editor) return;
+        QString filePath = m_editor->currentFilePath();
+        if (filePath.isEmpty()) {
+            // Unsaved buffer — run from temp file
+            QTemporaryFile* tmp = new QTemporaryFile(this);
+            QString ext;
+            QString lk = currentLangKey();
+            if (lk == "python")     ext = ".py";
+            else if (lk == "c")     ext = ".c";
+            else if (lk == "cpp")   ext = ".cpp";
+            else if (lk == "rust")  ext = ".rs";
+            else if (lk == "javascript") ext = ".js";
+            tmp->setFileTemplate(QDir::tempPath() + "/ccrun_XXXXXX" + ext);
+            if (tmp->open()) {
+                tmp->write(m_editor->currentContent().toUtf8());
+                tmp->flush();
+                filePath = tmp->fileName();
+                tmp->setAutoRemove(true);
+            }
+        } else {
+            m_editor->saveCurrentFile();
+        }
+        m_buildBar->clearResults();
+        m_buildBar->showResults();
+        int level = m_levelSelector ? m_levelSelector->currentLevel() : 1;
+        m_buildSystem->runFile(filePath, currentLangKey(), level);
+    });
+
+    // Build button — compile only
+    connect(m_buildBar, &BuildBar::buildRequested, this, [this]() {
+        if (!m_editor) return;
+        QString filePath = m_editor->currentFilePath();
+        if (filePath.isEmpty()) {
+            QMessageBox::information(this, "Save First",
+                "Please save your file before building.");
+            return;
+        }
+        m_editor->saveCurrentFile();
+        m_buildBar->clearResults();
+        m_buildBar->showResults();
+        int level = m_levelSelector ? m_levelSelector->currentLevel() : 1;
+        m_buildSystem->buildFile(filePath, currentLangKey(), level);
     });
 }
 
@@ -660,6 +807,19 @@ void MainWindow::wireSignals()
         });
 }
 
+// ── Language key ─────────────────────────────────────────────────────────
+QString MainWindow::currentLangKey() const
+{
+    QString lang = m_editor ? m_editor->currentLanguage() : QString();
+    if (lang.startsWith("Python"))      return "python";
+    if (lang.startsWith("C++"))         return "cpp";
+    if (lang.startsWith("C ") || lang == "C") return "c";
+    if (lang.startsWith("Rust"))        return "rust";
+    if (lang.startsWith("JavaScript"))  return "javascript";
+    if (lang.startsWith("UniLogic"))    return "ul";
+    return "python";
+}
+
 // ── Theme ────────────────────────────────────────────────────────────────
 void MainWindow::applyTheme()
 {
@@ -676,13 +836,13 @@ void MainWindow::applyTheme()
         m_clarityColumn->setStyleSheet(m_isDarkTheme
             ? "background: #2a2a3c; border-left: 1px solid #313244;"
               " border-right: 1px solid #313244;"
-            : "background: #f5f5f5; border-left: 1px solid #d0d0d0;"
-              " border-right: 1px solid #d0d0d0;");
+            : "background: #fafafa; border-left: 1px solid #e0e0e0;"
+              " border-right: 1px solid #e0e0e0;");
     }
     if (m_chatColumn) {
         m_chatColumn->setStyleSheet(m_isDarkTheme
             ? "background: #2a2a3c;"
-            : "background: #f5f5f5;");
+            : "background: #fafafa;");
     }
 
     // Status bar labels
@@ -710,6 +870,24 @@ void MainWindow::applyTheme()
               "QPushButton:hover { color: #cdd6f4; }"
             : "QPushButton { background: none; color: #555555; font-size: 13px; border: none; padding: 0; }"
               "QPushButton:hover { color: #1e1e2e; }");
+    if (m_settingsGearBtn)
+        m_settingsGearBtn->setStyleSheet(m_isDarkTheme
+            ? "QPushButton { background: none; color: #a6adc8; font-size: 13px; border: none; padding: 0; }"
+              "QPushButton:hover { color: #cdd6f4; }"
+            : "QPushButton { background: none; color: #555555; font-size: 13px; border: none; padding: 0; }"
+              "QPushButton:hover { color: #1e1e2e; }");
+
+    // Per-widget theme updates for panels with hardcoded inline styles
+    if (m_buildBar)
+        m_buildBar->applyTheme(m_isDarkTheme);
+    if (m_runtimeStrip)
+        m_runtimeStrip->applyTheme(m_isDarkTheme);
+    if (m_clarityPanel)
+        m_clarityPanel->applyTheme(m_isDarkTheme);
+    if (m_aiChatPanel)
+        m_aiChatPanel->applyTheme(m_isDarkTheme);
+    if (m_levelSelector)
+        m_levelSelector->applyTheme(m_isDarkTheme);
 
     // Update Windows title bar color via DWM
 #ifdef Q_OS_WIN

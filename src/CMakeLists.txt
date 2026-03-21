@@ -22,6 +22,7 @@ set(SOURCES
     editor/highlighter.cpp
     editor/filetree.cpp
     core/buildbar.cpp
+    core/buildsystem.cpp
     core/runtimestrip.cpp
     panels/clarity.cpp
     panels/aichat.cpp
@@ -44,6 +45,7 @@ set(HEADERS
     editor/highlighter.h
     editor/filetree.h
     core/buildbar.h
+    core/buildsystem.h
     core/runtimestrip.h
     panels/clarity.h
     panels/aichat.h

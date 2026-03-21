@@ -80,11 +80,11 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     auto *headerBarLayout = new QHBoxLayout(m_columnHeader);
     headerBarLayout->setContentsMargins(12, 8, 12, 8);
 
-    auto *titleLabel = new QLabel("AI Chat", m_columnHeader);
-    titleLabel->setStyleSheet(QString(
+    m_titleLabel = new QLabel("AI Chat", m_columnHeader);
+    m_titleLabel->setStyleSheet(QString(
         "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
     ).arg(ACCENT));
-    headerBarLayout->addWidget(titleLabel);
+    headerBarLayout->addWidget(m_titleLabel);
     headerBarLayout->addStretch();
 
     m_closeButton = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), m_columnHeader);
@@ -566,6 +566,9 @@ void AIChatPanel::applyTheme(bool isDark)
         m_columnHeader->setStyleSheet(QString(
             "background: %1; border-bottom: 1px solid %2;"
         ).arg(BG2, BORDER));
+        m_titleLabel->setStyleSheet(QString(
+            "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
+        ).arg(ACCENT));
         m_closeButton->setStyleSheet(QString(
             "QPushButton { background: none; color: %1; font-size: 12px; border: none; }"
             "QPushButton:hover { color: %2; }"
@@ -603,25 +606,27 @@ void AIChatPanel::applyTheme(bool isDark)
             "QPushButton:disabled { background: %2; color: %3; }"
         ).arg(ACCENT, BG3, FG3));
     } else {
-        setStyleSheet("background: #f5f5f5;");
+        setStyleSheet("background: #fafafa;");
         m_columnHeader->setStyleSheet(
-            "background: #f5f5f5; border-bottom: 1px solid #d0d0d0;");
+            "background: #fafafa; border-bottom: 1px solid #e0e0e0;");
+        m_titleLabel->setStyleSheet(
+            "font-size: 12px; font-weight: 700; color: #333333; letter-spacing: 0.3px;");
         m_closeButton->setStyleSheet(
             "QPushButton { background: none; color: #999999; font-size: 12px; border: none; }"
-            "QPushButton:hover { color: #1e1e2e; }");
+            "QPushButton:hover { color: #333333; }");
         m_headerLabel->setStyleSheet(
             "font-size: 10px; font-weight: 700; text-transform: uppercase; "
             "letter-spacing: 1px; color: #666666;");
         m_modelSelector->setStyleSheet(
-            "QComboBox { font-size: 10px; background: #ffffff; color: #1e1e2e; "
-            "border: 1px solid #d0d0d0; border-radius: 4px; padding: 2px 6px; }"
-            "QComboBox::drop-down { background: #e8e8e8; border-left: 1px solid #d0d0d0; }"
-            "QComboBox QAbstractItemView { background: #ffffff; color: #1e1e2e;"
-            " border: 1px solid #d0d0d0; selection-background-color: #d0e0ff;"
+            "QComboBox { font-size: 10px; background: #fafafa; color: #333333; "
+            "border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px 6px; }"
+            "QComboBox::drop-down { background: #fafafa; border-left: 1px solid #e0e0e0; }"
+            "QComboBox QAbstractItemView { background: #ffffff; color: #333333;"
+            " border: 1px solid #e0e0e0; selection-background-color: #e0e8ff;"
             " selection-color: #1e1e2e; }");
         m_configButton->setStyleSheet(
             "QPushButton { background: none; color: #666666; font-size: 13px; border: none; }"
-            "QPushButton:hover { color: #1e1e2e; }");
+            "QPushButton:hover { color: #333333; }");
         m_scrollArea->setStyleSheet(
             "QScrollArea { border: none; background: transparent; }"
             "QScrollBar:vertical { width: 7px; background: #f0f0f0; }"
@@ -631,7 +636,7 @@ void AIChatPanel::applyTheme(bool isDark)
             "color: #888888; font-size: 11px; font-style: italic; padding: 20px;");
         m_input->setStyleSheet(
             "QLineEdit { padding: 7px 10px; font-size: 11px; background: #ffffff; "
-            "color: #1e1e2e; border: 1px solid #d0d0d0; border-radius: 4px; }");
+            "color: #1e1e2e; border: 1px solid #e0e0e0; border-radius: 4px; }");
         m_sendButton->setStyleSheet(
             "QPushButton { background: #2563eb; color: #ffffff; font-weight: 600; "
             "padding: 7px 12px; font-size: 11px; border-radius: 4px; }"

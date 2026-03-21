@@ -95,6 +95,7 @@ private:
     QLineEdit *m_input;
     QPushButton *m_sendButton;
     QLabel *m_headerLabel;
+    QLabel *m_titleLabel;
     QWidget *m_columnHeader;
     QPushButton *m_closeButton;
     QWidget    *m_noModelBanner;  // shown when no AI model is configured

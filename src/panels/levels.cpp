@@ -6,6 +6,12 @@ static const char* FG2    = "#a6adc8";
 static const char* BORDER = "#45475a";
 static const char* ACCENT = "#89b4fa";
 
+// Light theme equivalents
+static const char* L_BG    = "#e8e8e8";
+static const char* L_FG    = "#1e1e2e";
+static const char* L_FG2   = "#555555";
+static const char* L_BORDER= "#d0d0d0";
+
 LevelSelector::LevelSelector(QWidget *parent)
     : QWidget(parent), m_level(1)
 {
@@ -92,36 +98,77 @@ void LevelSelector::setLevel(int level)
 
 void LevelSelector::updateButtonStyles()
 {
+    if (m_isDark) {
+        m_label->setStyleSheet(QString(
+            "QLabel { font-size: 10px; font-weight: 700; color: %1;"
+            " letter-spacing: 0.5px; padding-right: 6px; }"
+        ).arg(FG2));
+    } else {
+        m_label->setStyleSheet(
+            "QLabel { font-size: 10px; font-weight: 700; color: #555555;"
+            " letter-spacing: 0.5px; padding-right: 6px; }");
+    }
+
     for (int i = 0; i < m_buttons.size(); ++i) {
         auto* btn = m_buttons[i];
         int btnLevel = btn->property("levelIndex").toInt();
         bool active = (btnLevel == m_level);
 
-        if (active) {
-            btn->setStyleSheet(QString(
-                "QPushButton {"
-                "  font-size: 10px; font-weight: 700; padding: 3px 12px;"
-                "  background: rgba(137,180,250,0.25); color: %1;"
-                "  border: 1px solid %1; border-radius: 12px; margin: 0 2px;"
-                "  box-shadow: 0 0 6px rgba(137,180,250,0.4);"
-                "}"
-                "QPushButton:hover {"
-                "  background: rgba(137,180,250,0.35);"
-                "}"
-            ).arg(ACCENT));
+        if (m_isDark) {
+            if (active) {
+                btn->setStyleSheet(QString(
+                    "QPushButton {"
+                    "  font-size: 10px; font-weight: 700; padding: 3px 12px;"
+                    "  background: rgba(137,180,250,0.25); color: %1;"
+                    "  border: 1px solid %1; border-radius: 12px; margin: 0 2px;"
+                    "}"
+                    "QPushButton:hover {"
+                    "  background: rgba(137,180,250,0.35);"
+                    "}"
+                ).arg(ACCENT));
+            } else {
+                btn->setStyleSheet(QString(
+                    "QPushButton {"
+                    "  font-size: 10px; font-weight: 500; padding: 3px 12px;"
+                    "  background: %1; color: %2; border: 1px solid %3;"
+                    "  border-radius: 12px; margin: 0 2px;"
+                    "}"
+                    "QPushButton:hover {"
+                    "  background: %3; color: %4;"
+                    "}"
+                ).arg(BG3, FG2, BORDER, FG));
+            }
         } else {
-            btn->setStyleSheet(QString(
-                "QPushButton {"
-                "  font-size: 10px; font-weight: 500; padding: 3px 12px;"
-                "  background: %1; color: %2; border: 1px solid %3;"
-                "  border-radius: 12px; margin: 0 2px;"
-                "}"
-                "QPushButton:hover {"
-                "  background: %3; color: %4;"
-                "}"
-            ).arg(BG3, FG2, BORDER, FG));
+            if (active) {
+                btn->setStyleSheet(
+                    "QPushButton {"
+                    "  font-size: 10px; font-weight: 700; padding: 3px 12px;"
+                    "  background: #2563eb; color: #ffffff;"
+                    "  border: 1px solid #2563eb; border-radius: 12px; margin: 0 2px;"
+                    "}"
+                    "QPushButton:hover {"
+                    "  background: #1d4ed8;"
+                    "}");
+            } else {
+                btn->setStyleSheet(QString(
+                    "QPushButton {"
+                    "  font-size: 10px; font-weight: 500; padding: 3px 12px;"
+                    "  background: %1; color: %2; border: 1px solid %3;"
+                    "  border-radius: 12px; margin: 0 2px;"
+                    "}"
+                    "QPushButton:hover {"
+                    "  background: %3; color: %4;"
+                    "}"
+                ).arg(L_BG, L_FG2, L_BORDER, L_FG));
+            }
         }
     }
+}
+
+void LevelSelector::applyTheme(bool isDark)
+{
+    m_isDark = isDark;
+    updateButtonStyles();
 }
 
 void LevelSelector::applyLevel(int level)

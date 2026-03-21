@@ -18,6 +18,9 @@ static const char* ACCENT  = "#89b4fa";
 static const char* MAUVE   = "#cba6f7";
 static const char* BORDER  = "#45475a";
 
+// Shared theme flag so ClarityEntry can pick up the current theme when built
+static bool s_isDark = true;
+
 // ============================================================================
 // ClarityEntry
 // ============================================================================
@@ -28,24 +31,36 @@ ClarityEntry::ClarityEntry(const QString &title, const QString &time,
 {
     setFrameShape(QFrame::NoFrame);
     setCursor(Qt::PointingHandCursor);
-    setStyleSheet(QString(
-        "ClarityEntry { background: %1; border-radius: 6px;"
-        " border: 1px solid %2; border-left: 3px solid %3; }"
-        "ClarityEntry:hover { background: %4;"
-        " border: 1px solid %5; border-left: 3px solid %3; }"
-    ).arg(BG3, BORDER, ACCENT, BG4, ACCENT));
+    if (s_isDark) {
+        setStyleSheet(QString(
+            "ClarityEntry { background: %1; border-radius: 6px;"
+            " border: 1px solid %2; border-left: 3px solid %3; }"
+            "ClarityEntry:hover { background: %4;"
+            " border: 1px solid %5; border-left: 3px solid %3; }"
+        ).arg(BG3, BORDER, ACCENT, BG4, ACCENT));
+    } else {
+        setStyleSheet(
+            "ClarityEntry { background: #ffffff; border-radius: 6px;"
+            " border: 1px solid #e8e8e8; border-left: 3px solid #2563eb; }"
+            "ClarityEntry:hover { background: #f0f4ff;"
+            " border: 1px solid #c0cfe8; border-left: 3px solid #2563eb; }");
+    }
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(12, 10, 12, 10);
     layout->setSpacing(4);
 
     m_titleLabel = new QLabel(title, this);
-    m_titleLabel->setStyleSheet(QString("font-size: 12px; font-weight: 600; color: %1;").arg(FG));
+    m_titleLabel->setStyleSheet(s_isDark
+        ? QString("font-size: 12px; font-weight: 600; color: %1;").arg(FG)
+        : "font-size: 12px; font-weight: 600; color: #1e1e2e;");
     m_titleLabel->setWordWrap(true);
     layout->addWidget(m_titleLabel);
 
     m_timeLabel = new QLabel(time, this);
-    m_timeLabel->setStyleSheet(QString("font-size: 10px; color: %1;").arg(FG2));
+    m_timeLabel->setStyleSheet(s_isDark
+        ? QString("font-size: 10px; color: %1;").arg(FG2)
+        : "font-size: 10px; color: #666666;");
     layout->addWidget(m_timeLabel);
 
     // Detail section (hidden by default)
@@ -61,15 +76,16 @@ void ClarityEntry::buildDetailContent(const QString &detailHtml)
     layout->setContentsMargins(8, 6, 8, 8);
     layout->setSpacing(4);
 
-    m_detailWidget->setStyleSheet(QString(
-        "background: %1; border-radius: 6px;"
-    ).arg(BG));
+    m_detailWidget->setStyleSheet(s_isDark
+        ? QString("background: %1; border-radius: 6px;").arg(BG)
+        : "background: #f8f8f8; border-radius: 6px;");
 
     auto *detailLabel = new QLabel(detailHtml, m_detailWidget);
-    detailLabel->setStyleSheet(QString(
-        "font-size: 11px; line-height: 1.5; color: %1;"
-        "QLabel a { color: #74c7ec; }"
-    ).arg(FG2));
+    detailLabel->setStyleSheet(s_isDark
+        ? QString("font-size: 11px; line-height: 1.5; color: %1;"
+                  "QLabel a { color: #74c7ec; }").arg(FG2)
+        : "font-size: 11px; line-height: 1.5; color: #444444;"
+          "QLabel a { color: #2563eb; }");
     detailLabel->setWordWrap(true);
     detailLabel->setTextFormat(Qt::RichText);
     detailLabel->setOpenExternalLinks(false);
@@ -129,11 +145,11 @@ ClarityPanel::ClarityPanel(QWidget *parent)
     auto *headerBarLayout = new QHBoxLayout(m_columnHeader);
     headerBarLayout->setContentsMargins(12, 8, 12, 8);
 
-    auto *titleLabel = new QLabel("Clarity", m_columnHeader);
-    titleLabel->setStyleSheet(QString(
+    m_titleLabel = new QLabel("Clarity", m_columnHeader);
+    m_titleLabel->setStyleSheet(QString(
         "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
     ).arg(ACCENT));
-    headerBarLayout->addWidget(titleLabel);
+    headerBarLayout->addWidget(m_titleLabel);
     headerBarLayout->addStretch();
 
     m_closeButton = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), m_columnHeader);
@@ -248,6 +264,53 @@ void ClarityPanel::rebuildEntries()
 // ============================================================================
 // Sample entries per level -- ported from prototype CLARITY_ENTRIES
 // ============================================================================
+
+void ClarityPanel::applyTheme(bool isDark)
+{
+    m_isDark = isDark;
+    s_isDark = isDark;  // shared so ClarityEntry constructors pick it up
+    if (isDark) {
+        setStyleSheet(QString("background: %1;").arg(BG2));
+        m_columnHeader->setStyleSheet(QString(
+            "background: %1; border-bottom: 1px solid %2;"
+        ).arg(BG2, BORDER));
+        m_titleLabel->setStyleSheet(QString(
+            "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
+        ).arg(ACCENT));
+        m_closeButton->setStyleSheet(QString(
+            "QPushButton { background: none; color: %1; font-size: 12px; border: none; }"
+            "QPushButton:hover { color: %2; }"
+        ).arg(FG3, FG));
+        m_headerLabel->setStyleSheet(QString(
+            "font-size: 10px; font-weight: 700; text-transform: uppercase; "
+            "letter-spacing: 1px; color: %1; padding: 4px 4px 8px;"
+        ).arg(FG2));
+        m_scrollArea->setStyleSheet(
+            "QScrollArea { border: none; background: transparent; }"
+            "QScrollBar:vertical { width: 7px; background: transparent; }"
+            "QScrollBar::handle:vertical { background: #3c3c54; border-radius: 4px; }"
+        );
+    } else {
+        setStyleSheet("background: #fafafa;");
+        m_columnHeader->setStyleSheet(
+            "background: #fafafa; border-bottom: 1px solid #e0e0e0;");
+        m_titleLabel->setStyleSheet(
+            "font-size: 12px; font-weight: 700; color: #333333; letter-spacing: 0.3px;");
+        m_closeButton->setStyleSheet(
+            "QPushButton { background: none; color: #999999; font-size: 12px; border: none; }"
+            "QPushButton:hover { color: #333333; }");
+        m_headerLabel->setStyleSheet(
+            "font-size: 10px; font-weight: 700; text-transform: uppercase; "
+            "letter-spacing: 1px; color: #666666; padding: 4px 4px 8px;");
+        m_scrollArea->setStyleSheet(
+            "QScrollArea { border: none; background: transparent; }"
+            "QScrollBar:vertical { width: 7px; background: #f0f0f0; }"
+            "QScrollBar::handle:vertical { background: #cccccc; border-radius: 4px; }"
+        );
+    }
+    // Rebuild entries to pick up the new theme colors
+    rebuildEntries();
+}
 
 QVector<ClarityEntryData> ClarityPanel::sampleEntries(int level)
 {

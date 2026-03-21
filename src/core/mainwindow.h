@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include "core/aipermissions.h"
 
+class BuildSystem;
 class EditorWidget;
 class FileTreeWidget;
 class BuildBar;
@@ -47,6 +48,7 @@ private:
     void addToRecentWorkspaces(const QString& path);
     void rebuildRecentWorkspacesMenu();
     void applyTheme();
+    QString currentLangKey() const;  // map editor language display → buildsystem key
 
     EditorWidget*   m_editor      = nullptr;
     FileTreeWidget* m_fileTree    = nullptr;
@@ -81,10 +83,14 @@ private:
 
     // Theme toggle
     QPushButton* m_themeToggleBtn = nullptr;
+    QPushButton* m_settingsGearBtn = nullptr;
     bool m_isDarkTheme = true;
 
     // Permissions system
     AIPermissions m_aiPermissions;
+
+    // Build system — toolchain detection + run/build execution
+    BuildSystem*  m_buildSystem = nullptr;
 
     // Explain button state: stored original code before inline annotation
     QString m_preExplainCode;

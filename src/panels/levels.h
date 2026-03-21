@@ -22,6 +22,7 @@ public:
 
 public slots:
     void setLevel(int level);
+    void applyTheme(bool isDark);
 
 signals:
     void levelChanged(int level);
@@ -37,6 +38,7 @@ signals:
 
 private:
     int m_level = 1;
+    bool m_isDark = true;
     QLabel *m_label;
     QVector<QPushButton*> m_buttons;
 

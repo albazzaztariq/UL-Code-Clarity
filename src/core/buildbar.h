@@ -20,7 +20,11 @@ public:
     void setMemCheckVisible(bool visible);
     void toggleResults();
     void clearResults();
+    void showResults();   // show results pane (without replacing content)
     void applyTheme(bool isDark);
+
+    // Direct access to the output text edit for streaming output
+    QTextEdit* resultsContent() const { return m_resultsContent; }
 
 signals:
     void runRequested();

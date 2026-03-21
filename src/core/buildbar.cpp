@@ -251,6 +251,12 @@ void BuildBar::clearResults()
     m_resultsVisible = false;
 }
 
+void BuildBar::showResults()
+{
+    m_resultsPane->show();
+    m_resultsVisible = true;
+}
+
 void BuildBar::applyTheme(bool isDark)
 {
     m_isDark = isDark;
