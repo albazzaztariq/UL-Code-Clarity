@@ -1,8 +1,8 @@
 # Code Clarity
 
-**A code editor and learning platform for people who are new to programming**
+**A code editor and learning platform for those new to programming or anyone looking to tie explicit learning to their coding work**
 
-Code Clarity is a native IDE built around one idea: you build first, learn from what gets built. Every existing IDE assumes you know what you're doing. Every existing learning platform assumes you'll stop and study before building. Code Clarity assumes neither.
+Code Clarity is a native IDE built around one idea: you build first, learn from what gets built. Every existing IDE assumes you know what you're doing. Every existing learning platform assumes you'll stop and study before building. Code Clarity assumes neither. Whether you're writing your first line of code or you've been vibe-coding with AI tools and want to actually understand what's being generated — this is where you go from "it works but I don't know why" to "I built this and I understand every line."
 
 ---
 
