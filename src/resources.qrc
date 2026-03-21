@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>unilogic.ico</file>
+        <file>unilogic.png</file>
+    </qresource>
+</RCC>

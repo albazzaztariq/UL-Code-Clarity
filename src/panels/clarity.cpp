@@ -1,0 +1,368 @@
+#include "panels/clarity.h"
+#include <QMouseEvent>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QSettings>
+
+// ============================================================================
+// Color constants matching the prototype theme
+// ============================================================================
+static const char* BG      = "#1e1e2e";
+static const char* BG2     = "#2a2a3c";
+static const char* BG3     = "#333348";
+static const char* BG4     = "#3c3c54";
+static const char* FG      = "#cdd6f4";
+static const char* FG2     = "#a6adc8";
+static const char* FG3     = "#6c7086";
+static const char* ACCENT  = "#89b4fa";
+static const char* MAUVE   = "#cba6f7";
+static const char* BORDER  = "#45475a";
+
+// ============================================================================
+// ClarityEntry
+// ============================================================================
+
+ClarityEntry::ClarityEntry(const QString &title, const QString &time,
+                           const QString &detailHtml, QWidget *parent)
+    : QFrame(parent), m_expanded(false)
+{
+    setFrameShape(QFrame::NoFrame);
+    setCursor(Qt::PointingHandCursor);
+    setStyleSheet(QString(
+        "ClarityEntry { background: %1; border-radius: 6px;"
+        " border: 1px solid %2; border-left: 3px solid %3; }"
+        "ClarityEntry:hover { background: %4;"
+        " border: 1px solid %5; border-left: 3px solid %3; }"
+    ).arg(BG3, BORDER, ACCENT, BG4, ACCENT));
+
+    auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(12, 10, 12, 10);
+    layout->setSpacing(4);
+
+    m_titleLabel = new QLabel(title, this);
+    m_titleLabel->setStyleSheet(QString("font-size: 12px; font-weight: 600; color: %1;").arg(FG));
+    m_titleLabel->setWordWrap(true);
+    layout->addWidget(m_titleLabel);
+
+    m_timeLabel = new QLabel(time, this);
+    m_timeLabel->setStyleSheet(QString("font-size: 10px; color: %1;").arg(FG2));
+    layout->addWidget(m_timeLabel);
+
+    // Detail section (hidden by default)
+    m_detailWidget = new QWidget(this);
+    m_detailWidget->setVisible(false);
+    buildDetailContent(detailHtml);
+    layout->addWidget(m_detailWidget);
+}
+
+void ClarityEntry::buildDetailContent(const QString &detailHtml)
+{
+    auto *layout = new QVBoxLayout(m_detailWidget);
+    layout->setContentsMargins(8, 6, 8, 8);
+    layout->setSpacing(4);
+
+    m_detailWidget->setStyleSheet(QString(
+        "background: %1; border-radius: 6px;"
+    ).arg(BG));
+
+    auto *detailLabel = new QLabel(detailHtml, m_detailWidget);
+    detailLabel->setStyleSheet(QString(
+        "font-size: 11px; line-height: 1.5; color: %1;"
+        "QLabel a { color: #74c7ec; }"
+    ).arg(FG2));
+    detailLabel->setWordWrap(true);
+    detailLabel->setTextFormat(Qt::RichText);
+    detailLabel->setOpenExternalLinks(false);
+    layout->addWidget(detailLabel);
+
+    // "Try It Yourself" button (if the detail contains one)
+    if (detailHtml.contains("Try It Yourself")) {
+        auto *tryBtn = new QPushButton("Try It Yourself ->", m_detailWidget);
+        tryBtn->setStyleSheet(QString(
+            "QPushButton { background: %1; color: #1e1e2e; font-weight: 600; "
+            "padding: 3px 10px; border-radius: 4px; font-size: 10px; }"
+            "QPushButton:hover { filter: brightness(1.15); }"
+        ).arg(MAUVE));
+        tryBtn->setCursor(Qt::PointingHandCursor);
+        tryBtn->setFixedHeight(22);
+        connect(tryBtn, &QPushButton::clicked, this, &ClarityEntry::tryItYourselfClicked);
+        layout->addWidget(tryBtn, 0, Qt::AlignLeft);
+    }
+}
+
+void ClarityEntry::setExpanded(bool expanded)
+{
+    m_expanded = expanded;
+    m_detailWidget->setVisible(expanded);
+}
+
+bool ClarityEntry::isExpanded() const
+{
+    return m_expanded;
+}
+
+void ClarityEntry::mousePressEvent(QMouseEvent *event)
+{
+    Q_UNUSED(event);
+    setExpanded(!m_expanded);
+    emit clicked();
+}
+
+// ============================================================================
+// ClarityPanel
+// ============================================================================
+
+ClarityPanel::ClarityPanel(QWidget *parent)
+    : QWidget(parent), m_level(1)
+{
+    setStyleSheet(QString("background: %1;").arg(BG2));
+
+    auto *mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(0);
+
+    // Column header bar: "Clarity" title + X close button
+    m_columnHeader = new QWidget(this);
+    m_columnHeader->setStyleSheet(QString(
+        "background: %1; border-bottom: 1px solid %2;"
+    ).arg(BG2, BORDER));
+    auto *headerBarLayout = new QHBoxLayout(m_columnHeader);
+    headerBarLayout->setContentsMargins(12, 8, 12, 8);
+
+    auto *titleLabel = new QLabel("Clarity", m_columnHeader);
+    titleLabel->setStyleSheet(QString(
+        "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
+    ).arg(ACCENT));
+    headerBarLayout->addWidget(titleLabel);
+    headerBarLayout->addStretch();
+
+    m_closeButton = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), m_columnHeader);
+    m_closeButton->setFixedSize(16, 16);
+    m_closeButton->setCursor(Qt::PointingHandCursor);
+    m_closeButton->setStyleSheet(QString(
+        "QPushButton { background: none; color: %1; font-size: 12px; border: none; }"
+        "QPushButton:hover { color: %2; }"
+    ).arg(FG3, FG));
+    connect(m_closeButton, &QPushButton::clicked, this, &ClarityPanel::closeRequested);
+    headerBarLayout->addWidget(m_closeButton);
+
+    mainLayout->addWidget(m_columnHeader);
+
+    // Changelog content area with padding
+    auto *contentWidget = new QWidget(this);
+    auto *contentLayout = new QVBoxLayout(contentWidget);
+    contentLayout->setContentsMargins(8, 8, 8, 8);
+    contentLayout->setSpacing(0);
+
+    m_headerLabel = new QLabel("CHANGE LOG", contentWidget);
+    m_headerLabel->setStyleSheet(QString(
+        "font-size: 10px; font-weight: 700; text-transform: uppercase; "
+        "letter-spacing: 1px; color: %1; padding: 4px 4px 8px;"
+    ).arg(FG2));
+    contentLayout->addWidget(m_headerLabel);
+
+    m_scrollArea = new QScrollArea(this);
+    m_scrollArea->setWidgetResizable(true);
+    m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_scrollArea->setStyleSheet(
+        "QScrollArea { border: none; background: transparent; }"
+        "QScrollBar:vertical { width: 7px; background: transparent; }"
+        "QScrollBar::handle:vertical { background: #3c3c54; border-radius: 4px; }"
+    );
+
+    auto *scrollWidget = new QWidget;
+    m_entriesLayout = new QVBoxLayout(scrollWidget);
+    m_entriesLayout->setContentsMargins(0, 0, 4, 0);
+    m_entriesLayout->setSpacing(8);
+    m_entriesLayout->addStretch();
+    m_scrollArea->setWidget(scrollWidget);
+
+    contentLayout->addWidget(m_scrollArea);
+    mainLayout->addWidget(contentWidget, 1);
+
+    // Populate with sample entries only on first launch
+    QSettings s("CodeClarity", "CodeClarity");
+    if (!s.value("hasSeenExamples", false).toBool()) {
+        rebuildEntries();
+    }
+}
+
+void ClarityPanel::setLevel(int level)
+{
+    if (level < 1) level = 1;
+    if (level > 4) level = 4;
+    m_level = level;
+    rebuildEntries();
+}
+
+int ClarityPanel::level() const
+{
+    return m_level;
+}
+
+void ClarityPanel::addEntry(const ClarityEntryData &data)
+{
+    auto *entry = new ClarityEntry(data.title, data.time, data.detailHtml,
+                                   m_scrollArea->widget());
+    int idx = m_entries.size();
+    connect(entry, &ClarityEntry::clicked, this, [this, idx]() {
+        emit entryClicked(idx);
+    });
+    connect(entry, &ClarityEntry::tryItYourselfClicked, this, [this, idx]() {
+        emit tryItYourself(idx);
+    });
+
+    // Insert before the stretch
+    m_entriesLayout->insertWidget(m_entriesLayout->count() - 1, entry);
+    m_entries.append(entry);
+}
+
+void ClarityPanel::clearEntries()
+{
+    for (auto *entry : m_entries) {
+        m_entriesLayout->removeWidget(entry);
+        entry->deleteLater();
+    }
+    m_entries.clear();
+}
+
+void ClarityPanel::markExamplesSeen()
+{
+    QSettings s("CodeClarity", "CodeClarity");
+    if (!s.value("hasSeenExamples", false).toBool()) {
+        // Note: hasSeenExamples is written by AIChatPanel::markExamplesSeen
+        // which is the single source of truth. Here we just clear entries.
+        clearEntries();
+    }
+}
+
+void ClarityPanel::rebuildEntries()
+{
+    clearEntries();
+    auto entries = sampleEntries(m_level);
+    for (const auto &e : entries) {
+        addEntry(e);
+    }
+}
+
+// ============================================================================
+// Sample entries per level -- ported from prototype CLARITY_ENTRIES
+// ============================================================================
+
+QVector<ClarityEntryData> ClarityPanel::sampleEntries(int level)
+{
+    QVector<ClarityEntryData> entries;
+
+    switch (level) {
+    case 1: // Beginner -- plain English, concepts explained
+        entries.append({
+            "Created a function that calculates total price",
+            "2 min ago -- AI generated",
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>What Changed</h4>"
+            "<p>Added a <code>calculate_total</code> function that takes a list of prices "
+            "and a tax rate, returns the total with tax.</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Why</h4>"
+            "<p>You asked \"make a function to calculate total price with tax.\" "
+            "The AI multiplies the sum by (1 + tax_rate).</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Concepts Used</h4>"
+            "<p><a href='#'>Functions</a> -- reusable blocks of code<br>"
+            "<a href='#'>Parameters</a> -- values passed in<br>"
+            "<a href='#'>Return values</a> -- what comes back</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>What You'd Need to Know</h4>"
+            "<p>How to define a function with <code>def</code>, use <code>sum()</code>, "
+            "and return a value.</p>"
+            "<p>Try It Yourself</p>"
+        });
+        entries.append({
+            "Fixed the loop that was skipping the last item",
+            "5 min ago -- AI fix",
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>What Changed</h4>"
+            "<p>Changed <code>range(len(items) - 1)</code> to <code>range(len(items))</code>.</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Why</h4>"
+            "<p><code>range()</code> already excludes the upper bound. Subtracting 1 "
+            "skipped the last item.</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Concepts Used</h4>"
+            "<p><a href='#'>Off-by-one errors</a> -- a common counting mistake</p>"
+            "<p>Try It Yourself</p>"
+        });
+        entries.append({
+            "Added error handling for empty price lists",
+            "8 min ago -- AI generated",
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>What Changed</h4>"
+            "<p>Added a guard clause returning 0.0 if the list is empty.</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Why</h4>"
+            "<p>Prevents silent failures on empty input.</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Concepts Used</h4>"
+            "<p><a href='#'>Guard clauses</a> -- early returns that simplify logic</p>"
+            "<p>Try It Yourself</p>"
+        });
+        break;
+
+    case 2: // Intermediate -- less hand-holding, more technical
+        entries.append({
+            "Added calculate_total(prices, tax_rate) -> float",
+            "2 min ago",
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>What Changed</h4>"
+            "<p>New function: sums list, applies tax multiplier, returns rounded float.</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Why</h4>"
+            "<p>User request. Standard pattern: accumulate -> transform -> return.</p>"
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>Concepts</h4>"
+            "<p>Function definition, default parameters, sum + multiply pattern</p>"
+        });
+        entries.append({
+            "Fixed off-by-one in range(len(items) - 1)",
+            "5 min ago",
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>What Changed</h4>"
+            "<p>Removed erroneous <code>- 1</code> from range call. range() is already exclusive.</p>"
+        });
+        entries.append({
+            "Guard clause: return 0.0 on empty list",
+            "8 min ago",
+            "<h4 style='color:#89b4fa;margin:6px 0 3px;font-size:11px'>What Changed</h4>"
+            "<p>Early return prevents division-by-zero downstream.</p>"
+        });
+        break;
+
+    case 3: // Developer -- terse, technical lingo
+        entries.append({
+            "calculate_total(): sum + tax multiplier, default 10%",
+            "2 min ago",
+            "<p>Signature: <code>(list[float], float=0.10) -> float</code>. Rounds to 2dp.</p>"
+        });
+        entries.append({
+            "Fix: range(len-1) -> range(len), off-by-one",
+            "5 min ago",
+            "<p>range() upper bound is exclusive. The -1 was double-excluding.</p>"
+        });
+        entries.append({
+            "Guard: early return on empty prices",
+            "8 min ago",
+            "<p>Prevents ZeroDivisionError if prices is empty.</p>"
+        });
+        break;
+
+    case 4: // No Assist -- raw verbose changelog
+        entries.append({
+            "def calculate_total(prices, tax_rate=0.10) -> float",
+            "2 min ago",
+            "<p>+L1-22 main.py: added function calculate_total(list, float). "
+            "Body: sum accumulator loop over prices[i], multiply by (1 + tax_rate), "
+            "round(result, 2). Default param tax_rate=0.10.</p>"
+        });
+        entries.append({
+            "changed range(len(items) - 1) to range(len(items))",
+            "5 min ago",
+            "<p>~L7 main.py: modified range() upper bound. Removed arithmetic subtraction "
+            "on len() call. Affected iteration count: n-1 -> n.</p>"
+        });
+        entries.append({
+            "added guard clause L2-3: if not prices return 0.0",
+            "8 min ago",
+            "<p>+L2-3 calculate_total: inserted conditional early return. "
+            "Predicate: falsy check on prices param. Return value: float literal 0.0.</p>"
+        });
+        break;
+    }
+
+    return entries;
+}

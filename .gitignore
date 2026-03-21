@@ -1,0 +1,16 @@
+build/
+*.exe
+*.dll
+*.obj
+*.o
+*.a
+CMakeFiles/
+*_autogen/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+moc_*
+qrc_*
+ui_*
+*.user
+.vs/

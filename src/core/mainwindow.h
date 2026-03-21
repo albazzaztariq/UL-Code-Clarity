@@ -1,0 +1,92 @@
+#pragma once
+
+#include <QMainWindow>
+#include <QSplitter>
+#include <QLabel>
+#include <QMenu>
+#include <QCloseEvent>
+#include <QPushButton>
+#include "core/aipermissions.h"
+
+class EditorWidget;
+class FileTreeWidget;
+class BuildBar;
+class RuntimeStrip;
+class ClarityPanel;
+class AIChatPanel;
+class LevelSelector;
+class LangGuideOverlay;
+class BasicsOverlay;
+class ExpanderOverlay;
+class ExplainHandler;
+class WalkThroughHandler;
+class BuildFromScratchMode;
+
+class MainWindow : public QMainWindow {
+    Q_OBJECT
+
+public:
+    explicit MainWindow(QWidget* parent = nullptr);
+
+    void closeEvent(QCloseEvent* event) override;
+
+    EditorWidget*   editor()        const { return m_editor; }
+    FileTreeWidget* fileTree()      const { return m_fileTree; }
+    BuildBar*       buildBar()      const { return m_buildBar; }
+    RuntimeStrip*   runtimeStrip()  const { return m_runtimeStrip; }
+    QWidget*        clarityColumn() const { return m_clarityColumn; }
+    QWidget*        chatColumn()    const { return m_chatColumn; }
+
+private:
+    void createMenuBar();
+    void createStatusBar();
+    void setupCentralLayout();
+    void wireSignals();
+    void saveSession();
+    void restoreSession();
+    void addToRecentWorkspaces(const QString& path);
+    void rebuildRecentWorkspacesMenu();
+    void applyTheme();
+
+    EditorWidget*   m_editor      = nullptr;
+    FileTreeWidget* m_fileTree    = nullptr;
+    BuildBar*       m_buildBar    = nullptr;
+    RuntimeStrip*   m_runtimeStrip = nullptr;
+
+    // Right panel: two side-by-side columns (Clarity + AI Chat)
+    QSplitter*      m_rightSplitter = nullptr;
+    QWidget*        m_clarityColumn = nullptr;  // panels agent fills this
+    QWidget*        m_chatColumn    = nullptr;   // panels agent fills this
+    QSplitter*      m_mainSplitter  = nullptr;
+
+    // Panels
+    ClarityPanel*       m_clarityPanel  = nullptr;
+    AIChatPanel*        m_aiChatPanel   = nullptr;
+    LevelSelector*      m_levelSelector = nullptr;
+    LangGuideOverlay*   m_langGuide     = nullptr;
+    BasicsOverlay*      m_basicsOverlay = nullptr;
+    ExpanderOverlay*    m_expanderOverlay = nullptr;
+    ExplainHandler*     m_explainHandler = nullptr;
+    WalkThroughHandler* m_walkHandler   = nullptr;
+    BuildFromScratchMode* m_bfsMode     = nullptr;
+
+    // Recent Workspaces submenu
+    QMenu* m_recentMenu = nullptr;
+
+    // Status bar labels
+    QLabel* m_statusReady = nullptr;
+    QLabel* m_statusLang  = nullptr;
+    QLabel* m_statusEnc   = nullptr;
+    QLabel* m_statusPos   = nullptr;
+
+    // Theme toggle
+    QPushButton* m_themeToggleBtn = nullptr;
+    bool m_isDarkTheme = true;
+
+    // Permissions system
+    AIPermissions m_aiPermissions;
+
+    // Explain button state: stored original code before inline annotation
+    QString m_preExplainCode;
+    bool    m_explainActive = false;
+};

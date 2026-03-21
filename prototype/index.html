@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Clarity</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#1e1e2e;--bg2:#2a2a3c;--bg3:#333348;--bg4:#3c3c54;--bg5:#181825;
+  --fg:#cdd6f4;--fg2:#a6adc8;--fg3:#6c7086;
+  --accent:#89b4fa;--accent2:#74c7ec;--green:#a6e3a1;--red:#f38ba8;
+  --yellow:#f9e2af;--mauve:#cba6f7;--peach:#fab387;--teal:#94e2d5;
+  --border:#45475a;--radius:6px;
+  --font:'Segoe UI',system-ui,sans-serif;
+  --mono:'Cascadia Code','Fira Code','Consolas',monospace;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--fg);overflow:hidden}
+button{font-family:var(--font);cursor:pointer;border:none;border-radius:var(--radius);padding:5px 12px;font-size:12px;transition:all .12s}
+button:hover{filter:brightness(1.15)}
+select{font-family:var(--font);background:var(--bg3);color:var(--fg);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px}
+code{font-family:var(--mono);background:var(--bg3);padding:1px 4px;border-radius:3px;font-size:.9em}
+a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}
+::-webkit-scrollbar{width:7px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px}
+
+/* ═══ APP GRID ═══════════════════════════════════════════════════ */
+#app{display:grid;grid-template-rows:28px 26px 1fr 34px 24px;height:100%}
+
+/* ═══ TITLE BAR ══════════════════════════════════════════════════ */
+#titlebar{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;gap:12px}
+#titlebar .logo{font-weight:700;font-size:14px;color:var(--accent);letter-spacing:.3px}
+#titlebar .subtitle{font-size:11px;color:var(--fg3)}
+#titlebar .spacer{flex:1}
+.clarity-toggle-area{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--fg2)}
+.level-badge{font-size:10px;background:var(--bg3);padding:2px 8px;border-radius:10px;color:var(--fg2);cursor:pointer}
+.level-badge span{color:var(--accent)}
+
+/* ═══ MENU BAR ═══════════════════════════════════════════════════ */
+#menubar{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 4px;gap:0;font-size:12px}
+.menu-item{padding:4px 12px;color:var(--fg2);cursor:pointer;position:relative;border-radius:3px}
+.menu-item:hover{background:var(--bg4);color:var(--fg)}
+.menu-dropdown{display:none;position:absolute;top:100%;left:0;background:var(--bg3);border:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);min-width:200px;z-index:200;padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.menu-dropdown.open{display:block}
+.menu-dropdown .md-item{padding:5px 16px;font-size:12px;color:var(--fg2);cursor:pointer;display:flex;justify-content:space-between}
+.menu-dropdown .md-item:hover{background:var(--bg4);color:var(--fg)}
+.menu-dropdown .md-item .shortcut{color:var(--fg3);font-size:11px}
+.menu-dropdown .md-sep{height:1px;background:var(--border);margin:3px 8px}
+
+/* ═══ MAIN AREA ══════════════════════════════════════════════════ */
+#main{display:grid;grid-template-columns:auto 1fr auto;overflow:hidden}
+
+/* ── File Tree (left sidebar) ─────────────────────────────────── */
+#filetree{width:200px;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;font-size:12px;display:flex;flex-direction:column}
+#filetree.collapsed{width:0;overflow:hidden;border:none}
+#filetree .ft-header{padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--fg3);display:flex;align-items:center;justify-content:space-between}
+#filetree .ft-header .collapse-btn{cursor:pointer;font-size:14px;color:var(--fg3)}
+#filetree .ft-header .collapse-btn:hover{color:var(--fg)}
+.ft-folder,.ft-file{padding:3px 8px 3px 12px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--fg2)}
+.ft-folder:hover,.ft-file:hover{background:var(--bg4)}
+.ft-file.active{background:var(--bg4);color:var(--accent)}
+.ft-folder{font-weight:600;color:var(--fg3)}
+.ft-folder::before{content:"▸";font-size:10px;color:var(--fg3)}
+.ft-folder.open::before{content:"▾"}
+.ft-children{padding-left:14px}
+.ft-icon{font-size:13px}
+
+/* ── Center: Editor ───────────────────────────────────────────── */
+#center{display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#editor-tabs{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 8px;min-height:32px;gap:0}
+.etab{padding:6px 14px;font-size:11px;color:var(--fg3);cursor:pointer;border-right:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.etab.active{background:var(--bg);color:var(--fg)}
+.etab:hover:not(.active){background:var(--bg4)}
+.etab .x{font-size:9px;opacity:.4;margin-left:4px}.etab .x:hover{opacity:1}
+.lang-badge{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600}
+.lang-badge.python{color:var(--teal);background:rgba(148,226,213,.1)}
+.lang-badge.c{color:var(--peach);background:rgba(250,179,135,.1)}
+.lang-badge.ul{color:var(--accent);background:rgba(137,180,250,.1)}
+
+#editor-area{flex:1;display:flex;overflow:hidden}
+#line-numbers{width:44px;background:var(--bg2);padding:8px 6px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--fg3);line-height:1.55;overflow-y:auto;user-select:none}
+#code-editor{flex:1;background:var(--bg);padding:8px 12px;font-family:var(--mono);font-size:12px;line-height:1.55;overflow-y:auto;white-space:pre;tab-size:4;outline:none;color:var(--fg)}
+
+/* ── Right Panel: Clarity + AI Chat ───────────────────────────── */
+#right-panel{width:600px;display:flex;flex-direction:row;border-left:1px solid var(--border);background:var(--bg2);overflow:hidden}
+#right-panel.collapsed{width:0;overflow:hidden;border:none}
+#clarity-column{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+#clarity-column.hidden{display:none}
+#chat-column{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#chat-column.hidden{display:none}
+
+/* Right panel toggle buttons */
+#right-toggles{display:flex;border-bottom:1px solid var(--border);background:var(--bg)}
+.rt-btn{flex:1;text-align:center;padding:6px;font-size:11px;cursor:pointer;color:var(--fg3);border:none;background:none;transition:.15s}
+.rt-btn.active{color:var(--accent);background:var(--bg2)}
+.rt-btn:hover{color:var(--fg)}
+.rt-btn .dot{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:4px}
+.rt-btn .dot.on{background:var(--green)}
+
+/* Clarity changelog (always visible when active) */
+#clarity-pane{flex:1;overflow-y:auto;padding:8px;display:block}
+#clarity-pane.hidden{display:none}
+.cl-header{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--fg3);padding:4px 4px 8px}
+.cl-entry{background:var(--bg3);border-radius:var(--radius);padding:8px 10px;margin-bottom:6px;cursor:pointer;border-left:3px solid var(--accent);transition:.12s}
+.cl-entry:hover{background:var(--bg4);transform:translateX(2px)}
+.cl-entry .cl-title{font-size:12px;font-weight:600;margin-bottom:2px}
+.cl-entry .cl-time{font-size:10px;color:var(--fg3)}
+.cl-detail{display:none;margin-top:6px;padding:8px;background:var(--bg);border-radius:var(--radius);font-size:11px;line-height:1.5}
+.cl-detail.open{display:block}
+.cl-detail h4{color:var(--accent);margin:6px 0 3px;font-size:11px}
+.cl-detail h4:first-child{margin-top:0}
+.cl-detail p{color:var(--fg2);margin-bottom:4px}
+.cl-detail .try-btn{display:inline-block;margin-top:6px;background:var(--mauve);color:#1e1e2e;font-weight:600;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:10px}
+
+/* AI Chat (below clarity, or standalone) */
+#ai-chat-pane{flex:1;display:flex;flex-direction:column;padding:8px}
+#ai-chat-pane.hidden{display:none}
+.chat-header{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--fg3);padding:0 4px 6px;display:flex;align-items:center;justify-content:space-between}
+.chat-header select{font-size:10px}
+.chat-msgs{flex:1;overflow-y:auto;padding-bottom:6px}
+.chat-msg{margin-bottom:8px;font-size:11px;line-height:1.4}
+.chat-msg.user{text-align:right}
+.chat-msg.user .bubble{background:var(--accent);color:#1e1e2e;display:inline-block;padding:5px 10px;border-radius:10px 10px 2px 10px;max-width:85%;text-align:left}
+.chat-msg.ai .bubble{background:var(--bg3);display:inline-block;padding:5px 10px;border-radius:10px 10px 10px 2px;max-width:85%}
+.chat-input-row{display:flex;gap:4px;padding-top:6px;border-top:1px solid var(--border)}
+.chat-input-row input{flex:1;padding:7px 10px;font-size:11px}
+.chat-input-row button{background:var(--accent);color:#1e1e2e;font-weight:600}
+
+/* ═══ BUILD BAR ══════════════════════════════════════════════════ */
+#buildbar{display:flex;align-items:center;background:var(--bg2);border-top:1px solid var(--border);padding:0 10px;gap:8px}
+.bb-run{background:var(--green);color:#1e1e2e;font-weight:700;padding:4px 16px}
+.bb-build{background:var(--bg3);color:var(--fg)}
+.bb-memcheck{background:var(--peach);color:#1e1e2e;font-weight:600;display:none}
+.bb-memcheck.show{display:inline-flex}
+.bb-sep{width:1px;height:18px;background:var(--border)}
+.bb-label{font-size:11px;color:var(--fg3)}
+.bb-spacer{flex:1}
+#results-toggle{background:var(--bg3);color:var(--fg2);font-size:11px}
+#results-toggle.has-output{color:var(--green)}
+
+/* Results pane (slides up from bottom of editor) */
+#results-pane{display:none;background:var(--bg5);border-top:1px solid var(--border);max-height:140px;overflow-y:auto;font-family:var(--mono);font-size:11px;padding:6px 12px}
+#results-pane.visible{display:block}
+#results-pane .rp-header{color:var(--fg3);font-size:10px;margin-bottom:4px;display:flex;justify-content:space-between}
+#results-pane .rp-close{cursor:pointer;color:var(--fg3)}
+#results-pane .rp-close:hover{color:var(--fg)}
+.rp-output{color:var(--green)}
+.rp-error{color:var(--red)}
+/* Memory check results */
+.mc-finding{padding:4px 0;border-bottom:1px solid var(--bg3)}
+.mc-finding .mc-sev{font-weight:700;margin-right:6px}
+.mc-finding .mc-sev.warn{color:var(--yellow)}
+.mc-finding .mc-sev.err{color:var(--red)}
+.mc-finding .mc-msg{color:var(--fg2)}
+.mc-finding .mc-help{color:var(--accent2);cursor:pointer;font-size:10px;margin-left:8px}
+
+/* ═══ STATUS BAR ═════════════════════════════════════════════════ */
+#statusbar{display:flex;align-items:center;background:var(--bg2);border-top:1px solid var(--border);padding:0 12px;font-size:10px;color:var(--fg3);gap:14px}
+#statusbar .dot{width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block;margin-right:3px}
+
+/* ═══ RUNTIME STRIP (inline, below editor tabs) ═════════════════ */
+#runtime-strip{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);padding:3px 12px;gap:12px;font-size:10px;overflow-x:auto;flex-shrink:0}
+#runtime-strip.hidden{display:none}
+.rs-item{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.rs-item .rs-label{color:var(--fg3)}
+.rs-item .rs-value{color:var(--fg);font-weight:600}
+.rs-item .rs-value.tunable{color:var(--yellow)}
+.rs-item select{font-size:10px;padding:1px 4px}
+.help-dot{width:15px;height:15px;border-radius:50%;background:var(--bg);color:var(--fg3);font-size:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.help-dot:hover{color:var(--accent);background:var(--bg4)}
+.rs-sep{width:1px;height:14px;background:var(--border)}
+.rs-dismiss{margin-left:auto;cursor:pointer;color:var(--fg3);font-size:12px}.rs-dismiss:hover{color:var(--fg)}
+
+/* ═══ HELP TOOLTIP ═══════════════════════════════════════════════ */
+#help-tooltip{display:none;position:fixed;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;max-width:300px;font-size:11px;line-height:1.5;box-shadow:0 6px 24px rgba(0,0,0,.4);z-index:300}
+#help-tooltip.visible{display:block}
+#help-tooltip .ht-title{color:var(--accent);font-weight:700;margin-bottom:3px}
+
+/* ═══ STATEMENT EXPANDER OVERLAY ═════════════════════════════════ */
+#expander-overlay{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;width:560px;box-shadow:0 12px 48px rgba(0,0,0,.5);z-index:200}
+#expander-overlay.visible{display:flex;flex-direction:column}
+.exp-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.exp-demo{background:var(--bg);border-radius:var(--radius);padding:12px;font-family:var(--mono);font-size:11px;margin-bottom:12px}
+.exp-original{color:var(--fg3);margin-bottom:8px}
+.exp-arrow{text-align:center;color:var(--fg3);font-size:18px;margin-bottom:8px}
+.exp-expanded{color:var(--green)}
+.exp-marker{color:var(--fg3);font-style:italic}
+.exp-close{align-self:flex-end;background:var(--bg4);color:var(--fg2)}
+
+/* ═══ TUTORIALS OVERLAY ══════════════════════════════════════════ */
+#tutorials-overlay{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;width:500px;max-height:70vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.5);z-index:200}
+#tutorials-overlay.visible{display:block}
+.tut-title{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.tut-sub{font-size:11px;color:var(--fg3);margin-bottom:14px}
+.tut-lang-group{margin-bottom:14px}
+.tut-lang-label{font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.tut-lesson{padding:5px 10px;font-size:12px;color:var(--fg2);cursor:pointer;border-radius:4px;display:flex;justify-content:space-between;align-items:center}
+.tut-lesson:hover{background:var(--bg4);color:var(--fg)}
+.tut-lesson .tut-badge{font-size:9px;padding:1px 6px;border-radius:3px;background:var(--bg4);color:var(--fg3)}
+.tut-lesson .tut-badge.error{background:rgba(243,139,168,.15);color:var(--red)}
+.tut-close{position:absolute;top:12px;right:16px;background:none;color:var(--fg3);font-size:16px;cursor:pointer}
+.tut-close:hover{color:var(--fg)}
+
+/* ═══ BUILD FROM SCRATCH MODE ════════════════════════════════════ */
+/* ═══ LANGUAGE TUTORIAL OVERLAY ═══════════════════════════════════ */
+#lang-tutorial{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;width:580px;max-height:80vh;overflow-y:auto;box-shadow:0 12px 48px rgba(0,0,0,.5);z-index:200}
+#lang-tutorial.visible{display:block}
+.lt-title{font-size:15px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.lt-sub{font-size:11px;color:var(--fg3);margin-bottom:16px}
+.lt-section{font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--border)}
+.lt-section:first-of-type{border-top:none;margin-top:0;padding-top:0}
+.lt-row{display:flex;align-items:center;padding:5px 0;font-size:12px;gap:8px}
+.lt-row .lt-label{width:160px;color:var(--fg2);flex-shrink:0}
+.lt-row .lt-val{font-weight:600}
+.lt-row .lt-val.yes{color:var(--green)}.lt-row .lt-val.no{color:var(--red)}.lt-row .lt-val.partial{color:var(--yellow)}
+.lt-row .lt-val.info{color:var(--fg)}
+.lt-help{width:18px;height:18px;border-radius:50%;background:var(--bg);color:var(--fg3);font-size:9px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.lt-help:hover{color:var(--accent);background:var(--bg4)}
+.lt-close{position:absolute;top:12px;right:16px;background:none;color:var(--fg3);font-size:16px;cursor:pointer;border:none}.lt-close:hover{color:var(--fg)}
+.lt-desc{font-size:11px;color:var(--fg2);line-height:1.5;margin:4px 0 10px;padding:8px 10px;background:var(--bg);border-radius:4px}
+
+#bfs-editor-prompt{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;color:var(--fg2)}
+#bfs-editor-prompt.active{display:flex}
+#bfs-editor-prompt .bfs-icon{font-size:48px;margin-bottom:16px}
+#bfs-editor-prompt .bfs-title{font-size:18px;font-weight:700;color:var(--fg);margin-bottom:8px}
+#bfs-editor-prompt .bfs-sub{font-size:13px;max-width:400px;line-height:1.6}
+#bfs-mode-bar{display:none;align-items:center;background:var(--bg3);border-bottom:1px solid var(--border);padding:4px 12px;gap:8px;font-size:11px}
+#bfs-mode-bar.active{display:flex}
+.bfs-indicator{color:var(--green);font-weight:700}
+.bfs-phase{color:var(--fg2)}
+.bfs-skip{margin-left:auto;background:var(--bg4);color:var(--yellow);font-size:10px;padding:3px 10px}
+.bfs-export{background:var(--peach);color:#1e1e2e;font-size:10px;font-weight:600;padding:3px 10px}
+
+/* ═══ TEACH ME THE BASICS OVERLAY ════════════════════════════════ */
+#basics-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:500;overflow-y:auto}
+#basics-overlay.visible{display:block}
+.basics-wrap{max-width:640px;margin:0 auto;padding:32px 24px 60px}
+.basics-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;justify-content:center;gap:12px;z-index:501}
+.basics-nav button{padding:6px 20px;font-size:12px}
+.basics-dot-row{display:flex;gap:4px;margin:0 12px}
+.basics-dot{width:8px;height:8px;border-radius:50%;background:var(--bg4);cursor:pointer}
+.basics-dot.active{background:var(--accent)}
+.basics-dot.visited{background:var(--fg3)}
+.basics-page{display:none}
+.basics-page.active{display:block}
+.bp-title{font-size:22px;font-weight:700;color:var(--accent);margin-bottom:6px}
+.bp-sub{font-size:12px;color:var(--fg3);margin-bottom:20px}
+.bp-card{background:var(--bg2);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--accent)}
+.bp-card h3{font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px}
+.bp-card p{font-size:12px;color:var(--fg2);line-height:1.55}
+.bp-card code{font-size:11px}
+.bp-card .bp-lang-note{font-size:10px;color:var(--fg3);margin-top:4px;font-style:italic}
+.bp-close{position:fixed;top:12px;right:20px;background:var(--red);color:#1e1e2e;font-weight:700;padding:6px 14px;z-index:502}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<!-- ═══ TITLE BAR ════════════════════════════════════════════════ -->
+<div id="titlebar">
+  <span class="logo">Code Clarity</span>
+  <span class="subtitle">Real Learning Through Experience</span>
+  <div class="spacer"></div>
+  <button id="basics-btn" onclick="openBasics()" style="background:var(--yellow);color:#1e1e2e;font-weight:700;font-size:11px;padding:4px 14px;margin-right:4px">📚 Teach Me the Basics</button>
+  <button id="bfs-btn" onclick="startBuildFromScratch()" style="background:var(--green);color:#1e1e2e;font-weight:700;font-size:11px;padding:4px 14px;margin-right:8px">🔨 Build from Scratch</button>
+  <div class="clarity-toggle-area">
+    <span>Level</span>
+    <select id="level-select" onchange="setLevel(this.value)" style="font-size:11px;padding:2px 6px;background:var(--bg3);color:var(--fg);border:1px solid var(--border);border-radius:4px">
+      <option value="1">1 — Beginner</option>
+      <option value="2">2 — Intermediate</option>
+      <option value="3">3 — Developer</option>
+      <option value="4">4 — No Assist</option>
+    </select>
+  </div>
+</div>
+
+<!-- ═══ MENU BAR ═════════════════════════════════════════════════ -->
+<div id="menubar">
+  <div class="menu-item" onclick="toggleMenu(this)">File
+    <div class="menu-dropdown">
+      <div class="md-item" onclick="alert('New file')">New File <span class="shortcut">Ctrl+N</span></div>
+      <div class="md-item" onclick="alert('Open file')">Open File... <span class="shortcut">Ctrl+O</span></div>
+      <div class="md-item" onclick="alert('Open folder')">Open Folder... <span class="shortcut">Ctrl+Shift+O</span></div>
+      <div class="md-sep"></div>
+      <div class="md-item">Save <span class="shortcut">Ctrl+S</span></div>
+      <div class="md-item">Save As... <span class="shortcut">Ctrl+Shift+S</span></div>
+      <div class="md-sep"></div>
+      <div class="md-item">Exit</div>
+    </div>
+  </div>
+  <div class="menu-item" onclick="toggleMenu(this)">Edit
+    <div class="menu-dropdown">
+      <div class="md-item">Undo <span class="shortcut">Ctrl+Z</span></div>
+      <div class="md-item">Redo <span class="shortcut">Ctrl+Y</span></div>
+      <div class="md-sep"></div>
+      <div class="md-item">Find <span class="shortcut">Ctrl+F</span></div>
+      <div class="md-item">Replace <span class="shortcut">Ctrl+H</span></div>
+    </div>
+  </div>
+  <div class="menu-item" onclick="toggleMenu(this)">Tools
+    <div class="menu-dropdown">
+      <div class="md-item" onclick="toggleLangGuide()">Language Guide</div>
+      <div class="md-item" onclick="openExpander()">Statement Expander</div>
+      <div class="md-item" onclick="openTutorials()">Tutorials &amp; Examples</div>
+      <div class="md-item" onclick="openCodebaseExplainer()">Explain Codebase</div>
+      <div class="md-sep"></div>
+      <div class="md-item" onclick="toggleRuntime()">Runtime Info <span class="shortcut">Ctrl+R</span></div>
+    </div>
+  </div>
+  <div class="menu-item" onclick="toggleMenu(this)">Help
+    <div class="menu-dropdown">
+      <div class="md-item">Getting Started</div>
+      <div class="md-item">Keyboard Shortcuts</div>
+      <div class="md-item">About Code Clarity</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MAIN AREA ════════════════════════════════════════════════ -->
+<div id="main">
+
+<!-- ── File Tree ──────────────────────────────────────────────── -->
+<div id="filetree">
+  <div class="ft-header">
+    <span>Explorer</span>
+    <span class="collapse-btn" onclick="document.getElementById('filetree').classList.toggle('collapsed')">◀</span>
+  </div>
+  <div class="ft-folder open" onclick="this.classList.toggle('open')">📁 my-project</div>
+  <div class="ft-children">
+    <div class="ft-file active" onclick="switchFile('main.py')"><span class="ft-icon">🐍</span> main.py</div>
+    <div class="ft-file" onclick="switchFile('utils.py')"><span class="ft-icon">🐍</span> utils.py</div>
+    <div class="ft-file" onclick="switchFile('helpers.c')"><span class="ft-icon">📄</span> helpers.c</div>
+    <div class="ft-file" onclick="switchFile('app.ul')"><span class="ft-icon">⚡</span> app.ul</div>
+    <div class="ft-folder" onclick="this.classList.toggle('open')">📁 tests</div>
+    <div class="ft-children" style="display:none">
+      <div class="ft-file"><span class="ft-icon">🐍</span> test_main.py</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Center: Editor ─────────────────────────────────────────── -->
+<div id="center">
+  <div id="editor-tabs">
+    <div class="etab active" data-file="main.py" onclick="switchFile('main.py')">🐍 main.py <span class="x">✕</span></div>
+    <div class="etab" data-file="helpers.c" onclick="switchFile('helpers.c')">📄 helpers.c <span class="x">✕</span></div>
+    <div class="etab" data-file="app.ul" onclick="switchFile('app.ul')">⚡ app.ul <span class="x">✕</span></div>
+    <button id="explain-btn" onclick="explainCode()" style="margin-left:auto;background:var(--mauve);color:#1e1e2e;font-weight:700;font-size:11px;padding:4px 14px">💡 Explain</button>
+    <button onclick="toggleLangGuide()" style="background:var(--teal);color:#1e1e2e;font-weight:700;font-size:11px;padding:4px 14px">📖 Language Guide</button>
+    <button onclick="openCodebaseExplainer()" style="background:var(--yellow);color:#1e1e2e;font-weight:700;font-size:11px;padding:4px 14px">🗺️ Walk Me Through This Code</button>
+    <span class="lang-badge python" id="lang-badge" style="margin-left:8px">Python 3.12</span>
+  </div>
+  <div id="bfs-mode-bar">
+    <span class="bfs-indicator">● BUILD FROM SCRATCH</span>
+    <span class="bfs-phase" id="bfs-phase">Phase: Design</span>
+    <button class="bfs-skip" onclick="skipLearningStep()">Skip Learning Step</button>
+    <button class="bfs-export" onclick="exportToStandard()">Export to Standard Clarity</button>
+  </div>
+  <div id="runtime-strip"></div>
+  <div id="bfs-editor-prompt">
+    <div class="bfs-icon">🔨</div>
+    <div class="bfs-title">Let's build something together</div>
+    <div class="bfs-sub">Tell the AI in the chat panel what you want to build.<br><br>Describe it in plain English — what it does, who it's for, what it should look like. The AI will walk you through choosing a language, setting up the project, and writing every piece of code step by step.<br><br><em>Example: "I want to build a to-do list app that saves tasks to a file"</em></div>
+  </div>
+  <div id="editor-area">
+    <div id="line-numbers"></div>
+    <div id="code-editor" contenteditable="true" spellcheck="false"></div>
+  </div>
+  <div id="results-pane">
+    <div class="rp-header"><span id="results-title">Output</span><span class="rp-close" onclick="closeResults()">✕</span></div>
+    <div id="results-content"></div>
+  </div>
+</div>
+
+<!-- ── Right Panel: Clarity (always) + AI Chat ────────────────── -->
+<div id="right-panel">
+  <!-- Clarity column -->
+  <div id="clarity-column">
+    <div style="padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:11px;font-weight:700;color:var(--accent)">Clarity</span>
+      <span style="cursor:pointer;color:var(--fg3);font-size:12px" onclick="toggleRightPane('clarity')">✕</span>
+    </div>
+    <div id="clarity-pane" style="border-bottom:none">
+    <div class="cl-header">Change Log</div>
+    <div class="cl-entry" onclick="toggleDetail(this)">
+      <div class="cl-title">Created a function that calculates total price</div>
+      <div class="cl-time">2 min ago — AI generated</div>
+      <div class="cl-detail">
+        <h4>What Changed</h4>
+        <p>Added a <code>calculate_total</code> function that takes a list of prices and a tax rate, returns the total with tax.</p>
+        <h4>Why</h4>
+        <p>You asked "make a function to calculate total price with tax." The AI multiplies the sum of prices by (1 + tax_rate).</p>
+        <h4>Concepts Used</h4>
+        <p><a href="#">Functions</a> — reusable blocks of code<br><a href="#">Parameters</a> — values passed in<br><a href="#">Return values</a> — what comes back</p>
+        <h4>What You'd Need to Know</h4>
+        <p>How to define a function with <code>def</code>, use <code>sum()</code>, and return a value.</p>
+        <span class="try-btn">Try It Yourself →</span>
+      </div>
+    </div>
+    <div class="cl-entry" onclick="toggleDetail(this)">
+      <div class="cl-title">Fixed the loop that was skipping the last item</div>
+      <div class="cl-time">5 min ago — AI fix</div>
+      <div class="cl-detail">
+        <h4>What Changed</h4>
+        <p>Changed <code>range(len(items) - 1)</code> to <code>range(len(items))</code>.</p>
+        <h4>Why</h4>
+        <p><code>range()</code> already excludes the upper bound. Subtracting 1 skipped the last item.</p>
+        <h4>Concepts Used</h4>
+        <p><a href="#">Off-by-one errors</a> — a common counting mistake</p>
+        <span class="try-btn">Try It Yourself →</span>
+      </div>
+    </div>
+    <div class="cl-entry" onclick="toggleDetail(this)">
+      <div class="cl-title">Added error handling for empty price lists</div>
+      <div class="cl-time">8 min ago — AI generated</div>
+      <div class="cl-detail">
+        <h4>What Changed</h4>
+        <p>Added a guard clause returning 0.0 if the list is empty.</p>
+        <h4>Why</h4>
+        <p>Prevents silent failures on empty input.</p>
+        <h4>Concepts Used</h4>
+        <p><a href="#">Guard clauses</a> — early returns that simplify logic</p>
+        <span class="try-btn">Try It Yourself →</span>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /clarity-column -->
+
+  <!-- Chat column -->
+  <div id="chat-column">
+    <div style="padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:11px;font-weight:700;color:var(--accent)">AI Chat</span>
+      <span style="cursor:pointer;color:var(--fg3);font-size:12px" onclick="toggleRightPane('chat')">✕</span>
+    </div>
+    <div id="ai-chat-pane" style="border-bottom:none">
+    <div class="chat-header">
+      <span>AI Chat</span>
+      <select><option>Claude Sonnet</option><option>GPT-4o</option><option>Gemini</option><option>Local (Ollama)</option></select>
+    </div>
+    <div class="chat-msgs">
+      <div class="chat-msg user"><div class="bubble">make a function to calculate total price with tax</div></div>
+      <div class="chat-msg ai"><div class="bubble">Done! I created <code>calculate_total</code> — it sums prices and applies the tax rate. Check the Clarity panel for details.</div></div>
+      <div class="chat-msg user"><div class="bubble">the loop is skipping the last item</div></div>
+      <div class="chat-msg ai"><div class="bubble">Fixed! <code>range(len(items) - 1)</code> was off by one — changed to <code>range(len(items))</code>.</div></div>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" placeholder="Describe what you want...">
+      <button>Send</button>
+    </div>
+  </div>
+  </div><!-- /chat-column -->
+</div><!-- /right-panel -->
+
+</div><!-- /main -->
+
+<!-- ═══ BUILD BAR ════════════════════════════════════════════════ -->
+<div id="buildbar">
+  <button class="bb-run" onclick="runCode()">▶ Run</button>
+  <button class="bb-build">🔨 Build</button>
+  <button class="bb-memcheck" id="memcheck-btn" onclick="runMemCheck()">Mem Check for C</button>
+  <div class="bb-sep"></div>
+  <span class="bb-label">Target:</span>
+  <select id="target-select"><option>My Computer</option></select>
+  <div class="bb-spacer"></div>
+  <button id="results-toggle" onclick="toggleResults()">Output</button>
+</div>
+
+<!-- ═══ STATUS BAR ═══════════════════════════════════════════════ -->
+<div id="statusbar">
+  <span><span class="dot"></span>Ready</span>
+  <span id="status-lang">Python 3.12</span>
+  <span>UTF-8</span>
+  <span>Ln 1, Col 1</span>
+  <div style="flex:1"></div>
+  <span id="status-clarity">Clarity: Level 1</span>
+</div>
+
+</div><!-- /app -->
+
+<!-- ═══ OVERLAYS ═════════════════════════════════════════════════ -->
+
+<!-- Statement Expander -->
+<div id="expander-overlay">
+  <div class="exp-title">Statement Expander</div>
+  <p style="font-size:11px;color:var(--fg2);margin-bottom:10px">Breaks compressed/nested statements into one operation per line.</p>
+  <div class="exp-demo">
+    <div class="exp-original">result = transform(normalize(data.get_values()), config.settings["threshold"] * scale)</div>
+    <div class="exp-arrow">↓</div>
+    <div class="exp-expanded">
+      <span class="exp-marker"># ── Expanded by Clarity ──</span><br>
+      values = data.get_values()<br>
+      normalized = normalize(values)<br>
+      threshold = config.settings["threshold"]<br>
+      scaled = threshold * scale<br>
+      result = transform(normalized, scaled)<br>
+      <span class="exp-marker"># ── End expansion ──</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button style="background:var(--peach);color:#1e1e2e;font-weight:600" onclick="alert('Would scan and expand all nested statements in the current file')">Expand Current File</button>
+    <button class="exp-close" onclick="closeOverlay('expander-overlay')">Close</button>
+  </div>
+</div>
+
+<!-- Tutorials -->
+<div id="tutorials-overlay">
+  <span class="tut-close" onclick="closeOverlay('tutorials-overlay')">✕</span>
+  <div class="tut-title">Tutorials &amp; Examples</div>
+  <div class="tut-sub">Interactive lessons with guided exercises</div>
+  <div class="tut-lang-group">
+    <div class="tut-lang-label">🐍 Python</div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">1. Hello World <span class="tut-badge">Interactive</span></div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">2. Variables and Math <span class="tut-badge">Interactive</span></div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">3. Functions <span class="tut-badge">Interactive</span></div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">4. Loops and Conditions <span class="tut-badge error">Has errors to fix</span></div>
+    <div class="tut-lesson">5. Reading/Writing Files</div>
+    <div class="tut-lesson">6. Lists and Dicts</div>
+    <div class="tut-lesson">7. Error Handling</div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">8. Classes and Objects <span class="tut-badge">Interactive</span></div>
+  </div>
+  <div class="tut-lang-group">
+    <div class="tut-lang-label">📄 C</div>
+    <div class="tut-lesson">1. Hello World</div>
+    <div class="tut-lesson">2. Variables and Pointers</div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">3. malloc and free <span class="tut-badge error">Has errors to fix</span></div>
+    <div class="tut-lesson">4. Arrays and Strings</div>
+    <div class="tut-lesson">5. Structs</div>
+  </div>
+  <div class="tut-lang-group">
+    <div class="tut-lang-label">⚡ UniLogic</div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">1. Hello World <span class="tut-badge">Interactive</span></div>
+    <div class="tut-lesson">2. Functions and Types</div>
+    <div class="tut-lesson">3. Memory Models (GC vs Manual)</div>
+    <div class="tut-lesson">4. Compile to Multiple Targets</div>
+    <div class="tut-lesson" onclick="alert('Load tutorial')">5. Concurrency <span class="tut-badge error">Has errors to fix</span></div>
+  </div>
+</div>
+
+<!-- Teach Me the Basics -->
+<div id="basics-overlay">
+  <button class="bp-close" onclick="closeBasics()">✕ Close</button>
+  <div class="basics-wrap" id="basics-pages"></div>
+  <div class="basics-nav">
+    <button onclick="basicsNav(-1)" style="background:var(--bg3);color:var(--fg)" id="basics-prev">← Back</button>
+    <div class="basics-dot-row" id="basics-dots"></div>
+    <button onclick="basicsNav(1)" style="background:var(--accent);color:#1e1e2e" id="basics-next">Next →</button>
+  </div>
+</div>
+
+<!-- Language Tutorial -->
+<div id="lang-tutorial">
+  <span class="lt-close" onclick="closeOverlay('lang-tutorial')">✕</span>
+  <div class="lt-title" id="lt-title">Python — Language Reference</div>
+  <div class="lt-sub" id="lt-sub">What this language gives you, what it doesn't, and why it matters</div>
+  <div id="lt-body"></div>
+</div>
+
+<!-- Help tooltip -->
+<div id="help-tooltip"><div class="ht-title"></div><div class="ht-body"></div></div>
+
+<script>
+// ═══ SAMPLE CODE ════════════════════════════════════════════════
+const FILES = {
+  "main.py": {
+    lang: "python", badge: "Python 3.12", badgeClass: "python",
+    code: `def calculate_total(prices, tax_rate=0.10):
+    """Calculate total price with tax."""
+    if not prices:
+        return 0.0
+
+    subtotal = 0
+    for i in range(len(prices)):
+        subtotal += prices[i]
+
+    total = subtotal * (1 + tax_rate)
+    return round(total, 2)
+
+
+def main():
+    items = [12.99, 5.50, 3.75, 8.00, 15.25]
+    total = calculate_total(items)
+    print(f"Subtotal: \${sum(items):.2f}")
+    print(f"Total with tax: \${total:.2f}")
+    print(f"Items: {len(items)}")
+
+
+if __name__ == "__main__":
+    main()`,
+    output: `Subtotal: $45.49\nTotal with tax: $50.04\nItems: 5`
+  },
+  "helpers.c": {
+    lang: "c", badge: "C (gcc)", badgeClass: "c",
+    code: `#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct {
+    char* name;
+    double price;
+} Item;
+
+Item* create_item(const char* name, double price) {
+    Item* item = malloc(sizeof(Item));
+    item->name = (char*)name;
+    item->price = price;
+    return item;
+}
+
+double total_price(Item** items, int count) {
+    double total = 0;
+    for (int i = 0; i < count; i++) {
+        total += items[i]->price;
+    }
+    return total;
+}
+
+int main() {
+    Item* items[3];
+    items[0] = create_item("Widget", 12.99);
+    items[1] = create_item("Gadget", 5.50);
+    items[2] = create_item("Doohickey", 3.75);
+
+    printf("Total: $%.2f\\n", total_price(items, 3));
+
+    // Memory leak: items never freed!
+    return 0;
+}`,
+    output: `Total: $22.24`
+  },
+  "app.ul": {
+    lang: "ul", badge: "UniLogic", badgeClass: "ul",
+    code: `function calculate_total(list float prices, float tax_rate) returns float
+    if size(prices) == 0
+        return 0.0
+    end if
+
+    float subtotal = 0.0
+    for each p in prices
+        subtotal += p
+    end for
+
+    return subtotal * (1.0 + tax_rate)
+end function
+
+function main() returns int
+    list float items = [12.99, 5.50, 3.75, 8.00, 15.25]
+    float total = calculate_total(items, 0.10)
+    print "Total with tax: " + change(total)->string
+    return 0
+end function`,
+    output: `Total with tax: 50.039`
+  }
+};
+
+let currentFile = "main.py";
+
+// ═══ EDITOR ═════════════════════════════════════════════════════
+const editor = document.getElementById("code-editor");
+const lineNums = document.getElementById("line-numbers");
+
+function updateLineNumbers() {
+  const n = editor.textContent.split("\n").length;
+  lineNums.innerHTML = Array.from({length: n}, (_, i) => `<div>${i+1}</div>`).join("");
+}
+
+function switchFile(name) {
+  if (!FILES[name]) return;
+  currentFile = name;
+  const f = FILES[name];
+  editor.textContent = f.code;
+  updateLineNumbers();
+
+  // Update tabs
+  document.querySelectorAll(".etab").forEach(t => t.classList.toggle("active", t.dataset.file === name));
+  document.querySelectorAll(".ft-file").forEach(t => t.classList.remove("active"));
+  const ftFile = [...document.querySelectorAll(".ft-file")].find(el => el.textContent.trim().includes(name));
+  if (ftFile) ftFile.classList.add("active");
+
+  // Badge
+  const badge = document.getElementById("lang-badge");
+  badge.textContent = f.badge;
+  badge.className = "lang-badge " + f.badgeClass;
+  document.getElementById("status-lang").textContent = f.badge;
+
+  // Mem Check button: only show for C
+  document.getElementById("memcheck-btn").classList.toggle("show", f.lang === "c");
+
+  // Reset explain mode and results
+  explainActive = false;
+  document.getElementById("explain-btn").textContent = "💡 Explain";
+  document.getElementById("explain-btn").style.background = "var(--mauve)";
+  closeResults();
+  updateRuntimeStrip();
+}
+
+editor.textContent = FILES["main.py"].code;
+updateLineNumbers();
+editor.addEventListener("input", updateLineNumbers);
+
+// ═══ MENUS ══════════════════════════════════════════════════════
+function toggleMenu(item) {
+  const dd = item.querySelector(".menu-dropdown");
+  const wasOpen = dd.classList.contains("open");
+  document.querySelectorAll(".menu-dropdown").forEach(d => d.classList.remove("open"));
+  if (!wasOpen) dd.classList.add("open");
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest(".menu-item")) {
+    document.querySelectorAll(".menu-dropdown").forEach(d => d.classList.remove("open"));
+  }
+});
+
+// ═══ RIGHT PANEL TOGGLES ════════════════════════════════════════
+function toggleRightPane(which) {
+  if (which === "clarity") document.getElementById("clarity-column").classList.toggle("hidden");
+  if (which === "chat") document.getElementById("chat-column").classList.toggle("hidden");
+}
+
+// ═══ CLARITY DETAIL ═════════════════════════════════════════════
+function toggleDetail(entry) { entry.querySelector(".cl-detail").classList.toggle("open"); }
+
+// ═══ RUN / BUILD ════════════════════════════════════════════════
+function runCode() {
+  const f = FILES[currentFile];
+  const pane = document.getElementById("results-pane");
+  const content = document.getElementById("results-content");
+  document.getElementById("results-title").textContent = "Output";
+  content.innerHTML = `<div class="rp-output">${(f.output || "No output").replace(/\n/g, "<br>")}</div>`;
+  pane.classList.add("visible");
+  document.getElementById("results-toggle").classList.add("has-output");
+}
+
+function runMemCheck() {
+  const pane = document.getElementById("results-pane");
+  const content = document.getElementById("results-content");
+  document.getElementById("results-title").textContent = "Memory Check — helpers.c";
+  content.innerHTML = `
+    <div class="mc-finding"><span class="mc-sev warn">⚠</span><span class="mc-msg">Line 11: <code>malloc</code> without matching <code>free</code>. This will leak memory.</span><span class="mc-help" onclick="showHelp(this,'Memory Leak','You allocated memory with malloc() but never called free() on it. Every malloc needs a matching free, or the memory is lost until the program exits.')">What does this mean?</span></div>
+    <div class="mc-finding"><span class="mc-sev warn">⚠</span><span class="mc-msg">Line 34: items[0], items[1], items[2] allocated but never freed.</span><span class="mc-help" onclick="showHelp(this,'Unfree\\'d Pointers','Three Item pointers were created with create_item() (which calls malloc) but never freed before main() returns.')">What does this mean?</span></div>
+    <div class="mc-finding"><span class="mc-sev err">✗</span><span class="mc-msg">Line 12: <code>item->name</code> assigned from const pointer without copy — potential use-after-free if source is stack-allocated.</span><span class="mc-help" onclick="showHelp(this,'Dangling Pointer Risk','The name pointer is assigned directly from the argument. If the caller passes a stack string that goes out of scope, this pointer becomes invalid.')">What does this mean?</span></div>`;
+  pane.classList.add("visible");
+}
+
+function toggleResults() { document.getElementById("results-pane").classList.toggle("visible"); }
+function closeResults() { document.getElementById("results-pane").classList.remove("visible"); }
+
+// ═══ RUNTIME INFO OVERLAY ═══════════════════════════════════════
+const RUNTIMES = {
+  python: { title: "Python Runtime", rows: [
+    ["Language", "Python 3.12", "CPython", "The standard Python interpreter. Code is compiled to bytecode then interpreted — not native machine code."],
+    ["Runtime", "CPython (interpreter)", null, null],
+    ["Memory", "Garbage Collected (automatic)", "GC", "Python automatically tracks objects and frees memory when they\\'re no longer used. You never call malloc or free."],
+    ["Threading", "GIL (one thread at a time)", "GIL", "The Global Interpreter Lock means only one thread runs Python code at a time. Use multiprocessing for true parallelism."],
+    ["VM", "Bytecode → interpreted", "Bytecode", "Your .py is compiled to .pyc bytecode, then the CPython VM reads it instruction by instruction. Not native code."],
+  ]},
+  c: { title: "C Runtime", rows: [
+    ["Language", "C (compiled)", null, null],
+    ["Runtime", "Native binary (no interpreter)", null, null],
+    ["Memory", "Manual (malloc/free)", "Manual Memory", "You allocate with malloc() and free with free(). Forget to free → memory leak. Free twice → crash. This is what Mem Check helps catch."],
+    ["Threading", "pthreads (OS-level threads)", "pthreads", "C uses OS threads directly. No GIL — threads run truly in parallel. But you must handle synchronization yourself."],
+    ["Compiled by", "gcc", null, null],
+  ]},
+  ul: { title: "UniLogic Runtime — Configurable", tunable: true, rows: [
+    ["Memory", ["gc","manual","refcount","arena"], "Memory Model", "gc = automatic garbage collection. manual = you call memtake/memgive. refcount = reference counting. arena = bulk allocate, free all at once. Change and recompile to feel the difference."],
+    ["Safety", ["checked","unchecked","memory_safe"], "Safety Level", "checked = compiler catches errors. unchecked = no checks, max speed. memory_safe = full bounds + null safety."],
+    ["Types", ["strict","dynamic","gradual"], "Type Strictness", "strict = all types at compile time. dynamic = checked at runtime. gradual = mix."],
+    ["Concurrency", ["threaded","parallel","async","cooperative"], "Concurrency", "threaded = OS threads. parallel = OpenMP data parallelism. async = coroutines. cooperative = manual yield."],
+    ["Target", ["C (native)","Python","JavaScript","WASM","Bytecode VM"], "Target", "Same source, multiple outputs. C = native binary. Python/JS = transpile. WASM = browser. Bytecode = UL VM."],
+  ]},
+};
+
+function toggleRuntime() {
+  document.getElementById("runtime-strip").classList.toggle("hidden");
+}
+
+function updateRuntimeStrip() {
+  const strip = document.getElementById("runtime-strip");
+  const f = FILES[currentFile];
+  const rt = RUNTIMES[f.lang] || RUNTIMES.python;
+  let html = "";
+  for (const [label, value, helpTitle, helpBody] of rt.rows) {
+    if (Array.isArray(value)) {
+      const opts = value.map(v => `<option>${v}</option>`).join("");
+      html += `<div class="rs-item"><span class="rs-label">${label}:</span><select class="rs-value tunable">${opts}</select>`;
+      if (helpTitle) html += `<span class="help-dot" onclick="showHelp(this,'${helpTitle}','${helpBody}')">?</span>`;
+      html += `</div><div class="rs-sep"></div>`;
+    } else {
+      html += `<div class="rs-item"><span class="rs-label">${label}:</span><span class="rs-value">${value}</span>`;
+      if (helpTitle) html += `<span class="help-dot" onclick="showHelp(this,'${helpTitle}','${helpBody}')">?</span>`;
+      html += `</div><div class="rs-sep"></div>`;
+    }
+  }
+  html += `<span class="rs-dismiss" onclick="toggleRuntime()" title="Hide runtime strip">✕</span>`;
+  strip.innerHTML = html;
+}
+
+// ═══ OVERLAYS ═══════════════════════════════════════════════════
+function openExpander() { document.getElementById("expander-overlay").classList.add("visible"); }
+function openTutorials() { document.getElementById("tutorials-overlay").classList.add("visible"); }
+// ═══ LANGUAGE TUTORIAL ═══════════════════════════════════════════
+const LANG_TUTORIALS = {
+  python: {
+    title: "Python — Language Reference",
+    sub: "Interpreted, garbage-collected, dynamically typed. Great for beginners and data work. Slow for CPU-heavy tasks.",
+    sections: [
+      { name: "Runtime", rows: [
+        ["Compiled or Interpreted", "info", "Interpreted (bytecode)", "Python compiles your .py to bytecode (.pyc), then the CPython interpreter reads it instruction by instruction. It never becomes native machine code unless you use tools like Nuitka or Cython."],
+        ["Execution Speed", "partial", "Slow for CPU work", "Python is 10-100x slower than C for pure computation. The GIL, dynamic typing, and interpretation all contribute. Fine for I/O, scripting, and glue code."],
+        ["Startup Time", "info", "~50ms", "Python loads the interpreter, imports modules, compiles bytecode. Heavier than C but lighter than Java."],
+      ]},
+      { name: "Memory", rows: [
+        ["Memory Model", "info", "Garbage Collected", "Python uses reference counting plus a cyclic garbage collector. You never call malloc or free. Objects are freed when nothing references them."],
+        ["Manual Memory Control", "no", "No", "You cannot control when memory is allocated or freed. Python decides. This prevents memory leaks from programmer error but means you can't optimize memory usage."],
+        ["Stack vs Heap", "info", "Everything on heap", "All Python objects live on the heap. Local variables are references (pointers) to heap objects. The stack only holds these references, not the data itself."],
+      ]},
+      { name: "Threading & Concurrency", rows: [
+        ["True Parallelism", "no", "No (GIL)", "The Global Interpreter Lock means only one thread executes Python at a time. For CPU parallelism, use multiprocessing (separate processes) or C extensions."],
+        ["Async/Await", "yes", "Yes", "Python has native async/await for I/O concurrency. Good for network requests, file I/O, web servers. Not for CPU-bound work."],
+        ["Threads", "partial", "Yes, but limited", "threading module exists but threads don't run in parallel for Python code due to the GIL. Useful only for I/O-bound waiting."],
+      ]},
+      { name: "Object-Oriented Features", rows: [
+        ["Classes", "yes", "Yes", "Full class support with constructors (__init__), methods, properties, class variables, static methods."],
+        ["Inheritance", "yes", "Yes (multiple)", "Python supports multiple inheritance with MRO (Method Resolution Order). Can inherit from multiple classes."],
+        ["Polymorphism", "yes", "Yes (duck typing)", "If it walks like a duck and quacks like a duck, it's a duck. No interfaces needed — just implement the same methods."],
+        ["Interfaces", "partial", "ABC only", "Python has Abstract Base Classes (abc module) but no formal interface keyword. Duck typing is the standard approach."],
+        ["Encapsulation", "partial", "Convention only", "Python uses _ prefix for 'private' but nothing is truly private. It's a convention, not enforced by the language."],
+      ]},
+      { name: "Type System", rows: [
+        ["Static Types", "no", "No (optional hints)", "Python is dynamically typed. Type hints (PEP 484) exist but are not enforced at runtime — they're for tools like mypy."],
+        ["Generics", "partial", "Type hints only", "Generic type hints exist (list[int], dict[str, Any]) but are not enforced. The runtime doesn't check them."],
+        ["Null Safety", "no", "No", "None can be assigned to anything. No compile-time null checks. NoneType errors are a top Python bug."],
+      ]},
+      { name: "Quirks & Gotchas", rows: [
+        ["Mutable Default Args", "partial", "Dangerous", "def f(items=[]): — the default list is shared across ALL calls. A classic Python trap. Use None as default instead."],
+        ["Indentation is Syntax", "info", "Yes", "Python uses indentation to define blocks. No braces. A misaligned line changes the program's meaning."],
+        ["GIL", "partial", "Major limitation", "The Global Interpreter Lock is Python's biggest architectural constraint. It prevents true multi-threaded parallelism for CPU work."],
+      ]},
+    ]
+  },
+  c: {
+    title: "C — Language Reference",
+    sub: "Compiled to native code. Manual memory. Maximum control, maximum responsibility. The language that built operating systems.",
+    sections: [
+      { name: "Runtime", rows: [
+        ["Compiled or Interpreted", "info", "Compiled (native binary)", "C compiles directly to machine code. No interpreter, no VM, no runtime. The output is a standalone binary the CPU executes directly."],
+        ["Execution Speed", "yes", "Fastest possible", "C code runs at near-hardware speed. No overhead from garbage collection, interpretation, or dynamic dispatch. This is why OS kernels are written in C."],
+        ["Startup Time", "yes", "Instant (~1ms)", "A C binary starts immediately. No runtime to load, no bytecode to compile, no modules to import."],
+      ]},
+      { name: "Memory", rows: [
+        ["Memory Model", "info", "Manual (malloc/free)", "You allocate memory with malloc() and free it with free(). Forget to free = memory leak. Free twice = crash. Free then use = undefined behavior."],
+        ["Stack vs Heap", "info", "Both, you choose", "Local variables go on the stack (automatic, fast, limited size). Dynamic data goes on the heap (malloc, unlimited, you manage lifetime). Understanding this distinction is critical in C."],
+        ["Pointers", "yes", "Yes (central concept)", "Pointers are memory addresses. C gives you direct access to memory through pointers. Powerful but dangerous — invalid pointers cause segfaults and security vulnerabilities."],
+        ["Buffer Overflows", "no", "No protection", "C does not check array bounds. Writing past the end of an array overwrites whatever is next in memory. This is the #1 source of security vulnerabilities in C code."],
+      ]},
+      { name: "Threading & Concurrency", rows: [
+        ["True Parallelism", "yes", "Yes (pthreads)", "C threads run truly in parallel on multiple CPU cores. No GIL. But you must handle synchronization (mutexes, race conditions) yourself."],
+        ["Async/Await", "no", "No", "C has no built-in async. You can use libraries like libuv or write event loops manually, but it's not a language feature."],
+        ["Data Races", "no", "No protection", "C does nothing to prevent two threads from writing to the same memory simultaneously. You must use mutexes and atomics correctly. Getting this wrong causes hard-to-debug crashes."],
+      ]},
+      { name: "Object-Oriented Features", rows: [
+        ["Classes", "no", "No", "C has no classes. You use structs for data grouping and function pointers for behavior. It's manual but possible."],
+        ["Inheritance", "no", "No", "No language support. You can simulate it by embedding one struct inside another, but the compiler doesn't help you."],
+        ["Polymorphism", "partial", "Manual (function ptrs)", "You can create vtable-like dispatch using arrays of function pointers, but it's entirely manual. No compiler support."],
+        ["Interfaces", "no", "No", "No concept of interfaces. You use conventions and function pointer structs."],
+        ["Encapsulation", "partial", "Header files only", "You can hide implementation in .c files and only expose declarations in .h headers. But anything in a struct is accessible."],
+      ]},
+      { name: "Type System", rows: [
+        ["Static Types", "yes", "Yes", "C is statically typed. Every variable has a declared type checked at compile time."],
+        ["Generics", "no", "No", "C has no generics. You use void* (type-erased pointers) or preprocessor macros, both losing type safety."],
+        ["Null Safety", "no", "No", "NULL can be assigned to any pointer. Dereferencing NULL = crash (segfault). No compile-time protection."],
+      ]},
+      { name: "Quirks & Gotchas", rows: [
+        ["Undefined Behavior", "no", "Everywhere", "C has hundreds of undefined behaviors — signed overflow, null deref, use-after-free, buffer overflow. The compiler assumes these never happen and optimizes accordingly. When they do happen, anything can occur."],
+        ["No Strings", "info", "char arrays + \\\\0", "C has no string type. Strings are null-terminated char arrays. You manage the memory, the length, and the null terminator yourself."],
+        ["Header Files", "info", "Required", "C separates declarations (.h) from implementations (.c). You must manually keep them in sync. Forgetting an include causes cryptic errors."],
+        ["Preprocessor", "partial", "Powerful but fragile", "#define macros are text substitution before compilation. They don't respect scope, types, or namespaces. Misuse causes baffling bugs."],
+      ]},
+    ]
+  },
+  ul: {
+    title: "UniLogic — Language Reference",
+    sub: "Compiled, configurable runtime, multi-target. Python's ease with C's output. Everything is tunable.",
+    sections: [
+      { name: "Runtime", rows: [
+        ["Compiled or Interpreted", "info", "Compiled (multi-target)", "UL compiles to C (native binary), Python, JavaScript, WASM, or bytecode from the same source. You choose the target."],
+        ["Execution Speed", "yes", "C-speed when targeting C", "When compiled to C → native binary, UL code runs at the same speed as hand-written C. Other targets run at their platform's speed."],
+        ["Memory Model", "yes", "You choose", "gc, manual, refcount, or arena — all from one @dr line. Switch and recompile to see the difference. No other language lets you do this."],
+      ]},
+      { name: "Memory", rows: [
+        ["Garbage Collection", "yes", "Yes (gc mode)", "Using Boehm GC linked into the native binary. Automatic, no free() calls needed."],
+        ["Manual Memory", "yes", "Yes (manual mode)", "memtake/memgive (malloc/free). You control allocation and deallocation."],
+        ["Reference Counting", "yes", "Yes (refcount mode)", "Automatic increment/decrement. Freed when count hits zero."],
+        ["Arena Allocation", "yes", "Yes (arena mode)", "Bulk allocate, free everything at once. Fast for batch processing."],
+      ]},
+      { name: "Threading & Concurrency", rows: [
+        ["True Parallelism", "yes", "Yes (threaded mode)", "pthreads when targeting C. Real OS threads, true parallelism."],
+        ["Data Parallelism", "yes", "Yes (parallel mode)", "OpenMP-based parallel for loops. Automatic work distribution."],
+        ["Async/Await", "yes", "Yes (async mode)", "Coroutine-based async. Non-blocking I/O."],
+        ["Cooperative", "yes", "Yes (cooperative mode)", "Manual yield_now/schedule. Lightweight green threads."],
+      ]},
+      { name: "Object-Oriented Features", rows: [
+        ["Types (structs)", "yes", "Yes", "Zero-overhead C structs. Data only, no methods."],
+        ["Objects (OOP)", "yes", "Yes (vtable dispatch)", "Full OOP with constructors, methods, vtable-based polymorphism."],
+        ["Inheritance", "yes", "Yes (forks keyword)", "object Dog forks Animal — copies and extends. Multiple inheritance supported."],
+        ["Polymorphism", "yes", "Yes (automatic)", "Variable typed as parent, assigned child — vtable dispatches correctly."],
+        ["Interfaces", "yes", "Yes", "interface keyword. Semcheck enforces all methods present."],
+      ]},
+      { name: "Type System", rows: [
+        ["Static Types", "yes", "Yes (strict mode)", "Full compile-time type checking in strict mode."],
+        ["Dynamic Types", "yes", "Yes (dynamic mode)", "Runtime type checking in dynamic mode. Switch with one @dr line."],
+        ["Gradual Types", "yes", "Yes (gradual mode)", "Mix typed and untyped. Typed where you want safety, untyped where you want speed."],
+        ["Null Safety", "yes", "Yes (@nullable)", "@nullable annotation. Non-nullable by default."],
+      ]},
+    ]
+  },
+};
+
+function toggleLangGuide() {
+  const el = document.getElementById("lang-tutorial");
+  if (el.classList.contains("visible")) { el.classList.remove("visible"); return; }
+  openLangGuide();
+}
+
+function openLangGuide() {
+  const f = FILES[currentFile];
+  const tut = LANG_TUTORIALS[f.lang];
+  if (!tut) { alert("No language tutorial available for this file type yet."); return; }
+
+  document.getElementById("lt-title").textContent = tut.title;
+  document.getElementById("lt-sub").textContent = tut.sub;
+
+  let html = "";
+  for (const section of tut.sections) {
+    html += `<div class="lt-section">${section.name}</div>`;
+    if (section.desc) html += `<div class="lt-desc">${section.desc}</div>`;
+    for (const [label, status, value, helpText] of section.rows) {
+      html += `<div class="lt-row">
+        <span class="lt-label">${label}</span>
+        <span class="lt-val ${status}">${value}</span>`;
+      if (helpText) {
+        html += `<span class="lt-help" onclick="showHelp(this,'${label}','${helpText.replace(/'/g, "\\'")}')">?</span>`;
+      }
+      html += `</div>`;
+    }
+  }
+
+  document.getElementById("lt-body").innerHTML = html;
+  document.getElementById("lang-tutorial").classList.add("visible");
+}
+
+function openCodebaseExplainer() { alert("Codebase Explainer: Structure map + Execution flow visualization"); }
+function closeOverlay(id) { document.getElementById(id).classList.remove("visible"); }
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    document.querySelectorAll("#expander-overlay,#tutorials-overlay,#lang-tutorial").forEach(o => o.classList.remove("visible"));
+  }
+});
+
+// ═══ HELP TOOLTIP ═══════════════════════════════════════════════
+const tooltip = document.getElementById("help-tooltip");
+let tipTimer;
+function showHelp(btn, title, body) {
+  clearTimeout(tipTimer);
+  tooltip.querySelector(".ht-title").textContent = title;
+  tooltip.querySelector(".ht-body").textContent = body;
+  const r = btn.getBoundingClientRect();
+  tooltip.style.top = (r.bottom + 6) + "px";
+  tooltip.style.left = Math.min(r.left, window.innerWidth - 320) + "px";
+  tooltip.classList.add("visible");
+  tipTimer = setTimeout(() => tooltip.classList.remove("visible"), 5000);
+}
+document.addEventListener("click", e => {
+  if (!e.target.classList.contains("help-dot") && !e.target.classList.contains("mc-help") && !tooltip.contains(e.target))
+    tooltip.classList.remove("visible");
+});
+
+// ═══ WALK ME THROUGH THIS CODE ═══════════════════════════════════
+function openCodebaseExplainer() {
+  const msgs = document.querySelector(".chat-msgs");
+  const f = FILES[currentFile];
+  msgs.innerHTML += `<div class="chat-msg ai"><div class="bubble">
+    <b>Walking you through ${currentFile}:</b><br><br>
+    <b>What this file does:</b> It defines a <code>calculate_total</code> function and a <code>main</code> entry point. When run, it creates a list of prices, calculates tax, and prints the results.<br><br>
+    <b>Execution flow:</b><br>
+    1. Python checks <code>if __name__ == "__main__"</code> → true, so it calls <code>main()</code><br>
+    2. <code>main()</code> creates the items list with 5 prices<br>
+    3. <code>main()</code> calls <code>calculate_total(items)</code> with default 10% tax<br>
+    4. <code>calculate_total</code> loops through prices, sums them, multiplies by 1.10<br>
+    5. Result returned to <code>main()</code>, which prints three lines<br><br>
+    <b>Key relationships:</b> <code>main()</code> depends on <code>calculate_total()</code>. No external imports. Self-contained single-file program.
+  </div></div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  // Switch to chat panel if not visible
+  if (document.getElementById("ai-chat-pane").classList.contains("hidden")) {
+    toggleRightPane("chat");
+  }
+}
+
+// ═══ TEACH ME THE BASICS ════════════════════════════════════════
+const BASICS_PAGES = [
+  { title: "What is Code?", sub: "Page 1 of 12", cards: [
+    { h: "Code is Instructions", p: "Code is a list of instructions that tells a computer what to do, step by step. Like a recipe — the computer follows it exactly." },
+    { h: "Why Text?", p: "You could click buttons in a visual tool, but text is faster, more precise, and what every professional uses. Every app on your phone was written as text." },
+    { h: "Languages", p: "Just like human languages, there are many programming languages. Each has strengths. Python is easy to read. C is fast. JavaScript runs in browsers. You pick the one that fits your job." },
+  ]},
+  { title: "Variables and Types", sub: "Page 2 of 12", cards: [
+    { h: "Variables", p: "A variable is a named container. <code>price = 12.99</code> stores the number 12.99 under the name \"price\". You can read it, change it, and use it later." },
+    { h: "Types", p: "Types describe what kind of data something is. <code>42</code> is an integer (whole number). <code>3.14</code> is a float (decimal). <code>\"hello\"</code> is a string (text). <code>true</code> is a boolean (yes/no)." },
+    { h: "Why Types Matter", p: "You can add two numbers: <code>5 + 3 = 8</code>. You can add two strings: <code>\"hi\" + \" there\" = \"hi there\"</code>. But <code>5 + \"hi\"</code> doesn't make sense — the type tells the computer what \"add\" means." },
+  ]},
+  { title: "Functions and Methods", sub: "Page 3 of 12", cards: [
+    { h: "Functions", p: "A function is a reusable block of code with a name. <code>calculate_total(prices)</code> takes a list of prices and returns the total. You write it once, call it as many times as you want." },
+    { h: "Parameters and Returns", p: "Parameters are the inputs (what you pass in). Return values are the outputs (what comes back). <code>add(3, 7)</code> → passes 3 and 7 in, gets 10 back." },
+    { h: "Methods", p: "A method is a function that belongs to an object. <code>myList.append(5)</code> — append is a method on the list. Same idea as a function, just attached to something." },
+  ]},
+  { title: "Loops and Conditions", sub: "Page 4 of 12", cards: [
+    { h: "If/Else", p: "Decisions. <code>if temperature > 100: alarm()</code> — the code only runs when the condition is true. <code>else</code> handles the other case." },
+    { h: "Loops", p: "Repeating things. <code>for item in list: process(item)</code> — runs the body once for every item. Without loops, you'd copy-paste the same code hundreds of times." },
+    { h: "While Loops", p: "<code>while not done: keep_trying()</code> — repeats until a condition changes. Useful when you don't know how many times you'll need to loop." },
+  ]},
+  { title: "Objects, Classes, and Structs", sub: "Page 5 of 12", cards: [
+    { h: "Structs / Types", p: "A struct groups related data together. An <code>Item</code> struct might have a <code>name</code> (string) and <code>price</code> (float). Instead of two separate variables, you have one thing with two fields." },
+    { h: "Classes and Objects", p: "A class is a struct that also has functions (methods) attached. An object is one instance of a class. <code>class Dog</code> defines the template. <code>myDog = Dog(\"Rex\")</code> creates one specific dog." },
+    { h: "Inheritance", p: "A class can extend another. <code>class Poodle extends Dog</code> — Poodle gets everything Dog has, plus its own additions. Not all languages have this — C doesn't. Python and UL do." },
+    { h: "Polymorphism", p: "Using a parent type to handle different children. A variable typed as <code>Animal</code> can hold a Dog, Cat, or Bird. The right method runs based on what's actually stored. This is how plugins and frameworks work." },
+  ]},
+  { title: "Algorithms", sub: "Page 6 of 12", cards: [
+    { h: "What's an Algorithm?", p: "A step-by-step recipe for solving a problem. \"Sort this list from smallest to largest\" is a problem. Bubble sort, merge sort, quicksort are algorithms — different recipes for the same result, with different speeds." },
+    { h: "Big O Notation", p: "A way to describe how slow something gets as the input grows. O(n) means the time grows linearly — twice the data, twice the time. O(n²) means it gets much worse. You don't need to memorize this, but knowing it exists helps you understand why some code is slow." },
+    { h: "You Already Use Them", p: "Every time you search, sort, filter, or deduplicate data — that's an algorithm. Libraries like Python's <code>sorted()</code> use optimized algorithms so you don't have to write them yourself." },
+  ]},
+  { title: "How Code Runs", sub: "Page 7 of 12", cards: [
+    { h: "The Call Stack", p: "When a function calls another function, the computer remembers where it was. This stack of \"return addresses\" is the call stack. When the inner function finishes, execution returns to where it left off. Stack overflow = too many nested calls." },
+    { h: "Compiled vs Interpreted", p: "<b>Compiled</b> (C, Rust): your code is translated to machine code BEFORE it runs. The output is a standalone binary. <b>Interpreted</b> (Python): your code is read and executed line by line by another program (the interpreter)." },
+    { h: "JIT vs AOT", p: "<b>AOT</b> (Ahead of Time): compile everything before running. C does this. <b>JIT</b> (Just in Time): compile hot paths while running. Java and JavaScript do this. JIT can be fast but uses more memory at startup." },
+    { h: "VMs and Bytecode", p: "Some languages (Java, Python) compile to an intermediate format (bytecode), then a virtual machine interprets it. The VM is a program that pretends to be a computer. Slower than native code, but portable — runs anywhere the VM exists." },
+  ]},
+  { title: "Memory", sub: "Page 8 of 12", cards: [
+    { h: "What is Memory?", p: "RAM — temporary, fast storage. Every variable, object, and string lives in memory while your program runs. When the program exits, it's all gone." },
+    { h: "Stack vs Heap", p: "The <b>stack</b> is small, fast, automatic — local variables go here. The <b>heap</b> is large, slower, manual — objects you create with <code>new</code> or <code>malloc</code> go here. Python puts everything on the heap. C lets you choose." },
+    { h: "Garbage Collection", p: "Some languages (Python, Java, Go) automatically find and free memory you're no longer using. You never think about it. The downside: the GC pauses your program briefly to do its work." },
+    { h: "Manual Memory", p: "In C, YOU allocate (<code>malloc</code>) and free (<code>free</code>). Forget to free = memory leak (your program slowly eats all RAM). Free twice = crash. Use after free = security vulnerability." },
+    { h: "Memory Safety", p: "The #1 source of security bugs is memory errors in C/C++. Rust solves this with ownership rules. UL lets you pick your model. Python avoids it entirely with GC." },
+  ]},
+  { title: "Platforms and Compilation", sub: "Page 9 of 12", cards: [
+    { h: "What is a Platform?", p: "A platform is an OS + CPU architecture combination. <b>Windows x64</b>, <b>macOS ARM64</b>, <b>Linux x64</b> are platforms. Code compiled for one platform doesn't run on another — the machine instructions are different." },
+    { h: "ISA (Instruction Set Architecture)", p: "The CPU's language. x64 (Intel/AMD) and ARM64 (Apple Silicon, phones) speak different instruction sets. A binary compiled for x64 is gibberish to an ARM chip. This is why you download different versions of software for different machines." },
+    { h: "Why C/C++ Must Target Each Platform", p: "C compiles to native machine code for a specific ISA. To support Windows, Mac, and Linux, you compile three separate times. Python avoids this — the interpreter handles platform differences. The trade-off: Python is slower." },
+    { h: "LLVM and IR", p: "LLVM is a compiler toolkit. It takes an intermediate representation (IR) — a platform-neutral format — and compiles it to any ISA. Write one compiler front-end, get every platform for free. Rust, Swift, and UL use LLVM." },
+    { h: "Assembly", p: "The human-readable form of machine code. <code>MOV RAX, 5</code> means \"put 5 in register RAX\". You almost never write this directly, but debuggers show it when things go wrong at the lowest level." },
+  ]},
+  { title: "Version Control", sub: "Page 10 of 12", cards: [
+    { h: "Git", p: "A system that tracks every change you make to your code. You can go back to any previous version, see who changed what, and work on multiple features simultaneously without breaking each other's work." },
+    { h: "Commit", p: "A snapshot of your code at a point in time with a message describing what changed. <code>git commit -m \"fix login bug\"</code>. Your project history is a chain of commits." },
+    { h: "Push and Pull", p: "<b>Push</b>: upload your commits to a remote server (GitHub). <b>Pull</b>: download other people's commits. This is how teams collaborate — everyone pushes and pulls from the same repository." },
+    { h: "GitHub", p: "A website that hosts Git repositories. It adds code review (pull requests), issue tracking, CI/CD (automatic testing), and collaboration features. Most open-source software lives on GitHub." },
+    { h: "Branches", p: "A branch is a parallel timeline. You create a branch to work on a feature without touching the main code. When it's ready, you merge it back. If it doesn't work out, you delete the branch — main is untouched." },
+  ]},
+  { title: "Languages at a Glance", sub: "Page 11 of 12", cards: [
+    { h: "Python", p: "Easy to read, huge ecosystem, slow for CPU work. Used for: AI/ML, data science, scripting, web backends, automation. The most popular first language." },
+    { h: "JavaScript", p: "The language of the web browser. Every website uses it. Also runs on servers (Node.js). Dynamic, flexible, quirky. Used for: websites, web apps, mobile (React Native), servers." },
+    { h: "C", p: "The foundation. Operating systems, databases, embedded devices. Fast as possible, zero overhead. Manual memory. Dangerous if you're not careful. 50+ years old and still everywhere." },
+    { h: "C++", p: "C with classes, templates, and RAII. Used for: game engines (Unreal), browsers (Chrome), databases, performance-critical systems. Complex but powerful." },
+    { h: "Rust", p: "Memory safety without garbage collection. The compiler enforces ownership rules — if it compiles, it's safe. Used for: systems programming, CLI tools, WebAssembly. Steep learning curve." },
+    { h: "Java", p: "Enterprise workhorse. Runs on the JVM — write once, run anywhere. Verbose but reliable. Used for: Android apps, enterprise backends, big data (Hadoop/Spark)." },
+    { h: "Go", p: "Google's language for servers. Simple, fast compilation, great concurrency. Used for: cloud infrastructure (Docker, Kubernetes), microservices, CLIs." },
+    { h: "UniLogic", p: "Write once, compile to C, Python, JS, WASM, or bytecode. Configurable memory and concurrency. Designed for people who want to understand what's happening under the hood." },
+  ]},
+  { title: "What Else You Should Know", sub: "Page 12 of 12", cards: [
+    { h: "APIs", p: "An API (Application Programming Interface) is how programs talk to each other. When your app fetches weather data, it calls a weather API — sending a request and getting structured data back." },
+    { h: "Debugging", p: "Finding and fixing bugs. Read the error message. Check the line number. Add print statements. Use a debugger to step through line by line. 90% of debugging is reading carefully." },
+    { h: "Testing", p: "Writing code that checks your other code. <code>assert add(2,3) == 5</code>. If someone breaks the add function later, the test catches it immediately. Professional code has thousands of tests." },
+    { h: "Dependencies", p: "Libraries other people wrote that your code uses. <code>pip install requests</code> gives you HTTP in Python. The risk: dependencies can break, get abandoned, or have security holes. Keep them updated." },
+    { h: "The Terminal", p: "A text interface to your computer. You type commands, it executes them. Faster than clicking through menus once you learn it. Every developer uses it daily." },
+  ]},
+];
+
+let basicsPage = 0;
+
+function openBasics() {
+  const overlay = document.getElementById("basics-overlay");
+  const wrap = document.getElementById("basics-pages");
+  const dots = document.getElementById("basics-dots");
+
+  let pagesHtml = "";
+  let dotsHtml = "";
+  BASICS_PAGES.forEach((page, i) => {
+    pagesHtml += `<div class="basics-page${i === 0 ? " active" : ""}" data-page="${i}">
+      <div class="bp-title">${page.title}</div>
+      <div class="bp-sub">${page.sub}</div>
+      ${page.cards.map(c => `<div class="bp-card"><h3>${c.h}</h3><p>${c.p}</p></div>`).join("")}
+    </div>`;
+    dotsHtml += `<div class="basics-dot${i === 0 ? " active" : ""}" onclick="basicsGoTo(${i})"></div>`;
+  });
+
+  wrap.innerHTML = pagesHtml;
+  dots.innerHTML = dotsHtml;
+  basicsPage = 0;
+  overlay.classList.add("visible");
+  updateBasicsNav();
+}
+
+function closeBasics() {
+  document.getElementById("basics-overlay").classList.remove("visible");
+}
+
+function basicsNav(dir) {
+  basicsPage = Math.max(0, Math.min(BASICS_PAGES.length - 1, basicsPage + dir));
+  basicsGoTo(basicsPage);
+}
+
+function basicsGoTo(i) {
+  basicsPage = i;
+  document.querySelectorAll(".basics-page").forEach((p, idx) => p.classList.toggle("active", idx === i));
+  document.querySelectorAll(".basics-dot").forEach((d, idx) => {
+    d.classList.toggle("active", idx === i);
+    if (idx < i) d.classList.add("visited");
+  });
+  updateBasicsNav();
+  document.querySelector(".basics-wrap").scrollTop = 0;
+}
+
+function updateBasicsNav() {
+  document.getElementById("basics-prev").style.visibility = basicsPage === 0 ? "hidden" : "";
+  document.getElementById("basics-next").textContent = basicsPage === BASICS_PAGES.length - 1 ? "Done ✓" : "Next →";
+  if (basicsPage === BASICS_PAGES.length - 1) {
+    document.getElementById("basics-next").onclick = closeBasics;
+  } else {
+    document.getElementById("basics-next").onclick = () => basicsNav(1);
+  }
+}
+
+// ═══ BUILD FROM SCRATCH ═════════════════════════════════════════
+let bfsMode = false;
+
+function startBuildFromScratch() {
+  bfsMode = true;
+
+  // Show the editor prompt and mode bar
+  document.getElementById("bfs-editor-prompt").classList.add("active");
+  document.getElementById("bfs-mode-bar").classList.add("active");
+  document.getElementById("editor-area").style.display = "none";
+
+  // Update button
+  const btn = document.getElementById("bfs-btn");
+  btn.textContent = "✕ Exit Build Mode";
+  btn.style.background = "var(--red)";
+  btn.style.color = "#1e1e2e";
+  btn.onclick = exitBuildFromScratch;
+
+  // Clear editor tabs
+  document.querySelectorAll(".etab").forEach(t => t.style.display = "none");
+
+  // Replace AI chat with the guided prompt
+  const msgs = document.querySelector(".chat-msgs");
+  msgs.innerHTML = `
+    <div class="chat-msg ai"><div class="bubble">
+      <b>Welcome to Build from Scratch!</b><br><br>
+      Tell me what you want to build. Describe it however you like — I'll help you figure out the rest.<br><br>
+      Once I know what you're making, we'll work through:<br>
+      <b>1.</b> Which language fits best (and why)<br>
+      <b>2.</b> What packages/libraries you'll need<br>
+      <b>3.</b> The overall design — what functions, what data, what flow<br>
+      <b>4.</b> Writing the code together, one piece at a time<br><br>
+      <em>You'll understand every line before we move on.</em>
+    </div></div>
+  `;
+
+  // Focus the chat input
+  document.querySelector(".chat-input-row input").focus();
+  document.querySelector(".chat-input-row input").placeholder = "Describe what you want to build...";
+}
+
+function exitBuildFromScratch() {
+  bfsMode = false;
+  document.getElementById("bfs-editor-prompt").classList.remove("active");
+  document.getElementById("bfs-mode-bar").classList.remove("active");
+  document.getElementById("editor-area").style.display = "";
+  document.querySelectorAll(".etab").forEach(t => t.style.display = "");
+
+  const btn = document.getElementById("bfs-btn");
+  btn.textContent = "🔨 Build from Scratch";
+  btn.style.background = "var(--green)";
+  btn.onclick = startBuildFromScratch;
+
+  switchFile(currentFile);
+
+  // Restore chat
+  const msgs = document.querySelector(".chat-msgs");
+  msgs.innerHTML = `
+    <div class="chat-msg ai"><div class="bubble">Back to standard mode. I'll work on code automatically and explain what I do in the Clarity panel.</div></div>
+  `;
+  document.querySelector(".chat-input-row input").placeholder = "Describe what you want...";
+}
+
+function skipLearningStep() {
+  // Simulate the AI auto-fixing a bug without walking through it
+  const msgs = document.querySelector(".chat-msgs");
+  msgs.innerHTML += `
+    <div class="chat-msg ai"><div class="bubble">
+      <em>⏩ Skipped learning step.</em> I fixed the issue automatically. Check the Clarity changelog for what changed and why.
+    </div></div>
+  `;
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function exportToStandard() {
+  // Switch from guided mode to automatic mode
+  exitBuildFromScratch();
+  const msgs = document.querySelector(".chat-msgs");
+  msgs.innerHTML = `
+    <div class="chat-msg ai"><div class="bubble">
+      <b>Switched to Standard Clarity.</b><br><br>
+      I'll continue building your project automatically now. Every change I make will appear in the Clarity changelog with a full explanation. You don't need to approve each step anymore — but you can always switch back to Build from Scratch if you want to learn a specific part.
+    </div></div>
+  `;
+}
+
+// Simulate the guided conversation when user sends a message in BFS mode
+const chatInput = document.querySelector(".chat-input-row input");
+const chatSend = document.querySelector(".chat-input-row button");
+chatSend.addEventListener("click", handleChatSend);
+chatInput.addEventListener("keydown", e => { if (e.key === "Enter") handleChatSend(); });
+
+function handleChatSend() {
+  const input = document.querySelector(".chat-input-row input");
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+
+  const msgs = document.querySelector(".chat-msgs");
+  msgs.innerHTML += `<div class="chat-msg user"><div class="bubble">${text}</div></div>`;
+
+  if (bfsMode) {
+    // Simulate guided response based on phase
+    const phase = document.getElementById("bfs-phase").textContent;
+    let response = "";
+
+    if (phase.includes("Design")) {
+      response = `Great — so you want to build <b>${text.substring(0, 60)}</b>.<br><br>
+        Let me think about the best approach:<br><br>
+        <b>Language:</b> I'd recommend <b>Python</b> for this. Here's why:<br>
+        • Fast to prototype — you'll see results quickly<br>
+        • Great libraries for what you're describing<br>
+        • Runs on both Windows and Mac without changes<br><br>
+        If you wanted raw speed, C would work but you'd spend 3x longer on memory management. Rust would be safe but the learning curve is steep for a first project.<br><br>
+        <b>Does Python sound good? Or would you prefer another language?</b>`;
+      document.getElementById("bfs-phase").textContent = "Phase: Language Selection";
+    } else if (phase.includes("Language")) {
+      response = `Python it is. Now let me figure out what packages we'll need:<br><br>
+        <b>Packages:</b><br>
+        • <code>json</code> — built-in, for saving/loading data to files<br>
+        • <code>os</code> — built-in, for file path handling<br>
+        • <code>datetime</code> — built-in, for timestamps<br><br>
+        No external installs needed — everything's included with Python.<br><br>
+        <b>Does this look right? Any features I'm missing that might need other libraries?</b>`;
+      document.getElementById("bfs-phase").textContent = "Phase: Packages";
+    } else if (phase.includes("Packages")) {
+      response = `Now let's design the structure. Based on what you described, here's what we need:<br><br>
+        <b>Functions:</b><br>
+        • <code>add_item(name, description)</code> — creates a new entry<br>
+        • <code>remove_item(id)</code> — deletes by ID<br>
+        • <code>list_items()</code> — shows everything<br>
+        • <code>save_to_file(path)</code> — writes data to disk<br>
+        • <code>load_from_file(path)</code> — reads data from disk<br><br>
+        <b>Data:</b> A list of dicts, each with id, name, description, created_at, done<br><br>
+        <b>Flow:</b> main() loads the file → shows a menu → user picks action → loops until quit → saves on exit<br><br>
+        <b>Does this design make sense? Want to add or change anything before we start coding?</b>`;
+      document.getElementById("bfs-phase").textContent = "Phase: Architecture";
+    } else {
+      response = `Let's start writing code. I'll create the first function and explain each line as we go.<br><br>
+        <b>Ready? I'll begin with the data structure and add_item().</b><br>
+        You'll write parts of it yourself — I'll guide you through what each line does.`;
+      document.getElementById("bfs-phase").textContent = "Phase: Building";
+      // Show the editor with scaffolded code
+      document.getElementById("bfs-editor-prompt").classList.remove("active");
+      document.getElementById("editor-area").style.display = "";
+      editor.textContent = `# ── Your project: ${text.substring(0, 40)} ──\n# We'll build this together, one function at a time.\n\n# Step 1: Define the data structure\n# A list that holds all our items\nitems = []\n\n# Step 2: Your turn — write the add_item function\n# It should take a name and description,\n# create a dict with id, name, description, done=False,\n# and append it to the items list.\n#\n# def add_item(name, description):\n#     ... your code here ...\n`;
+      updateLineNumbers();
+    }
+
+    msgs.innerHTML += `<div class="chat-msg ai"><div class="bubble">${response}</div></div>`;
+  }
+
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ═══ EXPLAIN ════════════════════════════════════════════════════
+const EXPLAINED = {
+  "main.py": `# function returning float — calculates total cost of a list of prices with tax applied
+# accepts: list of prices, optional tax rate (defaults to 10%)
+def calculate_total(prices, tax_rate=0.10):
+    """Calculate total price with tax."""
+    # guard clause — returns 0 immediately if the price list is empty, prevents errors downstream
+    if not prices:
+        return 0.0
+
+    # accumulator variable — will hold the running sum of all prices
+    subtotal = 0
+    # loop through every item in the list by index — adds each price to the running total
+    for i in range(len(prices)):
+        subtotal += prices[i]
+
+    # applies tax by multiplying subtotal by (1 + rate), e.g. 1.10 for 10% tax
+    total = subtotal * (1 + tax_rate)
+    # rounds to 2 decimal places to avoid floating point artifacts like 50.038999...
+    return round(total, 2)
+
+
+# entry point — called when script runs directly, sets up test data and prints results
+def main():
+    # test data — five price values to sum
+    items = [12.99, 5.50, 3.75, 8.00, 15.25]
+    # calls calculate_total with default 10% tax
+    total = calculate_total(items)
+    # output — sum() is a builtin that adds list elements, :.2f formats to 2 decimal places
+    print(f"Subtotal: \${sum(items):.2f}")
+    print(f"Total with tax: \${total:.2f}")
+    # len() returns the number of items in the list
+    print(f"Items: {len(items)}")
+
+
+# Python idiom — only runs main() if this file is executed directly, not when imported
+if __name__ == "__main__":
+    main()`,
+
+  "helpers.c": `#include <stdio.h>
+#include <stdlib.h>
+
+// struct definition — groups a name string and price float into one data type
+typedef struct {
+    char* name;    // pointer to the item's name string
+    double price;  // the item's price as a 64-bit float
+} Item;
+
+// function returning Item pointer — allocates heap memory for one Item and sets its fields
+// caller is responsible for freeing the returned pointer
+Item* create_item(const char* name, double price) {
+    Item* item = malloc(sizeof(Item));  // allocates sizeof(Item) bytes on the heap
+    item->name = (char*)name;           // WARNING: stores pointer directly, doesn't copy the string
+    item->price = price;
+    return item;  // returns heap-allocated Item — must be freed by caller
+}
+
+// function returning double — sums the price field of each Item in the array
+// used by main() to get the total cost of all items
+double total_price(Item** items, int count) {
+    double total = 0;
+    for (int i = 0; i < count; i++) {
+        total += items[i]->price;  // arrow operator dereferences pointer to access price field
+    }
+    return total;
+}
+
+// entry point — creates 3 items, prints their total, but never frees the allocated memory
+int main() {
+    Item* items[3];  // array of 3 pointers to Item structs (stack-allocated array of heap pointers)
+    items[0] = create_item("Widget", 12.99);
+    items[1] = create_item("Gadget", 5.50);
+    items[2] = create_item("Doohickey", 3.75);
+
+    // %.2f formats the double to 2 decimal places
+    printf("Total: $%.2f\\n", total_price(items, 3));
+
+    // BUG: memory leak — 3 malloc'd Items are never free()'d before program exits
+    return 0;
+}`,
+
+  "app.ul": `// function returning float — sums a list of prices and applies a tax multiplier
+// called by main() to compute the final cost
+function calculate_total(list float prices, float tax_rate) returns float
+    // guard clause — returns 0 if the list is empty, avoids iterating over nothing
+    if size(prices) == 0
+        return 0.0
+    end if
+
+    // accumulator — holds running sum, initialized to 0.0 (float)
+    float subtotal = 0.0
+    // for-each loop — iterates every element in the prices list, adds to subtotal
+    for each p in prices
+        subtotal += p
+    end for
+
+    // multiplies subtotal by (1 + tax_rate) and returns the taxed total
+    return subtotal * (1.0 + tax_rate)
+end function
+
+// entry point — sets up test data and prints the result
+// returns int (0 = success) as required by UL convention
+function main() returns int
+    // list literal — 5 float prices
+    list float items = [12.99, 5.50, 3.75, 8.00, 15.25]
+    // calls calculate_total with 10% tax rate
+    float total = calculate_total(items, 0.10)
+    // change() casts float to string for concatenation — UL has no string interpolation
+    print "Total with tax: " + change(total)->string
+    return 0
+end function`,
+};
+
+let explainActive = false;
+function explainCode() {
+  const btn = document.getElementById("explain-btn");
+  if (explainActive) {
+    // Toggle off — restore original code
+    editor.textContent = FILES[currentFile].code;
+    btn.textContent = "💡 Explain";
+    btn.style.background = "var(--mauve)";
+    explainActive = false;
+  } else {
+    // Toggle on — show explained version
+    const explained = EXPLAINED[currentFile];
+    if (explained) {
+      editor.textContent = explained;
+      btn.textContent = "✕ Clear Explanation";
+      btn.style.background = "var(--red)";
+      btn.style.color = "#1e1e2e";
+      explainActive = true;
+    }
+  }
+  updateLineNumbers();
+}
+
+// ═══ LEVELS ═════════════════════════════════════════════════════
+const CLARITY_ENTRIES = {
+  1: [ // Beginner — plain English, concepts explained
+    { title: "Created a function that calculates total price", time: "2 min ago — AI generated",
+      detail: `<h4>What Changed</h4><p>Added a <code>calculate_total</code> function that takes a list of prices and a tax rate, returns the total with tax.</p><h4>Why</h4><p>You asked "make a function to calculate total price with tax." The AI multiplies the sum by (1 + tax_rate).</p><h4>Concepts Used</h4><p><a href="#">Functions</a> — reusable blocks of code<br><a href="#">Parameters</a> — values passed in<br><a href="#">Return values</a> — what comes back</p><h4>What You'd Need to Know</h4><p>How to define a function with <code>def</code>, use <code>sum()</code>, and return a value.</p><span class="try-btn">Try It Yourself →</span>` },
+    { title: "Fixed the loop that was skipping the last item", time: "5 min ago — AI fix",
+      detail: `<h4>What Changed</h4><p>Changed <code>range(len(items) - 1)</code> to <code>range(len(items))</code>.</p><h4>Why</h4><p><code>range()</code> already excludes the upper bound. Subtracting 1 skipped the last item.</p><h4>Concepts Used</h4><p><a href="#">Off-by-one errors</a> — a common counting mistake</p><span class="try-btn">Try It Yourself →</span>` },
+    { title: "Added error handling for empty price lists", time: "8 min ago",
+      detail: `<h4>What Changed</h4><p>Added a guard clause returning 0.0 if the list is empty.</p><h4>Why</h4><p>Prevents silent failures on empty input.</p><h4>Concepts Used</h4><p><a href="#">Guard clauses</a> — early returns that simplify logic</p>` },
+  ],
+  2: [ // Intermediate — less hand-holding, more technical
+    { title: "Added calculate_total(prices, tax_rate) → float", time: "2 min ago",
+      detail: `<h4>What Changed</h4><p>New function: sums list, applies tax multiplier, returns rounded float.</p><h4>Why</h4><p>User request. Standard pattern: accumulate → transform → return.</p><h4>Concepts</h4><p>Function definition, default parameters, sum + multiply pattern</p>` },
+    { title: "Fixed off-by-one in range(len(items) - 1)", time: "5 min ago",
+      detail: `<h4>What Changed</h4><p>Removed erroneous <code>- 1</code> from range call. range() is already exclusive.</p>` },
+    { title: "Guard clause: return 0.0 on empty list", time: "8 min ago",
+      detail: `<h4>What Changed</h4><p>Early return prevents division-by-zero downstream.</p>` },
+  ],
+  3: [ // Developer — terse, technical lingo
+    { title: "calculate_total(): sum + tax multiplier, default 10%", time: "2 min ago",
+      detail: `<p>Signature: <code>(list[float], float=0.10) → float</code>. Rounds to 2dp.</p>` },
+    { title: "Fix: range(len-1) → range(len), off-by-one", time: "5 min ago",
+      detail: `<p>range() upper bound is exclusive. The -1 was double-excluding.</p>` },
+    { title: "Guard: early return on empty prices", time: "8 min ago",
+      detail: `<p>Prevents ZeroDivisionError if prices is empty.</p>` },
+  ],
+  4: [ // No Assist — raw verbose changelog, no explanation
+    { title: "def calculate_total(prices, tax_rate=0.10) → float", time: "2 min ago",
+      detail: `<p>+L1-22 main.py: added function calculate_total(list, float). Body: sum accumulator loop over prices[i], multiply by (1 + tax_rate), round(result, 2). Default param tax_rate=0.10.</p>` },
+    { title: "changed range(len(items) - 1) to range(len(items))", time: "5 min ago",
+      detail: `<p>~L7 main.py: modified range() upper bound. Removed arithmetic subtraction on len() call. Affected iteration count: n-1 → n.</p>` },
+    { title: "added guard clause L2-3: if not prices return 0.0", time: "8 min ago",
+      detail: `<p>+L2-3 calculate_total: inserted conditional early return. Predicate: falsy check on prices param. Return value: float literal 0.0.</p>` },
+  ],
+};
+
+function setLevel(lvl) {
+  lvl = parseInt(lvl);
+  const labels = {1:"Beginner", 2:"Intermediate", 3:"Developer", 4:"No Assist"};
+  document.getElementById("status-clarity").textContent = `Clarity: ${labels[lvl]}`;
+
+  // Update changelog entries — all levels show the changelog, just different verbosity
+  const pane = document.getElementById("clarity-pane");
+  const entries = CLARITY_ENTRIES[lvl] || CLARITY_ENTRIES[1];
+  let html = '<div class="cl-header">Change Log</div>';
+  for (const e of entries) {
+    html += `<div class="cl-entry" onclick="toggleDetail(this)">
+      <div class="cl-title">${e.title}</div>
+      <div class="cl-time">${e.time}</div>
+      <div class="cl-detail">${e.detail}</div>
+    </div>`;
+  }
+  pane.innerHTML = html;
+
+  // Level 1: hide Build button, multi-file tabs. Level 2+: show them
+  document.querySelectorAll(".etab .x").forEach(x => x.style.display = lvl >= 2 ? "" : "none");
+  document.querySelector(".bb-build").style.display = lvl >= 2 ? "" : "none";
+  // Teach Me the Basics only at levels 1-2
+  document.getElementById("basics-btn").style.display = lvl <= 2 ? "" : "none";
+}
+
+// ═══ INIT ═══════════════════════════════════════════════════════
+switchFile("main.py");
+updateRuntimeStrip();
+setLevel(1);
+</script>
+</body>
+</html>
