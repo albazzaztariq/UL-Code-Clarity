@@ -31,6 +31,12 @@ set(SOURCES
     panels/basics.cpp
     panels/expander.cpp
     panels/levels.cpp
+    core/runtimeanalysis.cpp
+    core/optimizer.cpp
+    core/diffview.cpp
+    core/sast.cpp
+    core/dast.cpp
+    core/securitytesting.cpp
 )
 
 set(HEADERS
@@ -54,6 +60,12 @@ set(HEADERS
     panels/basics.h
     panels/expander.h
     panels/levels.h
+    core/runtimeanalysis.h
+    core/optimizer.h
+    core/diffview.h
+    core/sast.h
+    core/dast.h
+    core/securitytesting.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────

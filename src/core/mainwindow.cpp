@@ -1,4 +1,6 @@
 #include "core/mainwindow.h"
+#include "core/securitytesting.h"
+#include "core/runtimeanalysis.h"
 #include "core/theme.h"
 #include "core/buildbar.h"
 #include "core/buildsystem.h"
@@ -45,6 +47,7 @@
 #include <QTemporaryFile>
 #include <QProcess>
 #include <QTextCursor>
+#include <QTextBlock>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
@@ -323,6 +326,36 @@ void MainWindow::createMenuBar()
         if (m_runtimeStrip) m_runtimeStrip->toggle();
     });
 
+    toolsMenu->addSeparator();
+
+    auto* securityAction = toolsMenu->addAction("Security Testing");
+    securityAction->setShortcut(QKeySequence("Ctrl+Shift+T"));
+    connect(securityAction, &QAction::triggered, this, [this]() {
+        if (!m_securityFrame) return;
+        // Pass current code and language to the frame
+        QString code;
+        QString lang;
+        if (m_editor) {
+            code = m_editor->currentContent();
+            lang = currentLangKey();
+        }
+        m_securityFrame->setCode(code, lang);
+
+        // Switch view: hide editor splitter, show security frame
+        m_mainSplitter->setVisible(false);
+        m_securityFrame->setVisible(true);
+    });
+
+    auto* runtimeAnalysisAction = toolsMenu->addAction("Runtime Analysis...");
+    runtimeAnalysisAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
+    connect(runtimeAnalysisAction, &QAction::triggered, this, [this]() {
+        if (!m_runtimeAnalysis) return;
+        // Hide editor layout, show runtime analysis frame
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame) m_securityFrame->setVisible(false);
+        m_runtimeAnalysis->setVisible(true);
+    });
+
     // Help
     auto* helpMenu = mb->addMenu("&Help");
 
@@ -553,6 +586,16 @@ void MainWindow::setupCentralLayout()
     m_mainSplitter->setStretchFactor(2, 0);
 
     mainLayout->addWidget(m_mainSplitter, 1);
+
+    // Security Testing Frame — sits in the same layout slot, hidden by default
+    m_securityFrame = new SecurityTestingFrame;
+    m_securityFrame->setVisible(false);
+    mainLayout->addWidget(m_securityFrame);
+
+    // Runtime Analysis Frame — sits in the same layout slot, hidden by default
+    m_runtimeAnalysis = new RuntimeAnalysisFrame;
+    m_runtimeAnalysis->setVisible(false);
+    mainLayout->addWidget(m_runtimeAnalysis);
 
     // Build bar at bottom
     m_buildBar = new BuildBar;
@@ -869,6 +912,52 @@ void MainWindow::wireSignals()
         QString walkthrough = m_walkHandler->generateWalkthrough(filename, code, level);
         if (m_aiChatPanel)
             m_aiChatPanel->addMessage(ChatBubble::AI, walkthrough);
+    });
+
+    // Runtime Analysis Frame signals
+    connect(m_runtimeAnalysis, &RuntimeAnalysisFrame::backToEditor, this, [this]() {
+        m_runtimeAnalysis->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+    connect(m_runtimeAnalysis, &RuntimeAnalysisFrame::compilationError, this,
+        [this](const QString& filePath, const QString& errorText) {
+            // Switch back to editor and show error in build bar
+            m_runtimeAnalysis->setVisible(false);
+            m_mainSplitter->setVisible(true);
+            if (m_buildBar) {
+                m_buildBar->clearResults();
+                m_buildBar->showResults();
+                QTextEdit* te = m_buildBar->resultsContent();
+                if (te) {
+                    te->setHtml(QString(
+                        "<span style='color:#f38ba8;font-weight:bold;'>Compilation failed</span>"
+                        " for <b>%1</b><br><pre style='color:#cdd6f4;'>%2</pre>")
+                        .arg(QFileInfo(filePath).fileName(), errorText.toHtmlEscaped()));
+                }
+            }
+        });
+
+    // Security Testing Frame signals
+    connect(m_securityFrame, &SecurityTestingFrame::backToEditor, this, [this]() {
+        m_securityFrame->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+    connect(m_securityFrame, &SecurityTestingFrame::jumpToLine, this, [this](int lineNumber) {
+        if (!m_editor) return;
+        // Switch back to editor so the user can see the line
+        m_securityFrame->setVisible(false);
+        m_mainSplitter->setVisible(true);
+        // Move cursor to the requested line
+        if (lineNumber > 0) {
+            auto* ed = m_editor->codeEditor();
+            QTextCursor cursor = ed->textCursor();
+            cursor.movePosition(QTextCursor::Start);
+            cursor.movePosition(QTextCursor::NextBlock,
+                                QTextCursor::MoveAnchor,
+                                lineNumber - 1);
+            ed->setTextCursor(cursor);
+            ed->centerCursor();
+        }
     });
 
     // AI Chat: keep editor context in sync so the AI knows the current file

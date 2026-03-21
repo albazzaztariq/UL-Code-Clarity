@@ -22,6 +22,8 @@ class ExpanderOverlay;
 class ExplainHandler;
 class WalkThroughHandler;
 class BuildFromScratchMode;
+class SecurityTestingFrame;
+class RuntimeAnalysisFrame;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -71,6 +73,8 @@ private:
     ExplainHandler*     m_explainHandler = nullptr;
     WalkThroughHandler* m_walkHandler   = nullptr;
     BuildFromScratchMode* m_bfsMode     = nullptr;
+    SecurityTestingFrame* m_securityFrame = nullptr;
+    RuntimeAnalysisFrame* m_runtimeAnalysis = nullptr;
 
     // Recent Workspaces submenu
     QMenu* m_recentMenu = nullptr;
