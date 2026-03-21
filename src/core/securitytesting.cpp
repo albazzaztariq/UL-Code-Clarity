@@ -10,8 +10,9 @@
 #include <QScrollArea>
 #include <QTabWidget>
 #include <QMessageBox>
-#include <QFont>
 #include <QSizePolicy>
+#include <QDesktopServices>
+#include <QUrl>
 
 // ── Constructor ──────────────────────────────────────────────────────────────
 SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
@@ -23,7 +24,7 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
     root->setContentsMargins(16, 12, 16, 12);
     root->setSpacing(10);
 
-    // ── Top bar: Back button + title + Help button ───────────────────────────
+    // ── Top bar ──────────────────────────────────────────────────────────────
     auto* topBar = new QHBoxLayout;
     topBar->setSpacing(8);
 
@@ -45,7 +46,6 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
 
     topBar->addStretch(1);
 
-    // Large ? help button
     auto* helpBtn = new QPushButton("?");
     helpBtn->setFixedSize(36, 36);
     helpBtn->setCursor(Qt::PointingHandCursor);
@@ -59,7 +59,6 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
 
     root->addLayout(topBar);
 
-    // ── Separator ────────────────────────────────────────────────────────────
     auto* sep = new QFrame;
     sep->setFrameShape(QFrame::HLine);
     sep->setStyleSheet("color: #313244;");
@@ -80,7 +79,6 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
     sastLayout->setContentsMargins(12, 12, 12, 12);
     sastLayout->setSpacing(8);
 
-    // SAST header row
     auto* sastHeader = new QHBoxLayout;
     m_runSastBtn = new QPushButton("Run Static Analysis");
     m_runSastBtn->setFixedHeight(32);
@@ -156,10 +154,12 @@ SecurityTestingFrame::SecurityTestingFrame(QWidget* parent)
 }
 
 // ── Public setters ───────────────────────────────────────────────────────────
-void SecurityTestingFrame::setCode(const QString& code, const QString& language)
+void SecurityTestingFrame::setCode(const QString& code, const QString& language,
+                                   const QString& filePath)
 {
     m_code     = code;
     m_language = language;
+    m_filePath = filePath;
 }
 
 void SecurityTestingFrame::setExePath(const QString& exePath)
@@ -201,9 +201,10 @@ void SecurityTestingFrame::onRunSast()
     m_sastStatus->setText("Scanning...");
 
     StaticAnalyzer analyzer;
-    QList<SecurityFinding> findings = analyzer.analyzeCode(m_code, m_language);
+    QList<SecurityFinding> findings = analyzer.analyzeCode(m_code, m_language, m_filePath);
 
-    populateResults(m_sastScroll, findings);
+    populateResults(m_sastScroll, findings,
+                    analyzer.attributionName(), analyzer.attributionUrl());
 
     if (findings.isEmpty()) {
         m_sastStatus->setText("No issues found.");
@@ -217,7 +218,8 @@ void SecurityTestingFrame::onRunSast()
             case SecurityFinding::LOW:      ++low;      break;
             }
         }
-        m_sastStatus->setText(QString("%1 issue(s) found: %2 critical, %3 high, %4 medium, %5 low")
+        m_sastStatus->setText(
+            QString("%1 issue(s) found: %2 critical, %3 high, %4 medium, %5 low")
             .arg(findings.size()).arg(critical).arg(high).arg(medium).arg(low));
     }
 
@@ -238,20 +240,23 @@ void SecurityTestingFrame::onRunDast()
     DynamicTester tester;
     QList<SecurityFinding> findings = tester.testProgram(m_exePath, m_language);
 
-    populateResults(m_dastScroll, findings);
+    populateResults(m_dastScroll, findings, QString(), QString());
 
     if (findings.isEmpty()) {
         m_dastStatus->setText("All tests passed — no crashes or leaks detected.");
     } else {
-        m_dastStatus->setText(QString("%1 issue(s) detected during dynamic testing.").arg(findings.size()));
+        m_dastStatus->setText(
+            QString("%1 issue(s) detected during dynamic testing.").arg(findings.size()));
     }
 
     m_runDastBtn->setEnabled(true);
 }
 
-// ── Populate results area ────────────────────────────────────────────────────
+// ── Populate results ─────────────────────────────────────────────────────────
 void SecurityTestingFrame::populateResults(QScrollArea* area,
-                                           const QList<SecurityFinding>& findings)
+                                           const QList<SecurityFinding>& findings,
+                                           const QString& attributionName,
+                                           const QString& attributionUrl)
 {
     auto* container = new QWidget;
     container->setStyleSheet("background: #181825;");
@@ -266,24 +271,48 @@ void SecurityTestingFrame::populateResults(QScrollArea* area,
             "color: #a6e3a1; font-size: 14px; font-weight: bold; padding: 30px;");
         layout->addWidget(noIssues);
     } else {
-        // Sort: CRITICAL first
         QList<SecurityFinding> sorted = findings;
         std::sort(sorted.begin(), sorted.end(),
             [](const SecurityFinding& a, const SecurityFinding& b) {
                 return a.severity > b.severity;
             });
-
-        for (const auto& f : sorted) {
+        for (const auto& f : sorted)
             layout->addWidget(buildCard(f));
-        }
     }
 
     layout->addStretch(1);
+
+    // ── Attribution link (only shown when an external tool ran) ──────────────
+    if (!attributionName.isEmpty() && !attributionUrl.isEmpty()) {
+        auto* attrRow = new QHBoxLayout;
+        attrRow->addStretch(1);
+
+        auto* attrLabel = new QLabel("Analysis powered by ");
+        attrLabel->setStyleSheet("color: #6c7086; font-size: 11px;");
+        attrRow->addWidget(attrLabel);
+
+        auto* attrLink = new QPushButton(attributionName);
+        attrLink->setFlat(true);
+        attrLink->setCursor(Qt::PointingHandCursor);
+        attrLink->setStyleSheet(
+            "QPushButton { background: none; color: #89b4fa; font-size: 11px;"
+            " border: none; padding: 0; text-decoration: underline; }"
+            "QPushButton:hover { color: #b4d0fb; }");
+        QString url = attributionUrl;
+        connect(attrLink, &QPushButton::clicked, this, [url]() {
+            QDesktopServices::openUrl(QUrl(url));
+        });
+        attrRow->addWidget(attrLink);
+        attrRow->addStretch(1);
+
+        layout->addLayout(attrRow);
+    }
+
     area->setWidget(container);
 }
 
 // ── Card builder ─────────────────────────────────────────────────────────────
-QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f, bool showJump)
+QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f)
 {
     QString color = severityColor(f.severity);
     QString label = severityLabel(f.severity);
@@ -295,9 +324,9 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f, bool showJump
 
     auto* cardLayout = new QVBoxLayout(card);
     cardLayout->setContentsMargins(12, 10, 12, 10);
-    cardLayout->setSpacing(4);
+    cardLayout->setSpacing(6);
 
-    // ── Header row: severity badge + title + line number ────────────────────
+    // ── Header: severity badge + title + line button ─────────────────────────
     auto* headerRow = new QHBoxLayout;
     headerRow->setSpacing(8);
 
@@ -312,7 +341,7 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f, bool showJump
     titleLabel->setStyleSheet("color: #cdd6f4; font-size: 14px; font-weight: bold;");
     headerRow->addWidget(titleLabel, 1);
 
-    if (f.lineNumber > 0 && showJump) {
+    if (f.lineNumber > 0) {
         auto* lineBtn = new QPushButton(QString("Line %1").arg(f.lineNumber));
         lineBtn->setFixedHeight(22);
         lineBtn->setCursor(Qt::PointingHandCursor);
@@ -325,7 +354,7 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f, bool showJump
             emit jumpToLine(ln);
         });
         headerRow->addWidget(lineBtn);
-    } else if (f.lineNumber < 0 && !f.matchedText.isEmpty()) {
+    } else if (!f.matchedText.isEmpty()) {
         auto* inputLabel = new QLabel(f.matchedText.left(50));
         inputLabel->setStyleSheet("color: #6c7086; font-size: 11px;");
         headerRow->addWidget(inputLabel);
@@ -345,9 +374,30 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f, bool showJump
     descLabel->setStyleSheet("color: #cdd6f4; font-size: 13px;");
     cardLayout->addWidget(descLabel);
 
+    // ── Why This Matters ─────────────────────────────────────────────────────
+    if (!f.whyItMatters.isEmpty()) {
+        auto* whyRow = new QHBoxLayout;
+        whyRow->setSpacing(6);
+
+        auto* whyIcon = new QLabel("Why this matters:");
+        whyIcon->setStyleSheet(
+            "color: #f9e2af; font-size: 12px; font-weight: bold;");
+        whyIcon->setFixedWidth(110);
+        whyRow->addWidget(whyIcon);
+
+        auto* whyLabel = new QLabel(f.whyItMatters);
+        whyLabel->setWordWrap(true);
+        whyLabel->setStyleSheet("color: #cdd6f4; font-size: 12px; font-style: italic;");
+        whyRow->addWidget(whyLabel, 1);
+
+        cardLayout->addLayout(whyRow);
+    }
+
     // ── Fix suggestion ────────────────────────────────────────────────────────
     if (!f.fixSuggestion.isEmpty()) {
         auto* fixRow = new QHBoxLayout;
+        fixRow->setSpacing(6);
+
         auto* fixIcon = new QLabel("Fix:");
         fixIcon->setStyleSheet(QString(
             "color: %1; font-size: 12px; font-weight: bold;").arg(color));
@@ -358,6 +408,7 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f, bool showJump
         fixLabel->setWordWrap(true);
         fixLabel->setStyleSheet("color: #a6adc8; font-size: 12px;");
         fixRow->addWidget(fixLabel, 1);
+
         cardLayout->addLayout(fixRow);
     }
 
@@ -368,10 +419,10 @@ QWidget* SecurityTestingFrame::buildCard(const SecurityFinding& f, bool showJump
 QString SecurityTestingFrame::severityColor(SecurityFinding::Severity sev)
 {
     switch (sev) {
-    case SecurityFinding::CRITICAL: return "#f38ba8";  // red
-    case SecurityFinding::HIGH:     return "#fab387";  // orange
-    case SecurityFinding::MEDIUM:   return "#f9e2af";  // yellow
-    case SecurityFinding::LOW:      return "#89b4fa";  // blue
+    case SecurityFinding::CRITICAL: return "#f38ba8";
+    case SecurityFinding::HIGH:     return "#fab387";
+    case SecurityFinding::MEDIUM:   return "#f9e2af";
+    case SecurityFinding::LOW:      return "#89b4fa";
     }
     return "#89b4fa";
 }

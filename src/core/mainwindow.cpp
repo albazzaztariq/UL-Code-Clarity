@@ -332,14 +332,16 @@ void MainWindow::createMenuBar()
     securityAction->setShortcut(QKeySequence("Ctrl+Shift+T"));
     connect(securityAction, &QAction::triggered, this, [this]() {
         if (!m_securityFrame) return;
-        // Pass current code and language to the frame
+        // Pass current code, language, and file path to the frame
         QString code;
         QString lang;
+        QString filePath;
         if (m_editor) {
-            code = m_editor->currentContent();
-            lang = currentLangKey();
+            code     = m_editor->currentContent();
+            lang     = currentLangKey();
+            filePath = m_editor->currentFilePath();
         }
-        m_securityFrame->setCode(code, lang);
+        m_securityFrame->setCode(code, lang, filePath);
 
         // Switch view: hide editor splitter, show security frame
         m_mainSplitter->setVisible(false);
