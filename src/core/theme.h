@@ -102,7 +102,7 @@ inline QString appStyleSheet() {
         "QComboBox::drop-down { border: none; width: 20px; }"
         "QComboBox::down-arrow { width: 8px; height: 8px; }"
         "QComboBox QAbstractItemView { background: #2a2a3c; color: #cdd6f4;"
-        " border: 1px solid #45475a; selection-background-color: #3c3c54; outline: none; }"
+        " border: none; outline: none; selection-background-color: #3c3c54; }"
 
         // Line edits — focus ring
         "QLineEdit { background: #2a2a3c; color: #cdd6f4; border: 1px solid #45475a;"
@@ -199,23 +199,28 @@ inline QString lightStyleSheet() {
         "QComboBox { background: #ffffff; color: #333333; border: 1px solid #e0e0e0;"
         " border-radius: 4px; padding: 4px 8px; font-size: 11px; }"
         "QComboBox:focus { border-color: #2563eb; }"
-        "QComboBox::drop-down { border: none; width: 20px; background: #ffffff; }"
-        "QComboBox::down-arrow { width: 8px; height: 8px; }"
+        "QComboBox::drop-down { border-left: 1px solid #d0d0d0; width: 20px;"
+        " subcontrol-position: right; subcontrol-origin: padding; background: #ffffff; }"
+        "QComboBox::down-arrow { border-top: 5px solid #333333;"
+        " border-left: 4px solid transparent; border-right: 4px solid transparent;"
+        " width: 0; height: 0; }"
         "QComboBox QAbstractItemView { background: #ffffff; color: #333333;"
-        " border: 1px solid #e0e0e0; selection-background-color: #e0e8ff; outline: none; }"
+        " border: none; outline: none; selection-background-color: #e0e8ff; }"
 
         // Line edits
         "QLineEdit { background: #ffffff; color: #333333; border: 1px solid #e0e0e0;"
         " border-radius: 4px; padding: 5px 10px; font-size: 12px; }"
         "QLineEdit:focus { border-color: #2563eb; }"
 
-        // Tab bar — active has blue bottom border, white bg, no colored tints
-        "QTabBar::tab { background: #ffffff; color: #666666; padding: 7px 16px;"
-        " border-right: 1px solid #e0e0e0; font-size: 11px; border-bottom: 2px solid transparent; }"
+        // Tab bar — inactive: #f0f0f0 bg, active: white with blue bottom border
+        "QTabBar::tab { background: #f0f0f0; color: #555555; border: none;"
+        " border-bottom: 2px solid transparent; padding: 6px 14px; font-size: 11px; }"
         "QTabBar::tab:selected { background: #ffffff; color: #1e1e2e;"
         " border-bottom: 2px solid #2563eb; }"
-        "QTabBar::tab:hover:!selected { background: #f5f5f5; color: #333333; }"
+        "QTabBar::tab:hover:!selected { background: #e8e8e8; color: #333333; }"
+        // Close button: grey X, turns red on hover
         "QTabBar::close-button { subcontrol-position: right; }"
+        "QTabBar::close-button:hover { background: transparent; }"
 
         // Tree view
         "QTreeView { background: #fafafa; color: #333333; border: none; font-size: 12px; }"

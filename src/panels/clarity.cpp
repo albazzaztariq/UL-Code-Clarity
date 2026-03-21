@@ -34,10 +34,10 @@ ClarityEntry::ClarityEntry(const QString &title, const QString &time,
     if (s_isDark) {
         setStyleSheet(QString(
             "ClarityEntry { background: %1; border-radius: 6px;"
-            " border: 1px solid %2; border-left: 3px solid %3; }"
-            "ClarityEntry:hover { background: %4;"
-            " border: 1px solid %5; border-left: 3px solid %3; }"
-        ).arg(BG3, BORDER, ACCENT, BG4, ACCENT));
+            " border: none; border-left: 3px solid %2; }"
+            "ClarityEntry:hover { background: %3;"
+            " border: none; border-left: 3px solid %2; }"
+        ).arg(BG3, ACCENT, BG4));
     } else {
         setStyleSheet(
             "ClarityEntry { background: #ffffff; border-radius: 6px;"

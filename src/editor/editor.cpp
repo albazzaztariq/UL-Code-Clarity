@@ -178,7 +178,7 @@ EditorWidget::EditorWidget(QWidget* parent)
     tabRow->setStyleSheet("background: #2a2a3c; border-bottom: 1px solid #313244;");
 
     m_tabBar = new QTabBar;
-    m_tabBar->setTabsClosable(true);
+    m_tabBar->setTabsClosable(false);  // we place our own styled close buttons
     m_tabBar->setMovable(true);
     m_tabBar->setExpanding(false);
     tabLayout->addWidget(m_tabBar);
@@ -396,10 +396,8 @@ void EditorWidget::openFile(const QString& filePath)
     file.close();
 
     // If readAll() returned nothing, the file may be a cloud-only OneDrive placeholder.
-    // Fall back to QTextStream which can handle some edge cases, but ultimately we still
-    // show the tab so the user knows the file was "opened" even if content is unavailable.
+    // Fall back to QTextStream which can handle some edge cases.
     if (raw.isEmpty() && QFileInfo(filePath).size() > 0) {
-        // Try again with QTextStream
         QFile f2(filePath);
         if (f2.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QTextStream ts(&f2);
@@ -411,9 +409,19 @@ void EditorWidget::openFile(const QString& filePath)
     }
 
     // Decode as UTF-8, fall back to Latin-1 for binary-ish files
-    QString content = QString::fromUtf8(raw);
-    if (content.contains(QChar(0xFFFD))) {
-        content = QString::fromLatin1(raw);
+    QString content;
+    if (raw.isEmpty() && QFileInfo(filePath).size() > 0) {
+        // Still empty after both attempts — likely a cloud-only OneDrive placeholder
+        content = QString(
+            "// Cannot read file — it may be a cloud-only OneDrive file.\n"
+            "// Right-click the file in File Explorer and choose\n"
+            "// \"Always keep on this device\", then reopen it here."
+        );
+    } else {
+        content = QString::fromUtf8(raw);
+        if (content.contains(QChar(0xFFFD))) {
+            content = QString::fromLatin1(raw);
+        }
     }
 
     QFileInfo fi(filePath);
@@ -425,6 +433,7 @@ void EditorWidget::openFile(const QString& filePath)
 
     m_tabBar->blockSignals(true);
     int addedIdx = m_tabBar->addTab(fi.fileName());
+    m_tabBar->setTabButton(addedIdx, QTabBar::RightSide, makeCloseButton(addedIdx));
     m_tabBar->blockSignals(false);
     Q_UNUSED(addedIdx);
 
@@ -611,8 +620,42 @@ void EditorWidget::hideWelcome()
     m_editorStack->setCurrentIndex(1);
 }
 
+void EditorWidget::applyCloseButtonStyle(QPushButton* btn, bool isDark) const
+{
+    if (isDark) {
+        btn->setStyleSheet(
+            "QPushButton { background: transparent; color: #6c7086;"
+            " border: none; font-size: 11px; padding: 0; border-radius: 2px; }"
+            "QPushButton:hover { color: #f38ba8; background: rgba(243,139,168,0.15); }");
+    } else {
+        btn->setStyleSheet(
+            "QPushButton { background: transparent; color: #999999;"
+            " border: none; font-size: 11px; padding: 0; border-radius: 2px; }"
+            "QPushButton:hover { color: #cc0000; background: rgba(204,0,0,0.08); }");
+    }
+}
+
+QPushButton* EditorWidget::makeCloseButton(int tabIdx)
+{
+    auto* btn = new QPushButton(QString::fromUtf8("\xc3\x97"));  // ×
+    btn->setFixedSize(16, 16);
+    btn->setCursor(Qt::PointingHandCursor);
+    applyCloseButtonStyle(btn, m_isDark);
+    connect(btn, &QPushButton::clicked, this, [this, btn]() {
+        // Find which tab this button belongs to
+        for (int i = 0; i < m_tabBar->count(); ++i) {
+            if (m_tabBar->tabButton(i, QTabBar::RightSide) == btn) {
+                emit m_tabBar->tabCloseRequested(i);
+                return;
+            }
+        }
+    });
+    return btn;
+}
+
 void EditorWidget::applyTheme(bool isDark)
 {
+    m_isDark = isDark;
     m_codeEditor->applyTheme(isDark);
 
     if (isDark) {
@@ -675,6 +718,13 @@ void EditorWidget::applyTheme(bool isDark)
             "QLabel { color: #2563eb; background: rgba(37,99,235,0.1);"
             " padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;"
             " margin-right: 4px; }");
+    }
+
+    // Re-style all existing close buttons
+    for (int i = 0; i < m_tabBar->count(); ++i) {
+        auto* btn = qobject_cast<QPushButton*>(m_tabBar->tabButton(i, QTabBar::RightSide));
+        if (btn)
+            applyCloseButtonStyle(btn, isDark);
     }
 }
 

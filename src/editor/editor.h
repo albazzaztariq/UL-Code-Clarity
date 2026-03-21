@@ -98,6 +98,8 @@ private:
     void updateLanguageBadge();
     QString detectLanguage(const QString& filePath) const;
     QString languageDisplay(const QString& lang) const;
+    void applyCloseButtonStyle(QPushButton* btn, bool isDark) const;
+    QPushButton* makeCloseButton(int tabIdx);
 
     struct TabInfo {
         QString filePath;
@@ -119,4 +121,5 @@ private:
     QWidget*          m_welcomePage;
     QString           m_welcomeLang = "python";
     void              setWelcomeCode(const QString& lang);
+    bool              m_isDark = true;
 };

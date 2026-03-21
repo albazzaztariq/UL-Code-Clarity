@@ -36,7 +36,7 @@ ModelConfigDialog::ModelConfigDialog(QWidget *parent)
         "QComboBox { background: %3; color: %2; border: 1px solid %4;"
         "  border-radius: 4px; padding: 4px 8px; font-size: 11px; }"
         "QComboBox::drop-down { border: none; }"
-        "QComboBox QAbstractItemView { background: %3; color: %2; border: 1px solid %4; }"
+        "QComboBox QAbstractItemView { background: %3; color: %2; border: none; outline: none; }"
     ).arg(BG2, FG, BG3, BORDER));
 
     auto *mainLayout = new QVBoxLayout(this);

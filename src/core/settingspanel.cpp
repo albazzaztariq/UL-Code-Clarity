@@ -50,7 +50,7 @@ namespace {
             "QComboBox { background: %4; color: %2; border: 1px solid %3;"
             "  border-radius: 4px; padding: 4px 8px; font-size: 11px; }"
             "QComboBox::drop-down { border: none; }"
-            "QComboBox QAbstractItemView { background: %4; color: %2; border: 1px solid %3; }"
+            "QComboBox QAbstractItemView { background: %4; color: %2; border: none; outline: none; }"
             "QCheckBox { color: %2; font-size: 11px; }"
             "QCheckBox::indicator { width: 14px; height: 14px; }"
             "QListWidget { background: %4; color: %2; border: 1px solid %3;"
@@ -694,7 +694,7 @@ ModelEditDialog::ModelEditDialog(QWidget *parent, const SavedModel &existing)
         "QComboBox { background: %3; color: %2; border: 1px solid %4;"
         "  border-radius: 4px; padding: 4px 8px; font-size: 11px; }"
         "QComboBox::drop-down { border: none; }"
-        "QComboBox QAbstractItemView { background: %3; color: %2; border: 1px solid %4; }"
+        "QComboBox QAbstractItemView { background: %3; color: %2; border: none; outline: none; }"
     ).arg("#2a2a3c", "#cdd6f4", "#333348", "#45475a"));
 
     auto *layout = new QVBoxLayout(this);

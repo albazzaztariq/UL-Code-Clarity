@@ -80,6 +80,7 @@ private:
     QLabel* m_statusLang  = nullptr;
     QLabel* m_statusEnc   = nullptr;
     QLabel* m_statusPos   = nullptr;
+    QWidget* m_statusBarSpacer = nullptr;
 
     // Theme toggle
     QPushButton* m_themeToggleBtn = nullptr;

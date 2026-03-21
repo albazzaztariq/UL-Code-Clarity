@@ -251,7 +251,7 @@ void MainWindow::createStatusBar()
 
     m_statusReady = new QLabel("Ready");
     m_statusReady->setStyleSheet(
-        "QLabel { color: #a6adc8; font-size: 11px; padding: 0 6px; }");
+        "QLabel { color: #a6adc8; font-size: 11px; padding: 0 6px; background: transparent; }");
     sb->addWidget(m_statusReady);
 
     // Green dot indicator
@@ -263,22 +263,23 @@ void MainWindow::createStatusBar()
 
     // Language label — hidden until a file is opened
     m_statusLang = new QLabel;
-    m_statusLang->setStyleSheet("QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; }");
+    m_statusLang->setStyleSheet("QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; background: transparent; }");
     m_statusLang->hide();
     sb->addWidget(m_statusLang);
 
     m_statusEnc = new QLabel("UTF-8");
-    m_statusEnc->setStyleSheet("QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; }");
+    m_statusEnc->setStyleSheet("QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; background: transparent; }");
     sb->addWidget(m_statusEnc);
 
     m_statusPos = new QLabel("Ln 1, Col 1");
-    m_statusPos->setStyleSheet("QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; }");
+    m_statusPos->setStyleSheet("QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; background: transparent; }");
     sb->addWidget(m_statusPos);
 
-    // Spacer
-    auto* spacer = new QWidget;
-    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    sb->addWidget(spacer);
+    // Spacer — background must match status bar, updated in applyTheme
+    m_statusBarSpacer = new QWidget;
+    m_statusBarSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    m_statusBarSpacer->setStyleSheet("background: #181825;");
+    sb->addWidget(m_statusBarSpacer);
 
     // Level selector in status bar (segmented button group)
     m_levelSelector = new LevelSelector;
@@ -845,23 +846,29 @@ void MainWindow::applyTheme()
             : "background: #fafafa;");
     }
 
-    // Status bar labels
+    // Status bar spacer — must match bar background to avoid white blob
+    if (m_statusBarSpacer)
+        m_statusBarSpacer->setStyleSheet(m_isDarkTheme
+            ? "background: #181825;"
+            : "background: #f0f0f0;");
+
+    // Status bar labels — always transparent background so they blend with QStatusBar
     if (m_statusReady)
         m_statusReady->setStyleSheet(m_isDarkTheme
-            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 6px; }"
-            : "QLabel { color: #555555; font-size: 11px; padding: 0 6px; }");
+            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 6px; background: transparent; }"
+            : "QLabel { color: #555555; font-size: 11px; padding: 0 6px; background: transparent; }");
     if (m_statusLang)
         m_statusLang->setStyleSheet(m_isDarkTheme
-            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; }"
-            : "QLabel { color: #555555; font-size: 11px; padding: 0 8px; }");
+            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; background: transparent; }"
+            : "QLabel { color: #555555; font-size: 11px; padding: 0 8px; background: transparent; }");
     if (m_statusEnc)
         m_statusEnc->setStyleSheet(m_isDarkTheme
-            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; }"
-            : "QLabel { color: #555555; font-size: 11px; padding: 0 8px; }");
+            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; background: transparent; }"
+            : "QLabel { color: #555555; font-size: 11px; padding: 0 8px; background: transparent; }");
     if (m_statusPos)
         m_statusPos->setStyleSheet(m_isDarkTheme
-            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; }"
-            : "QLabel { color: #555555; font-size: 11px; padding: 0 8px; }");
+            ? "QLabel { color: #a6adc8; font-size: 11px; padding: 0 8px; background: transparent; }"
+            : "QLabel { color: #555555; font-size: 11px; padding: 0 8px; background: transparent; }");
 
     // Theme toggle and gear buttons in status bar
     if (m_themeToggleBtn)

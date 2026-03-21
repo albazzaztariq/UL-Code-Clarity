@@ -7,6 +7,18 @@
 #include <QTemporaryDir>
 #include <QCoreApplication>
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+// Helper to hide console windows from QProcess on Windows
+static void hideConsoleWindow(QProcess &p) {
+    p.setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments *args) {
+        args->flags |= CREATE_NO_WINDOW;
+    });
+}
+#else
+static void hideConsoleWindow(QProcess &) {}
+#endif
+
 // ============================================================================
 // BuildSystem
 // ============================================================================
@@ -51,6 +63,7 @@ QString BuildSystem::probe(const QStringList& candidates, const QStringList& arg
 {
     for (const QString& exe : candidates) {
         QProcess p;
+        hideConsoleWindow(p);
         p.start(exe, args);
         if (p.waitForFinished(3000)) {
             QString out = QString::fromUtf8(p.readAllStandardOutput()).trimmed();
@@ -122,6 +135,7 @@ QStringList BuildSystem::missingPythonDeps(const QString& sourceCode) const
     QStringList missing;
     for (const QString& pkg : imports) {
         QProcess p;
+        hideConsoleWindow(p);
         QStringList pyArgs = {"py", "python3", "python"};
         for (const QString& py : pyArgs) {
             p.start(py, {"-m", "pip", "show", pkg});
@@ -385,6 +399,7 @@ void BuildSystem::executeCommand(const Command& cmd, const QString& lang,
                                   int level, bool isRun)
 {
     m_process = new QProcess(this);
+    hideConsoleWindow(*m_process);
     m_process->setWorkingDirectory(cmd.workingDir);
     m_process->setProcessChannelMode(QProcess::MergedChannels);
 
