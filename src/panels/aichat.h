@@ -15,6 +15,7 @@
 #include <QVector>
 #include <QSettings>
 #include "core/aibackend.h"
+#include "core/rubberduck.h"
 
 // A single chat message bubble
 class ChatBubble : public QFrame {
@@ -99,6 +100,7 @@ private:
     QWidget *m_columnHeader;
     QPushButton *m_closeButton;
     QWidget    *m_noModelBanner;  // shown when no AI model is configured
+    RubberDuckToggle *m_rubberDuckToggle = nullptr;  // in header bar
     QNetworkAccessManager *m_networkManager;
     QVector<ChatBubble*> m_bubbles;
     AIBackend *m_aiBackend;

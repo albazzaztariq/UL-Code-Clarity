@@ -198,6 +198,34 @@ BuildBar::BuildBar(QWidget* parent)
 
     barLayout->addStretch();
 
+    // Predict toggle button
+    m_predictToggle = new QPushButton("Predict");
+    m_predictToggle->setFixedHeight(26);
+    m_predictToggle->setCheckable(true);
+    m_predictToggle->setCursor(Qt::PointingHandCursor);
+    m_predictToggle->setToolTip("Predict Before You Run — type what you think will print");
+    m_predictToggle->setStyleSheet(
+        "QPushButton { background: #313244; color: #a6adc8;"
+        " font-size: 11px; padding: 0 12px; border-radius: 6px;"
+        " border: 1px solid #45475a; }"
+        "QPushButton:hover { background: #3c3c54; }"
+        "QPushButton:checked { background: rgba(137,180,250,0.18); color: #89b4fa;"
+        " border-color: rgba(137,180,250,0.4); }");
+    barLayout->addWidget(m_predictToggle);
+
+    // Error badge button (hidden until errors exist)
+    m_errorBadge = new QPushButton("Errors (0)");
+    m_errorBadge->setFixedHeight(26);
+    m_errorBadge->setCursor(Qt::PointingHandCursor);
+    m_errorBadge->setToolTip("Open Error Journal");
+    m_errorBadge->setVisible(false);
+    m_errorBadge->setStyleSheet(
+        "QPushButton { background: rgba(243,139,168,0.15); color: #f38ba8;"
+        " font-size: 11px; padding: 0 10px; border-radius: 6px;"
+        " border: 1px solid rgba(243,139,168,0.35); }"
+        "QPushButton:hover { background: rgba(243,139,168,0.28); }");
+    barLayout->addWidget(m_errorBadge);
+
     // Output toggle button
     m_outputToggle = new QPushButton("Output");
     m_outputToggle->setFixedHeight(26);
@@ -216,6 +244,8 @@ BuildBar::BuildBar(QWidget* parent)
     connect(m_debugBtn, &QPushButton::clicked, this, &BuildBar::debugRequested);
     connect(m_memCheckBtn, &QPushButton::clicked, this, &BuildBar::memCheckRequested);
     connect(m_outputToggle, &QPushButton::clicked, this, &BuildBar::toggleResults);
+    connect(m_predictToggle, &QPushButton::toggled, this, &BuildBar::predictToggled);
+    connect(m_errorBadge, &QPushButton::clicked, this, &BuildBar::errorJournalRequested);
     connect(m_resultsClose, &QPushButton::clicked, this, [this]() {
         m_resultsPane->hide();
         m_resultsVisible = false;
@@ -233,6 +263,17 @@ BuildBar::BuildBar(QWidget* parent)
                 "QPushButton:hover { background: #d8d8d8; }");
         }
     });
+}
+
+void BuildBar::setErrorBadge(int count)
+{
+    if (!m_errorBadge) return;
+    if (count > 0) {
+        m_errorBadge->setText(QString("Errors (%1)").arg(count));
+        m_errorBadge->setVisible(true);
+    } else {
+        m_errorBadge->setVisible(false);
+    }
 }
 
 void BuildBar::showOutput(const QString& text)

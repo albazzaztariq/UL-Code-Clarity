@@ -1,6 +1,7 @@
 #include "editor/editor.h"
 #include "editor/highlighter.h"
 #include "core/theme.h"
+#include "core/costvisualizer.h"
 
 #include <QPainter>
 #include <QTextBlock>
@@ -8,6 +9,9 @@
 #include <QFileInfo>
 #include <QTextStream>
 #include <QFileDialog>
+#include <QMenu>
+#include <QAction>
+#include <QContextMenuEvent>
 
 // ═══════════════════════════════════════════════════════════════════════
 // CodeEditor — QPlainTextEdit with line numbers
@@ -107,16 +111,31 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent* event)
     QFont font("Cascadia Code", 9);
     painter.setFont(font);
 
+    // Cost stripe width (3px on the left edge of the gutter)
+    const int stripeW = 3;
+
     while (block.isValid() && top <= event->rect().bottom()) {
         if (block.isVisible() && bottom >= event->rect().top()) {
-            QString number = QString::number(blockNumber + 1);
+            int lineNo = blockNumber + 1;
+
+            // ── Cost stripe ───────────────────────────────────────────
+            if (m_costVisualizer && m_costVisualizer->isActive()) {
+                double cost = m_costVisualizer->costForLine(lineNo);
+                QColor stripeColor = CostVisualizer::colorForCost(cost);
+                painter.fillRect(0, top, stripeW,
+                                 qRound(blockBoundingRect(block).height()),
+                                 stripeColor);
+            }
+
+            // ── Line number ───────────────────────────────────────────
+            QString number = QString::number(lineNo);
             bool isCurrent = (textCursor().blockNumber() == blockNumber);
             if (m_isDark) {
                 painter.setPen(isCurrent ? QColor(0xcd, 0xd6, 0xf4) : QColor(0x6c, 0x70, 0x86));
             } else {
                 painter.setPen(isCurrent ? QColor(0x1e, 0x1e, 0x2e) : QColor(0x99, 0x99, 0x99));
             }
-            painter.drawText(0, top, m_lineNumberArea->width() - 8,
+            painter.drawText(stripeW + 2, top, m_lineNumberArea->width() - stripeW - 10,
                              fontMetrics().height(),
                              Qt::AlignRight | Qt::AlignVCenter, number);
         }
@@ -126,6 +145,37 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent* event)
         bottom = top + qRound(blockBoundingRect(block).height());
         ++blockNumber;
     }
+}
+
+void CodeEditor::setCostVisualizer(CostVisualizer* cv)
+{
+    m_costVisualizer = cv;
+    if (cv) {
+        connect(cv, &CostVisualizer::dataReady, this, [this]() {
+            m_lineNumberArea->update();
+        });
+    }
+    m_lineNumberArea->update();
+}
+
+void CodeEditor::contextMenuEvent(QContextMenuEvent* event)
+{
+    QMenu* menu = createStandardContextMenu();
+    menu->addSeparator();
+
+    // Determine the line that was right-clicked
+    QTextCursor cur = cursorForPosition(event->pos());
+    int lineNo = cur.blockNumber() + 1;
+    QString lineText = cur.block().text();
+
+    QAction* whatIfAction = menu->addAction("What If...?");
+    whatIfAction->setToolTip("Open sandbox to test a different value on this line");
+    connect(whatIfAction, &QAction::triggered, this, [this, lineNo, lineText]() {
+        emit whatIfRequested(lineNo, lineText);
+    });
+
+    menu->exec(event->globalPos());
+    delete menu;
 }
 
 void CodeEditor::applyTheme(bool isDark)

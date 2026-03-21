@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QStackedWidget>
+#include "core/costvisualizer.h"
 
 class SyntaxHighlighter;
 
@@ -22,8 +23,17 @@ public:
     int  lineNumberAreaWidth() const;
     void applyTheme(bool isDark);
 
+    // Cost Visualizer — set data and repaint gutter
+    void setCostVisualizer(CostVisualizer* cv);
+    CostVisualizer* costVisualizer() const { return m_costVisualizer; }
+
+signals:
+    // Emitted when user right-clicks and picks "What If...?"
+    void whatIfRequested(int lineNumber, const QString& lineText);
+
 protected:
     void resizeEvent(QResizeEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
 private slots:
     void updateLineNumberAreaWidth(int newBlockCount);
@@ -31,8 +41,9 @@ private slots:
     void highlightCurrentLine();
 
 private:
-    QWidget* m_lineNumberArea;
-    bool m_isDark = true;
+    QWidget*        m_lineNumberArea;
+    bool            m_isDark = true;
+    CostVisualizer* m_costVisualizer = nullptr;  // not owned
 };
 
 // ── Line Number Area Widget ─────────────────────────────────────────────

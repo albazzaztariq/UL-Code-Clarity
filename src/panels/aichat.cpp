@@ -87,6 +87,10 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     headerBarLayout->addWidget(m_titleLabel);
     headerBarLayout->addStretch();
 
+    // Rubber Duck Mode toggle
+    m_rubberDuckToggle = new RubberDuckToggle(m_columnHeader);
+    headerBarLayout->addWidget(m_rubberDuckToggle);
+
     m_closeButton = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), m_columnHeader);
     m_closeButton->setFixedSize(16, 16);
     m_closeButton->setCursor(Qt::PointingHandCursor);
@@ -403,6 +407,32 @@ void AIChatPanel::onSendClicked()
     QString text = m_input->text().trimmed();
     if (text.isEmpty()) return;
 
+    // ── Rubber Duck Mode interception ─────────────────────────────────────
+    if (m_rubberDuckToggle && m_rubberDuckToggle->isEnabled()) {
+        auto* dlg = new RubberDuckDialog(text, this);
+        dlg->setAttribute(Qt::WA_DeleteOnClose);
+        dlg->applyTheme(m_isDark);
+        connect(dlg, &RubberDuckDialog::sendWithContext, this,
+            [this](const QString& contextualMessage) {
+                // Clear example messages on first real user message
+                markExamplesSeen();
+
+                // Show the contextual message in the chat (trimmed for display)
+                addMessage(ChatBubble::User, contextualMessage);
+
+                m_input->setEnabled(false);
+                m_sendButton->setEnabled(false);
+                m_input->clear();
+                emit messageSent(contextualMessage);
+            });
+        connect(dlg, &RubberDuckDialog::solvedSelf, this, [this]() {
+            m_input->clear();
+        });
+        dlg->show();
+        return;
+    }
+
+    // ── Normal send path ──────────────────────────────────────────────────
     // Clear example messages on first real user message
     markExamplesSeen();
 

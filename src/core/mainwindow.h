@@ -30,6 +30,13 @@ class DependencyAnalysisFrame;
 class CodeHealthFrame;
 class InteractiveBasicsDialog;
 class DebugFrame;
+class DataTraceFrame;
+class PredictPanel;
+class ErrorJournal;
+class CostVisualizer;
+class CostVisualizerPanel;
+class TypeFlowFrame;
+class MachineViewPanel;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -87,6 +94,13 @@ private:
     CodeHealthFrame*      m_codeHealth    = nullptr;
     InteractiveBasicsDialog* m_interactiveBasics = nullptr;
     DebugFrame*           m_debugFrame    = nullptr;
+    DataTraceFrame*       m_dataTrace     = nullptr;
+    PredictPanel*         m_predictPanel  = nullptr;
+    ErrorJournal*         m_errorJournal  = nullptr;
+    CostVisualizer*       m_costVisualizer = nullptr;
+    CostVisualizerPanel*  m_costPanel      = nullptr;
+    TypeFlowFrame*        m_typeFlow       = nullptr;
+    MachineViewPanel*     m_machineView    = nullptr;
 
     // Recent Workspaces submenu
     QMenu* m_recentMenu = nullptr;

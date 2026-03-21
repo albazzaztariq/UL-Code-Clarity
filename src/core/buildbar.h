@@ -26,17 +26,24 @@ public:
     // Direct access to the output text edit for streaming output
     QTextEdit* resultsContent() const { return m_resultsContent; }
 
+    // Update the error badge text and visibility
+    void setErrorBadge(int count);
+
 signals:
     void runRequested();
     void buildRequested();
     void memCheckRequested();
     void debugRequested();
+    void predictToggled(bool on);
+    void errorJournalRequested();
 
 private:
     QPushButton* m_runBtn;
     QPushButton* m_buildBtn;
     QPushButton* m_debugBtn;
     QPushButton* m_memCheckBtn;
+    QPushButton* m_predictToggle = nullptr;
+    QPushButton* m_errorBadge    = nullptr;
     QComboBox*   m_targetCombo;
     QPushButton* m_outputToggle;
 

@@ -6,6 +6,13 @@
 #include "core/dependencyanalysis.h"
 #include "core/codehealth.h"
 #include "core/debugger.h"
+#include "core/datatrace.h"
+#include "core/predictpanel.h"
+#include "core/errorjournal.h"
+#include "core/costvisualizer.h"
+#include "core/whatif.h"
+#include "core/typeflow.h"
+#include "core/machineview.h"
 #include "core/theme.h"
 #include "core/buildbar.h"
 #include "core/buildsystem.h"
@@ -537,6 +544,149 @@ void MainWindow::createMenuBar()
         m_debugFrame->startDebugging();
     });
 
+    toolsMenu->addSeparator();
+
+    auto* dataTraceAction = toolsMenu->addAction("Trace This Variable...");
+    dataTraceAction->setShortcut(QKeySequence("Ctrl+Shift+V"));
+    connect(dataTraceAction, &QAction::triggered, this, [this]() {
+        if (!m_dataTrace || !m_editor) return;
+        QString code     = m_editor->currentContent();
+        QString lang     = currentLangKey();
+        QString filePath = m_editor->currentFilePath();
+        // If there's a selection in the editor, pre-fill it as the variable name
+        QString selected = m_editor->codeEditor()->textCursor().selectedText().trimmed();
+        m_dataTrace->setCode(code, lang, filePath);
+        if (!selected.isEmpty())
+            m_dataTrace->setVariable(selected);
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame)    m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+        if (m_codeHealth)       m_codeHealth->setVisible(false);
+        if (m_debugFrame)       m_debugFrame->setVisible(false);
+        m_dataTrace->setVisible(true);
+    });
+
+    auto* errorJournalAction = toolsMenu->addAction("Error Journal");
+    errorJournalAction->setShortcut(QKeySequence("Ctrl+Shift+E"));
+    connect(errorJournalAction, &QAction::triggered, this, [this]() {
+        if (!m_errorJournal) return;
+        // Update workspace root in case it changed
+        if (m_fileTree && !m_fileTree->rootPath().isEmpty())
+            m_errorJournal->setWorkspaceRoot(m_fileTree->rootPath());
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame)    m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+        if (m_codeHealth)       m_codeHealth->setVisible(false);
+        if (m_debugFrame)       m_debugFrame->setVisible(false);
+        if (m_dataTrace)        m_dataTrace->setVisible(false);
+        m_errorJournal->setVisible(true);
+    });
+
+    toolsMenu->addSeparator();
+
+    // ── Type Flow Visualizer ──────────────────────────────────────────────
+    auto* typeFlowAction = toolsMenu->addAction("Type Flow...");
+    typeFlowAction->setShortcut(QKeySequence("Ctrl+Shift+F"));
+    connect(typeFlowAction, &QAction::triggered, this, [this]() {
+        if (!m_typeFlow || !m_editor) return;
+        QString code = m_editor->currentContent();
+        QString lang = currentLangKey();
+        m_typeFlow->setCode(code, lang);
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame)    m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+        if (m_codeHealth)       m_codeHealth->setVisible(false);
+        if (m_debugFrame)       m_debugFrame->setVisible(false);
+        if (m_dataTrace)        m_dataTrace->setVisible(false);
+        if (m_errorJournal)     m_errorJournal->setVisible(false);
+        m_typeFlow->setVisible(true);
+    });
+
+    // ── Machine View toggle ───────────────────────────────────────────────
+    auto* machineViewAction = toolsMenu->addAction("Machine View");
+    machineViewAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
+    machineViewAction->setCheckable(true);
+    connect(machineViewAction, &QAction::triggered, this, [this, machineViewAction](bool checked) {
+        if (!m_machineView) return;
+        if (checked) {
+            if (m_levelSelector)
+                m_machineView->setLevel(m_levelSelector->currentLevel());
+            if (m_editor)
+                m_machineView->setLanguage(currentLangKey());
+            m_machineView->clearExplanation();
+            m_machineView->setVisible(true);
+        } else {
+            m_machineView->setVisible(false);
+        }
+        Q_UNUSED(machineViewAction);
+    });
+
+    toolsMenu->addSeparator();
+
+    // ── Execution Cost Visualizer ─────────────────────────────────────────
+    auto* costAction = toolsMenu->addAction("Show Execution Cost");
+    costAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
+    costAction->setCheckable(true);
+    connect(costAction, &QAction::triggered, this, [this, costAction](bool checked) {
+        if (!m_editor) return;
+        if (checked) {
+            QString filePath = m_editor->currentFilePath();
+            if (filePath.isEmpty()) {
+                costAction->setChecked(false);
+                QMessageBox::information(this, "Save First",
+                    "Please save your file before profiling execution cost.");
+                return;
+            }
+            QString lang = currentLangKey();
+            if (lang != "python") {
+                costAction->setChecked(false);
+                QMessageBox::information(this, "Python Only",
+                    "Execution Cost Visualizer currently supports Python files only.");
+                return;
+            }
+            m_editor->saveCurrentFile();
+            if (!m_costVisualizer) {
+                m_costVisualizer = new CostVisualizer(this);
+                m_editor->codeEditor()->setCostVisualizer(m_costVisualizer);
+                connect(m_costVisualizer, &CostVisualizer::statusMessage, this,
+                    [this](const QString& msg) {
+                        if (m_costPanel) m_costPanel->setStatus(msg);
+                    });
+                connect(m_costVisualizer, &CostVisualizer::errorOccurred, this,
+                    [this, costAction](const QString& err) {
+                        QMessageBox::warning(this, "Profiler Error", err);
+                        if (m_costPanel) m_costPanel->setVisible(false);
+                        costAction->setChecked(false);
+                    });
+            }
+            if (!m_costPanel) {
+                m_costPanel = new CostVisualizerPanel(m_editor);
+                auto* editorLayout = qobject_cast<QVBoxLayout*>(m_editor->layout());
+                if (editorLayout) editorLayout->insertWidget(0, m_costPanel);
+                connect(m_costPanel, &CostVisualizerPanel::stopRequested, this,
+                    [this, costAction]() {
+                        if (m_costVisualizer) m_costVisualizer->clear();
+                        if (m_costPanel) m_costPanel->setVisible(false);
+                        if (m_editor) m_editor->codeEditor()->viewport()->update();
+                        costAction->setChecked(false);
+                    });
+            }
+            m_costPanel->setVisible(true);
+            m_costPanel->setStatus("Profiling...");
+            m_costVisualizer->profileFile(filePath);
+        } else {
+            if (m_costVisualizer) m_costVisualizer->clear();
+            if (m_costPanel) m_costPanel->setVisible(false);
+            if (m_editor) m_editor->codeEditor()->viewport()->update();
+        }
+    });
+
     // Help
     auto* helpMenu = mb->addMenu("&Help");
 
@@ -798,9 +948,33 @@ void MainWindow::setupCentralLayout()
     m_debugFrame->setVisible(false);
     mainLayout->addWidget(m_debugFrame);
 
+    // Data Trace Frame — hidden by default
+    m_dataTrace = new DataTraceFrame;
+    m_dataTrace->setVisible(false);
+    mainLayout->addWidget(m_dataTrace);
+
+    // Error Journal — hidden by default
+    m_errorJournal = new ErrorJournal;
+    m_errorJournal->setVisible(false);
+    mainLayout->addWidget(m_errorJournal);
+
+    // Type Flow Frame — hidden by default
+    m_typeFlow = new TypeFlowFrame;
+    m_typeFlow->setVisible(false);
+    mainLayout->addWidget(m_typeFlow);
+
+    // Machine View Panel — sits below the editor splitter, hidden until toggled
+    m_machineView = new MachineViewPanel;
+    m_machineView->setVisible(false);
+    mainLayout->addWidget(m_machineView);
+
     // Security Lab Widget — swapped in per lab, hidden by default
     // Created lazily in openSecurityLab(); placeholder registered here
     m_securityLab = nullptr;  // built on demand
+
+    // Predict Panel — sits above the build bar, hidden unless Predict mode is on
+    m_predictPanel = new PredictPanel;
+    mainLayout->addWidget(m_predictPanel);
 
     // Build bar at bottom
     m_buildBar = new BuildBar;
@@ -1123,6 +1297,24 @@ void MainWindow::wireSignals()
             m_aiChatPanel->addMessage(ChatBubble::AI, walkthrough);
     });
 
+    // Editor right-click: "What If...?" → WhatIfDialog
+    connect(m_editor->codeEditor(), &CodeEditor::whatIfRequested, this,
+        [this](int lineNumber, const QString& lineText) {
+            if (!m_editor) return;
+            QString filePath = m_editor->currentFilePath();
+            if (filePath.isEmpty()) {
+                QMessageBox::information(this, "Save First",
+                    "Please save your file before using What If.");
+                return;
+            }
+            m_editor->saveCurrentFile();
+            auto* dlg = new WhatIfDialog(filePath, lineNumber, lineText,
+                                          currentLangKey(), this);
+            dlg->setAttribute(Qt::WA_DeleteOnClose);
+            dlg->setWindowModality(Qt::NonModal);
+            dlg->show();
+        });
+
     // Runtime Analysis Frame signals
     connect(m_runtimeAnalysis, &RuntimeAnalysisFrame::backToEditor, this, [this]() {
         m_runtimeAnalysis->setVisible(false);
@@ -1219,6 +1411,96 @@ void MainWindow::wireSignals()
         m_mainSplitter->setVisible(true);
     });
 
+    // DataTrace Frame signals
+    connect(m_dataTrace, &DataTraceFrame::backToEditor, this, [this]() {
+        m_dataTrace->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+    connect(m_dataTrace, &DataTraceFrame::jumpToLine, this, [this](int line) {
+        m_dataTrace->setVisible(false);
+        m_mainSplitter->setVisible(true);
+        if (m_editor && line > 0) {
+            auto* ed = m_editor->codeEditor();
+            QTextCursor cursor = ed->textCursor();
+            cursor.movePosition(QTextCursor::Start);
+            cursor.movePosition(QTextCursor::NextBlock, QTextCursor::MoveAnchor, line - 1);
+            ed->setTextCursor(cursor);
+            ed->centerCursor();
+        }
+    });
+
+    // ErrorJournal signals
+    connect(m_errorJournal, &ErrorJournal::backToEditor, this, [this]() {
+        m_errorJournal->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+    connect(m_errorJournal, &ErrorJournal::jumpToFile, this,
+        [this](const QString& filePath, int line) {
+            if (m_editor) {
+                m_editor->openFile(filePath);
+                m_errorJournal->setVisible(false);
+                m_mainSplitter->setVisible(true);
+                if (line > 0) {
+                    auto* ed = m_editor->codeEditor();
+                    QTextCursor cursor = ed->textCursor();
+                    cursor.movePosition(QTextCursor::Start);
+                    cursor.movePosition(QTextCursor::NextBlock,
+                                        QTextCursor::MoveAnchor, line - 1);
+                    ed->setTextCursor(cursor);
+                    ed->centerCursor();
+                }
+            }
+        });
+    // PredictPanel: runRequested — run code then feed actual output back
+    connect(m_predictPanel, &PredictPanel::runRequested, this, [this]() {
+        if (!m_editor) return;
+        QString filePath = m_editor->currentFilePath();
+        if (filePath.isEmpty()) {
+            QTemporaryFile* tmp = new QTemporaryFile(this);
+            QString lk = currentLangKey();
+            QString ext = (lk == "python") ? ".py" : (lk == "c") ? ".c" : ".cpp";
+            tmp->setFileTemplate(QDir::tempPath() + "/ccpred_XXXXXX" + ext);
+            if (tmp->open()) {
+                tmp->write(m_editor->currentContent().toUtf8());
+                tmp->flush();
+                filePath = tmp->fileName();
+                tmp->setAutoRemove(true);
+            }
+        } else {
+            m_editor->saveCurrentFile();
+        }
+        m_buildBar->clearResults();
+        m_buildBar->showResults();
+        int level = m_levelSelector ? m_levelSelector->currentLevel() : 1;
+        m_buildSystem->runFile(filePath, currentLangKey(), level);
+    });
+
+    // When BuildSystem finishes, collect output and send to PredictPanel + ErrorJournal
+    connect(m_buildSystem, &BuildSystem::finished, this,
+        [this](bool success) {
+            // Collect output from the results pane
+            QTextEdit* te = m_buildBar ? m_buildBar->resultsContent() : nullptr;
+            QString actualOutput = te ? te->toPlainText() : QString();
+
+            if (m_predictPanel && m_predictPanel->isActive() && m_predictPanel->isVisible()) {
+                // Only feed if we triggered via PredictPanel
+                // (distinguish by checking m_predictPanel is waiting)
+                m_predictPanel->checkPrediction(actualOutput);
+            }
+
+            QString filePath = m_editor ? m_editor->currentFilePath() : QString();
+            if (m_errorJournal) {
+                if (!success && !actualOutput.isEmpty()) {
+                    m_errorJournal->logError(actualOutput, filePath);
+                } else if (success && !filePath.isEmpty()) {
+                    m_errorJournal->logSuccess(filePath);
+                }
+                // Update workspace root
+                if (m_fileTree && !m_fileTree->rootPath().isEmpty())
+                    m_errorJournal->setWorkspaceRoot(m_fileTree->rootPath());
+            }
+        });
+
     // Build bar debug button
     connect(m_buildBar, &BuildBar::debugRequested, this, [this]() {
         if (!m_editor) return;
@@ -1238,6 +1520,99 @@ void MainWindow::wireSignals()
         if (m_codeHealth)       m_codeHealth->setVisible(false);
         m_debugFrame->setVisible(true);
         m_debugFrame->startDebugging();
+    });
+
+    // Build bar: Predict toggle — show/hide the PredictPanel
+    connect(m_buildBar, &BuildBar::predictToggled, this, [this](bool on) {
+        if (m_predictPanel) {
+            m_predictPanel->setActive(on);
+            if (on) m_predictPanel->reset();
+        }
+    });
+
+    // Build bar: Error Journal button
+    connect(m_buildBar, &BuildBar::errorJournalRequested, this, [this]() {
+        if (!m_errorJournal) return;
+        if (m_fileTree && !m_fileTree->rootPath().isEmpty())
+            m_errorJournal->setWorkspaceRoot(m_fileTree->rootPath());
+        m_mainSplitter->setVisible(false);
+        if (m_securityFrame)    m_securityFrame->setVisible(false);
+        if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+        if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+        if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+        if (m_codeHealth)       m_codeHealth->setVisible(false);
+        if (m_debugFrame)       m_debugFrame->setVisible(false);
+        if (m_dataTrace)        m_dataTrace->setVisible(false);
+        m_errorJournal->setVisible(true);
+    });
+
+    // Sync error badge from errorJournal → buildbar badge
+    connect(m_errorJournal, &ErrorJournal::errorCountChanged, this,
+        [this](int count) {
+            if (m_buildBar) m_buildBar->setErrorBadge(count);
+        });
+
+    // Context menu on editor for "Trace This Variable"
+    m_editor->codeEditor()->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_editor->codeEditor(), &QWidget::customContextMenuRequested, this,
+        [this](const QPoint& pos) {
+            QMenu* menu = m_editor->codeEditor()->createStandardContextMenu();
+            menu->addSeparator();
+            auto* traceAction = menu->addAction("Trace This Variable");
+            QString selected = m_editor->codeEditor()->textCursor().selectedText().trimmed();
+            traceAction->setEnabled(!selected.isEmpty());
+            connect(traceAction, &QAction::triggered, this, [this, selected]() {
+                if (!m_dataTrace || !m_editor) return;
+                QString code     = m_editor->currentContent();
+                QString lang     = currentLangKey();
+                QString filePath = m_editor->currentFilePath();
+                m_dataTrace->setCode(code, lang, filePath);
+                m_dataTrace->setVariable(selected);
+                m_mainSplitter->setVisible(false);
+                if (m_securityFrame)    m_securityFrame->setVisible(false);
+                if (m_runtimeAnalysis)  m_runtimeAnalysis->setVisible(false);
+                if (m_memoryAnalysis)   m_memoryAnalysis->setVisible(false);
+                if (m_depAnalysis)      m_depAnalysis->setVisible(false);
+                if (m_codeHealth)       m_codeHealth->setVisible(false);
+                if (m_debugFrame)       m_debugFrame->setVisible(false);
+                m_dataTrace->setVisible(true);
+            });
+            menu->exec(m_editor->codeEditor()->mapToGlobal(pos));
+            menu->deleteLater();
+        });
+
+    // TypeFlow Frame signals
+    connect(m_typeFlow, &TypeFlowFrame::backToEditor, this, [this]() {
+        m_typeFlow->setVisible(false);
+        m_mainSplitter->setVisible(true);
+    });
+    connect(m_typeFlow, &TypeFlowFrame::jumpToLine, this, [this](int line) {
+        if (!m_editor) return;
+        QTextBlock block = m_editor->codeEditor()->document()->findBlockByNumber(line - 1);
+        if (block.isValid()) {
+            QTextCursor cur(block);
+            m_editor->codeEditor()->setTextCursor(cur);
+            m_editor->codeEditor()->centerCursor();
+        }
+    });
+
+    // Machine View Panel signals
+    connect(m_machineView, &MachineViewPanel::closeRequested, this, [this]() {
+        m_machineView->setVisible(false);
+    });
+    // When cursor moves in editor → update Machine View if visible
+    connect(m_editor->codeEditor(), &QPlainTextEdit::cursorPositionChanged, this, [this]() {
+        if (!m_machineView || !m_machineView->isVisible()) return;
+        QTextCursor cur = m_editor->codeEditor()->textCursor();
+        int lineNum = cur.blockNumber() + 1;
+        QString lineText = cur.block().text();
+        if (m_levelSelector) m_machineView->setLevel(m_levelSelector->currentLevel());
+        m_machineView->setLanguage(currentLangKey());
+        m_machineView->explainLine(lineNum, lineText);
+    });
+    // Update Machine View level when level selector changes
+    connect(m_levelSelector, &LevelSelector::levelChanged, this, [this](int level) {
+        if (m_machineView) m_machineView->setLevel(level);
     });
 
     // AI Chat: keep editor context in sync so the AI knows the current file

@@ -47,6 +47,14 @@ set(SOURCES
     core/debugbackend.cpp
     core/executionrecorder.cpp
     core/whatswrong.cpp
+    core/costvisualizer.cpp
+    core/rubberduck.cpp
+    core/whatif.cpp
+    core/datatrace.cpp
+    core/predictpanel.cpp
+    core/errorjournal.cpp
+    core/typeflow.cpp
+    core/machineview.cpp
 )
 
 
@@ -87,6 +95,14 @@ set(HEADERS
     core/debugbackend.h
     core/executionrecorder.h
     core/whatswrong.h
+    core/costvisualizer.h
+    core/rubberduck.h
+    core/whatif.h
+    core/datatrace.h
+    core/predictpanel.h
+    core/errorjournal.h
+    core/typeflow.h
+    core/machineview.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────
