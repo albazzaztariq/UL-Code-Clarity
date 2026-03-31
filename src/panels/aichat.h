@@ -69,6 +69,10 @@ public:
     ClaudeBridge* claudeBridge() const { return m_claudeBridge; }
     void setClaudeCodeMode(bool enabled);
     bool isClaudeCodeMode() const { return m_claudeCodeMode; }
+
+    // Called by MainWindow to set up editor tracking when Claude Code activates
+    void setEditorForTracking(class EditorWidget *editor);
+    class EditorTracker* editorTracker() const { return m_editorTracker; }
     void setWorkingDirectory(const QString &dir) { m_workingDir = dir; }
     void setSessionId(const QString &id) { m_sessionId = id; }
     QString sessionId() const;
@@ -117,6 +121,8 @@ private:
     AIBackend *m_aiBackend;
     ClaudeBridge *m_claudeBridge;
     TTSNarrator *m_ttsNarrator;
+    class EditorTracker *m_editorTracker = nullptr;
+    class EditorWidget *m_trackedEditor = nullptr;
     QPushButton *m_speakerBtn = nullptr;
     bool m_claudeCodeMode = false;
     QString m_workingDir;

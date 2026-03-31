@@ -141,9 +141,6 @@ private:
     TypeFlowFrame*        m_typeFlow       = nullptr;
     MachineViewPanel*     m_machineView    = nullptr;
 
-    // Claude Code integration
-    EditorTracker* m_editorTracker = nullptr;
-
     // News ticker
     NewsTicker*   m_newsTicker    = nullptr;
 

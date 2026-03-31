@@ -539,6 +539,7 @@ void MainWindow::setupCentralLayout()
     chatLayout->setContentsMargins(0, 0, 0, 0);
     chatLayout->setSpacing(0);
     m_aiChatPanel = new AIChatPanel;
+    m_aiChatPanel->setEditorForTracking(m_editor);
     chatLayout->addWidget(m_aiChatPanel);
     m_rightSplitter->addWidget(m_chatColumn);
 

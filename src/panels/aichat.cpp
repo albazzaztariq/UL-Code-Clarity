@@ -1,5 +1,6 @@
 #include "panels/aichat.h"
 #include "panels/modelconfig.h"
+#include "core/editortracker.h"
 #include "core/settingspanel.h"
 #include "core/setupwizard.h"
 #include "core/theme.h"
@@ -312,6 +313,16 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     // Load model display from saved settings on startup
     reloadModelFromConfig();
 
+    // Handle model selector changes — detect "Claude Code" selection
+    connect(m_modelSelector, &QComboBox::currentTextChanged, this, [this](const QString &text) {
+        bool wantsClaude = text.startsWith("Claude Code");
+        if (wantsClaude && !m_claudeCodeMode) {
+            setClaudeCodeMode(true);
+        } else if (!wantsClaude && m_claudeCodeMode) {
+            setClaudeCodeMode(false);
+        }
+    });
+
     // Show example conversation when chat is empty
     if (m_bubbles.isEmpty())
         showExampleConversation();
@@ -358,13 +369,17 @@ void AIChatPanel::reloadModelFromConfig()
     m_modelSelector->blockSignals(true);
     m_modelSelector->clear();
 
+    // Always add Claude Code as first option (uses CLI subscription, no API key)
+    m_modelSelector->addItem("Claude Code");
+
     if (models.isEmpty()) {
         // Fallback: show legacy single-model config
         QSettings s("CodeClarity", "CodeClarity");
         QString provider  = s.value("ai/provider",  "Anthropic").toString();
         QString modelName = s.value("ai/modelName", "").toString();
         QString display   = modelName.isEmpty() ? provider : modelName;
-        m_modelSelector->addItem(display);
+        if (!display.isEmpty())
+            m_modelSelector->addItem(display);
     } else {
         for (const SavedModel &m : models) {
             QString display = m.modelName.isEmpty() ? m.provider : m.modelName;
@@ -625,6 +640,11 @@ void AIChatPanel::finalizeStreamBubble()
     m_streamText.clear();
 }
 
+void AIChatPanel::setEditorForTracking(EditorWidget *editor)
+{
+    m_trackedEditor = editor;
+}
+
 QString AIChatPanel::sessionId() const
 {
     if (m_claudeBridge && !m_claudeBridge->sessionId().isEmpty())
@@ -639,20 +659,22 @@ void AIChatPanel::setClaudeCodeMode(bool enabled)
     m_claudeCodeMode = enabled;
     if (enabled) {
         m_headerLabel->setText("CLAUDE CODE");
-        m_modelSelector->setVisible(false);
         m_configButton->setVisible(false);
         m_noModelBanner->setVisible(false);
         m_sendButton->setEnabled(true);
         m_input->setPlaceholderText("Talk to Claude Code...");
         if (m_speakerBtn) m_speakerBtn->setVisible(true);
+        // Create editor tracker if we have an editor reference
+        if (m_trackedEditor && !m_editorTracker) {
+            m_editorTracker = new EditorTracker(m_trackedEditor, m_claudeBridge, this);
+        }
     } else {
         m_headerLabel->setText("AI CHAT");
-        m_modelSelector->setVisible(true);
         m_configButton->setVisible(true);
         m_input->setPlaceholderText("Describe what you want...");
         if (m_speakerBtn) m_speakerBtn->setVisible(false);
         m_ttsNarrator->setEnabled(false);
-        reloadModelFromConfig();
+        checkModelConfigured();
     }
 }
 

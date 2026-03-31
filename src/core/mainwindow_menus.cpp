@@ -163,34 +163,7 @@ void MainWindow::createMenuBar()
         if (m_chatColumn) m_chatColumn->setVisible(on);
     });
 
-    viewMenu->addSeparator();
-    auto *claudeCodeAct = viewMenu->addAction("Claude Code Mode");
-    claudeCodeAct->setCheckable(true);
-    claudeCodeAct->setChecked(false);
-    connect(claudeCodeAct, &QAction::toggled, this, [this](bool on) {
-        if (m_aiChatPanel) {
-            m_aiChatPanel->setClaudeCodeMode(on);
-            // Pass current workspace as working directory
-            if (m_fileTree && !m_fileTree->rootPath().isEmpty())
-                m_aiChatPanel->setWorkingDirectory(m_fileTree->rootPath());
-            if (on && !m_editorTracker) {
-                m_editorTracker = new EditorTracker(m_editor,
-                    m_aiChatPanel->claudeBridge(), this);
-                // Wire changelog to Clarity panel
-                connect(m_editorTracker, &EditorTracker::fileModified, this,
-                    [this](const QString &filePath, const QString &desc) {
-                    if (m_clarityPanel) {
-                        ClarityEntryData entry;
-                        entry.title = desc;
-                        entry.time = QTime::currentTime().toString("h:mm ap");
-                        entry.detailHtml = QString("<b>File:</b> %1")
-                            .arg(filePath.toHtmlEscaped());
-                        m_clarityPanel->addEntry(entry);
-                    }
-                });
-            }
-        }
-    });
+    // Claude Code Mode is triggered from the model selector dropdown in AIChatPanel
 
     addSimple(editMenu, "Replace", "Ctrl+H", [this]() {
         if (!m_editor) return;
@@ -295,7 +268,12 @@ void MainWindow::buildToolsMenu()
     QSettings s("CodeClarity", "CodeClarity");
 
     // Current assist level (1=Beginner, 2=Intermediate, 3=Developer, 4=Expert)
-    int level = m_levelSelector ? m_levelSelector->currentLevel() : 4;
+    // Read from selector if available, otherwise from saved settings
+    int level = 1;
+    if (m_levelSelector)
+        level = m_levelSelector->currentLevel();
+    else
+        level = QSettings("CodeClarity", "CodeClarity").value("assistLevel", 1).toInt();
 
     // Minimum level required for each tool key
     static const QMap<QString, int> toolMinLevel = {
