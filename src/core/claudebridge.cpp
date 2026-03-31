@@ -3,6 +3,7 @@
 #include <QJsonArray>
 #include <QStandardPaths>
 #include <QDir>
+#include <QFile>
 #include <QDebug>
 
 // ============================================================================
@@ -47,8 +48,19 @@ void ClaudeBridge::startSession(const QString &sessionId, const QString &working
     if (!workingDir.isEmpty())
         m_process->setWorkingDirectory(workingDir);
 
-    // Find claude executable — check PATH
-    QString claudeExe = "claude";
+    // Find claude executable — try multiple locations
+    QString claudeExe;
+    QStringList candidates = {
+        "claude",  // on PATH
+        QDir::homePath() + "/.claude/local/claude.exe",
+        qEnvironmentVariable("LOCALAPPDATA") + "/Programs/claude/claude.exe",
+        qEnvironmentVariable("APPDATA") + "/npm/claude.cmd",
+    };
+    for (const QString &c : candidates) {
+        if (c.isEmpty()) continue;
+        if (QFile::exists(c)) { claudeExe = c; break; }
+    }
+    if (claudeExe.isEmpty()) claudeExe = "claude";  // hope it's on PATH
 
     QStringList args;
     args << "--output-format" << "stream-json";
