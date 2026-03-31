@@ -134,11 +134,11 @@ void LevelSelector::updateButtonStyles()
                 btn->setStyleSheet(
                     "QPushButton {"
                     "  font-size: 10px; font-weight: 700; padding: 3px 12px;"
-                    "  background: #2563eb; color: #ffffff;"
-                    "  border: 1px solid #2563eb; border-radius: 12px; margin: 0 2px;"
+                    "  background: #4f5b6a; color: #ffffff;"
+                    "  border: 1px solid #4f5b6a; border-radius: 12px; margin: 0 2px;"
                     "}"
                     "QPushButton:hover {"
-                    "  background: #1d4ed8;"
+                    "  background: #434e5c;"
                     "}");
             } else {
                 btn->setStyleSheet(QString(

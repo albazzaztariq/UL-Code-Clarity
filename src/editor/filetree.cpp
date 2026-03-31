@@ -145,14 +145,23 @@ FileTreeWidget::FileTreeWidget(QWidget* parent)
 
     headerLayout->addStretch();
 
-    m_collapseBtn = new QPushButton(QString::fromUtf8("\xe2\x97\x80"));  // ◀ collapse (pointing left = collapse)
-    m_collapseBtn->setFixedSize(22, 22);
+    // Faded + (non-functional when expanded)
+    m_plusLabel = new QLabel("+", m_header);
+    m_plusLabel->setFixedSize(26, 26);
+    m_plusLabel->setAlignment(Qt::AlignCenter);
+    m_plusLabel->setStyleSheet(
+        "font-size: 18px; font-weight: bold; color: #45475a; background: transparent;");
+    headerLayout->addWidget(m_plusLabel);
+
+    // − button (collapse)
+    m_collapseBtn = new QPushButton(QString::fromUtf8("\xe2\x88\x92"), m_header);
+    m_collapseBtn->setFixedSize(26, 26);
     m_collapseBtn->setToolTip("Collapse Explorer");
     m_collapseBtn->setStyleSheet(
         QString("QPushButton { color: %1; background: transparent;"
-        " font-size: 14px; border: none; padding: 0; }"
+        " font-size: 18px; font-weight: bold; border: none; padding: 0; }"
         "QPushButton:hover { color: %2; background: %3; border-radius: 4px; }")
-        .arg(Theme::Colors::fg2(), Theme::Colors::fg(), Theme::Colors::bg4()));
+        .arg(Theme::Colors::fg(), Theme::Colors::fg(), Theme::Colors::bg4()));
     headerLayout->addWidget(m_collapseBtn);
 
     layout->addWidget(m_header);
@@ -359,10 +368,13 @@ void FileTreeWidget::collapse()
     m_collapsed = true;
     m_stack->hide();
     m_headerLabel->hide();
-    m_collapseBtn->setText(QString::fromUtf8("\xe2\x96\xb6"));  // ▶ right-pointing = expand
+    if (m_plusLabel) m_plusLabel->hide();
+    m_collapseBtn->setText("+");
     m_collapseBtn->setToolTip("Expand Explorer");
-    setMaximumWidth(32);
-    setMinimumWidth(32);
+    auto *hl = qobject_cast<QHBoxLayout*>(m_header->layout());
+    if (hl) hl->setContentsMargins(4, 4, 4, 4);
+    setMaximumWidth(36);
+    setMinimumWidth(36);
 }
 
 void FileTreeWidget::expand()
@@ -370,8 +382,11 @@ void FileTreeWidget::expand()
     m_collapsed = false;
     m_stack->show();
     m_headerLabel->show();
-    m_collapseBtn->setText(QString::fromUtf8("\xe2\x97\x80"));  // ◀ left-pointing = collapse
+    if (m_plusLabel) m_plusLabel->show();
+    m_collapseBtn->setText(QString::fromUtf8("\xe2\x88\x92"));  // −
     m_collapseBtn->setToolTip("Collapse Explorer");
+    auto *hl = qobject_cast<QHBoxLayout*>(m_header->layout());
+    if (hl) hl->setContentsMargins(12, 8, 12, 8);
     setMaximumWidth(400);
     setMinimumWidth(140);
 }

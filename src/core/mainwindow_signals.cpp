@@ -64,12 +64,12 @@ void MainWindow::wireSignals()
 
     // Clarity panel close -> hide clarity column
     connect(m_clarityPanel, &ClarityPanel::closeRequested, this, [this]() {
-        m_clarityColumn->setVisible(false);
+        if (m_clarityPanel) m_clarityPanel->toggleCollapsed();
     });
 
     // AI Chat panel close -> hide chat column
     connect(m_aiChatPanel, &AIChatPanel::closeRequested, this, [this]() {
-        m_chatColumn->setVisible(false);
+        if (m_aiChatPanel) m_aiChatPanel->toggleCollapsed();
     });
 
     // Overlay close signals

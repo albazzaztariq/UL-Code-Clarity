@@ -7,7 +7,6 @@
 #include <QMenu>
 #include <QCloseEvent>
 #include <QPushButton>
-#include <QComboBox>
 #include <QMap>
 #include <QAction>
 #include "core/aipermissions.h"
@@ -54,6 +53,12 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
 
     void closeEvent(QCloseEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void changeEvent(QEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
+    bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override;
 
     EditorWidget*   editor()        const { return m_editor; }
     FileTreeWidget* fileTree()      const { return m_fileTree; }
@@ -67,6 +72,12 @@ private:
     void createLearningMenu();
     void buildToolsMenu();
     void createStatusBar();
+    void setupTitleBar();
+    void applyTitleBarTheme();
+    void applyWin32Frameless();
+    void setupDidYouKnowBanner();
+    void updateDidYouKnowBanner();
+    QString buildDidYouKnowHtml(bool isDark);
     void setupCentralLayout();
     void wireSignals();
     void saveSession();
@@ -137,7 +148,6 @@ private:
 
     // Build chain
     BuildChainConfig  m_activeBuildChain;
-    QComboBox*        m_chainCombo = nullptr;
 
     // CVE monitoring
     CVEMonitor*   m_cveMonitor    = nullptr;
@@ -149,6 +159,8 @@ private:
     QMenu*  m_recentMenu        = nullptr;
     QMenu*  m_toolsMenu         = nullptr;
     QMenu*  m_savedPipelinesMenu = nullptr;
+    QAction* m_viewClarityAct   = nullptr;
+    QAction* m_viewAIChatAct    = nullptr;
 
     // Tools menu actions (keyed by settings key for visibility control)
     QMap<QString, QAction*> m_toolsActions;
@@ -164,6 +176,20 @@ private:
     QPushButton* m_themeToggleBtn = nullptr;
     QPushButton* m_settingsGearBtn = nullptr;
     bool m_isDarkTheme = true;
+
+    // Custom title bar
+    QWidget* m_titleBar = nullptr;
+    QLabel* m_windowIconLabel = nullptr;
+    QLabel* m_windowTitleLabel = nullptr;
+    QPushButton* m_minimizeBtn = nullptr;
+    QPushButton* m_maximizeBtn = nullptr;
+    QPushButton* m_closeBtn = nullptr;
+
+    // Did You Know banner
+    QWidget* m_didYouKnowBanner = nullptr;
+    QLabel* m_didYouKnowLabel = nullptr;
+    QTimer* m_didYouKnowTimer = nullptr;
+    int m_lastDidYouKnowIndex = -1;
 
     // Permissions system
     AIPermissions m_aiPermissions;

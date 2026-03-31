@@ -223,25 +223,27 @@ EditorWidget::EditorWidget(QWidget* parent)
     tabLayout->addWidget(m_langBadge);
 
     // Explain button
-    auto* explainBtn = new QPushButton("Explain");
+    auto* explainBtn = new QPushButton("Generate Comments");
     explainBtn->setFixedHeight(22);
     explainBtn->setCursor(Qt::PointingHandCursor);
-    explainBtn->setToolTip("Explain the current code in plain language");
+    explainBtn->setToolTip("Generate inline comments for the current code");
     explainBtn->setStyleSheet(
-        QString("QPushButton { background: %1; color: #1e1e2e; font-weight: 600;"
-        " font-size: 10px; padding: 0 10px; border-radius: 4px; border: none; margin-right: 4px; }"
-        "QPushButton:hover { background: #fae3b0; }").arg(Theme::Colors::yellow()));
+        QString("QPushButton { background: %1; color: %2; font-weight: 600;"
+        " font-size: 10px; padding: 0 10px; border-radius: 4px; border: none; margin-right: 10px; }"
+        "QPushButton:hover { filter: brightness(1.15); }")
+        .arg(Theme::Colors::accent(), Theme::Colors::bg()));
     tabLayout->addWidget(explainBtn);
 
     // Walk Me Through button
-    auto* walkBtn = new QPushButton("Walk Me Through This Code");
+    auto* walkBtn = new QPushButton("Start Code Walkthrough");
     walkBtn->setFixedHeight(22);
     walkBtn->setCursor(Qt::PointingHandCursor);
-    walkBtn->setToolTip("Get a step-by-step walkthrough of this code");
+    walkBtn->setToolTip("Start a step-by-step walkthrough of this code");
     walkBtn->setStyleSheet(
-        QString("QPushButton { background: %1; color: #1e1e2e; font-weight: 600;"
+        QString("QPushButton { background: %1; color: %2; font-weight: 600;"
         " font-size: 10px; padding: 0 10px; border-radius: 4px; border: none; margin-right: 8px; }"
-        "QPushButton:hover { background: #fae3b0; }").arg(Theme::Colors::yellow()));
+        "QPushButton:hover { filter: brightness(1.15); }")
+        .arg(Theme::Colors::accent(), Theme::Colors::bg()));
     tabLayout->addWidget(walkBtn);
 
     // Clear Explanations button — hidden until Explain is active

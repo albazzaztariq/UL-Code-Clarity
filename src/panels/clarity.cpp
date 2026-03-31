@@ -30,9 +30,9 @@ ClarityEntry::ClarityEntry(const QString &title, const QString &time,
     } else {
         setStyleSheet(
             "ClarityEntry { background: transparent; border-radius: 0;"
-            " border: none; border-left: 3px solid #2563eb; margin-bottom: 8px; }"
+            " border: none; border-left: 3px solid #4f5b6a; margin-bottom: 8px; }"
             "ClarityEntry:hover { background: transparent;"
-            " border: none; border-left: 3px solid #2563eb; margin-bottom: 8px; }");
+            " border: none; border-left: 3px solid #4f5b6a; margin-bottom: 8px; }");
     }
 
     auto *layout = new QVBoxLayout(this);
@@ -72,9 +72,9 @@ void ClarityEntry::buildDetailContent(const QString &detailHtml)
     auto *detailLabel = new QLabel(detailHtml, m_detailWidget);
     detailLabel->setStyleSheet(s_isDark
         ? QString("font-size: 11px; line-height: 1.5; color: %1; background: transparent;"
-                  "QLabel a { color: " ACCENT2 "; }").arg(FG2)
+                  "QLabel a { color: %2; }").arg(FG2, ACCENT2)
         : "font-size: 11px; line-height: 1.5; color: #444444; background: transparent;"
-          "QLabel a { color: #2563eb; }");
+          "QLabel a { color: #4f5b6a; }");
     detailLabel->setWordWrap(true);
     detailLabel->setTextFormat(Qt::RichText);
     detailLabel->setOpenExternalLinks(false);
@@ -84,10 +84,10 @@ void ClarityEntry::buildDetailContent(const QString &detailHtml)
     if (detailHtml.contains("Try It Yourself")) {
         auto *tryBtn = new QPushButton("Try It Yourself ->", m_detailWidget);
         tryBtn->setStyleSheet(QString(
-            "QPushButton { background: %1; color: " BG "; font-weight: 600; "
+            "QPushButton { background: %1; color: %2; font-weight: 600; "
             "padding: 3px 10px; border-radius: 4px; font-size: 10px; }"
             "QPushButton:hover { filter: brightness(1.15); }"
-        ).arg(MAUVE));
+        ).arg(MAUVE, BG));
         tryBtn->setCursor(Qt::PointingHandCursor);
         tryBtn->setFixedHeight(22);
         connect(tryBtn, &QPushButton::clicked, this, &ClarityEntry::tryItYourselfClicked);
@@ -126,35 +126,43 @@ ClarityPanel::ClarityPanel(QWidget *parent)
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Column header bar: "Clarity" title + X close button
+    // Column header bar: +/− buttons top-right
     m_columnHeader = new QWidget(this);
     m_columnHeader->setStyleSheet(QString(
         "background: %1; border-bottom: 1px solid %2;"
     ).arg(BG2, BORDER));
     auto *headerBarLayout = new QHBoxLayout(m_columnHeader);
-    headerBarLayout->setContentsMargins(12, 8, 12, 8);
+    headerBarLayout->setContentsMargins(8, 4, 8, 4);
 
-    m_titleLabel = new QLabel("Clarity", m_columnHeader);
-    m_titleLabel->setStyleSheet(QString(
-        "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
-    ).arg(ACCENT));
-    headerBarLayout->addWidget(m_titleLabel);
     headerBarLayout->addStretch();
 
-    m_closeButton = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), m_columnHeader);
-    m_closeButton->setFixedSize(16, 16);
-    m_closeButton->setCursor(Qt::PointingHandCursor);
-    m_closeButton->setStyleSheet(QString(
-        "QPushButton { background: none; color: %1; font-size: 12px; border: none; }"
-        "QPushButton:hover { color: %2; }"
-    ).arg(FG3, FG));
-    connect(m_closeButton, &QPushButton::clicked, this, &ClarityPanel::closeRequested);
-    headerBarLayout->addWidget(m_closeButton);
+    // Faded + (non-functional when expanded)
+    m_plusLabel = new QLabel("+", m_columnHeader);
+    m_plusLabel->setFixedSize(26, 26);
+    m_plusLabel->setAlignment(Qt::AlignCenter);
+    m_plusLabel->setStyleSheet(QString(
+        "font-size: 18px; font-weight: bold; color: #45475a; background: transparent;"));
+    m_plusLabel->setToolTip("Panel is already open");
+    headerBarLayout->addWidget(m_plusLabel);
+
+    // − button (collapse)
+    m_hideButton = new QPushButton(QString::fromUtf8("\xe2\x88\x92"), m_columnHeader);
+    m_hideButton->setFixedSize(26, 26);
+    m_hideButton->setCursor(Qt::PointingHandCursor);
+    m_hideButton->setStyleSheet(QString(
+        "QPushButton { color: %1; background: transparent;"
+        " font-size: 18px; font-weight: bold; border: none; padding: 0; }"
+        "QPushButton:hover { color: %2; background: %3; border-radius: 4px; }")
+        .arg(FG, FG, BG4));
+    m_hideButton->setToolTip("Collapse panel");
+    connect(m_hideButton, &QPushButton::clicked, this, &ClarityPanel::closeRequested);
+    headerBarLayout->addWidget(m_hideButton);
 
     mainLayout->addWidget(m_columnHeader);
 
     // Changelog content area with padding
     auto *contentWidget = new QWidget(this);
+    m_contentWidget = contentWidget;
     auto *contentLayout = new QVBoxLayout(contentWidget);
     contentLayout->setContentsMargins(8, 8, 8, 8);
     contentLayout->setSpacing(0);
@@ -169,11 +177,11 @@ ClarityPanel::ClarityPanel(QWidget *parent)
     m_scrollArea = new QScrollArea(this);
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_scrollArea->setStyleSheet(
+    m_scrollArea->setStyleSheet(QString(
         "QScrollArea { border: none; background: transparent; }"
         "QScrollBar:vertical { width: 7px; background: transparent; }"
-        "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
-    );
+        "QScrollBar::handle:vertical { background: %1; border-radius: 4px; }")
+        .arg(BG4));
 
     auto *scrollWidget = new QWidget;
     m_entriesLayout = new QVBoxLayout(scrollWidget);
@@ -189,6 +197,41 @@ ClarityPanel::ClarityPanel(QWidget *parent)
     QSettings s("CodeClarity", "CodeClarity");
     if (!s.value("hasSeenExamples", false).toBool()) {
         rebuildEntries();
+    }
+}
+
+void ClarityPanel::toggleCollapsed()
+{
+    m_collapsed = !m_collapsed;
+
+    if (m_contentWidget)
+        m_contentWidget->setVisible(!m_collapsed);
+
+    auto *headerLayout = qobject_cast<QHBoxLayout*>(m_columnHeader->layout());
+
+    if (m_collapsed) {
+        // Show only + button to expand
+        m_hideButton->setText("+");
+        m_hideButton->setToolTip("Expand panel");
+        if (m_plusLabel) m_plusLabel->hide();
+        if (headerLayout) headerLayout->setContentsMargins(4, 4, 4, 4);
+    } else {
+        // Show faded + and active −
+        m_hideButton->setText(QString::fromUtf8("\xe2\x88\x92"));  // −
+        m_hideButton->setToolTip("Collapse panel");
+        if (m_plusLabel) m_plusLabel->show();
+        if (headerLayout) headerLayout->setContentsMargins(8, 4, 8, 4);
+    }
+
+    QWidget *container = parentWidget();
+    if (container) {
+        if (m_collapsed) {
+            container->setMinimumWidth(36);
+            container->setMaximumWidth(36);
+        } else {
+            container->setMinimumWidth(180);
+            container->setMaximumWidth(600);
+        }
     }
 }
 
@@ -263,31 +306,28 @@ void ClarityPanel::applyTheme(bool isDark)
         m_columnHeader->setStyleSheet(QString(
             "background: %1; border-bottom: 1px solid %2;"
         ).arg(BG2, BORDER));
-        m_titleLabel->setStyleSheet(QString(
-            "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
-        ).arg(ACCENT));
-        m_closeButton->setStyleSheet(QString(
-            "QPushButton { background: none; color: %1; font-size: 12px; border: none; }"
-            "QPushButton:hover { color: %2; }"
-        ).arg(FG3, FG));
+        m_hideButton->setStyleSheet(QString(
+            "QPushButton { color: %1; background: transparent;"
+            " font-size: 18px; font-weight: bold; border: none; padding: 0; }"
+            "QPushButton:hover { color: %2; background: %3; border-radius: 4px; }")
+            .arg(FG, FG, BG4));
         m_headerLabel->setStyleSheet(QString(
             "font-size: 10px; font-weight: 700; text-transform: uppercase; "
             "letter-spacing: 1px; color: %1; padding: 4px 4px 8px;"
         ).arg(FG2));
-        m_scrollArea->setStyleSheet(
+        m_scrollArea->setStyleSheet(QString(
             "QScrollArea { border: none; background: transparent; }"
             "QScrollBar:vertical { width: 7px; background: transparent; }"
-            "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
-        );
+            "QScrollBar::handle:vertical { background: %1; border-radius: 4px; }")
+            .arg(BG4));
     } else {
         setStyleSheet("background: #fafafa;");
         m_columnHeader->setStyleSheet(
             "background: #fafafa; border-bottom: 1px solid #e0e0e0;");
-        m_titleLabel->setStyleSheet(
-            "font-size: 12px; font-weight: 700; color: #333333; letter-spacing: 0.3px;");
-        m_closeButton->setStyleSheet(
-            "QPushButton { background: none; color: #999999; font-size: 12px; border: none; }"
-            "QPushButton:hover { color: #333333; }");
+        m_hideButton->setStyleSheet(
+            "QPushButton { color: #4b515a; background: transparent;"
+            " font-size: 18px; font-weight: bold; border: none; padding: 0; }"
+            "QPushButton:hover { color: #2f343b; background: #d6dbe3; border-radius: 4px; }");
         m_headerLabel->setStyleSheet(
             "font-size: 10px; font-weight: 700; text-transform: uppercase; "
             "letter-spacing: 1px; color: #666666; padding: 4px 4px 8px;");

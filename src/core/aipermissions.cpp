@@ -1,6 +1,7 @@
 #include "core/aipermissions.h"
 
 #include <QSettings>
+#include <QDebug>
 #include <QFileInfo>
 #include <QDir>
 #include <QMessageBox>
@@ -19,11 +20,13 @@ AIPermissions::AIPermissions(QObject *parent)
 
 void AIPermissions::setWorkspaceRoot(const QString &root)
 {
+    qDebug() << "[DEBUG] AIPermissions::setWorkspaceRoot" << root;
     m_workspaceRoot = QDir::cleanPath(root);
 }
 
 bool AIPermissions::isUnderWorkspace(const QString &filePath, const QString &workspaceRoot)
 {
+    qDebug() << "[DEBUG] AIPermissions::isUnderWorkspace" << filePath << workspaceRoot;
     if (workspaceRoot.isEmpty()) return false;
 
     QString cleanFile = QDir::cleanPath(QFileInfo(filePath).absoluteFilePath());
@@ -35,19 +38,23 @@ bool AIPermissions::isUnderWorkspace(const QString &filePath, const QString &wor
 
 bool AIPermissions::requestAccess(const QString &filePath, Operation op, QWidget *parent)
 {
+    const QString opStr = (op == Read) ? "read" : "write";
+    qDebug() << "[DEBUG] AIPermissions::requestAccess" << opStr << filePath;
+
     // Rule 1: path must be under workspace root — hard deny if not
     if (!isUnderWorkspace(filePath, m_workspaceRoot)) {
+        qDebug() << "[DEBUG] AIPermissions::requestAccess denied: outside workspace";
         return false;
     }
 
     // Rule 2: if prompts are disabled, allow immediately
     QSettings s("CodeClarity", "CodeClarity");
     if (s.value("permissions/disablePrompts", false).toBool()) {
+        qDebug() << "[DEBUG] AIPermissions::requestAccess allow: prompts disabled";
         return true;
     }
 
     // Rule 3: show prompt
-    QString opStr = (op == Read) ? "read" : "write";
     QString fileName = QFileInfo(filePath).fileName();
 
     QMessageBox dlg(parent);
@@ -72,12 +79,14 @@ bool AIPermissions::requestAccess(const QString &filePath, Operation op, QWidget
     QAbstractButton *clicked = dlg.clickedButton();
 
     if (clicked == settingsBtn) {
+        qDebug() << "[DEBUG] AIPermissions::requestAccess settings requested";
         // Emit a signal or post a queued event — for now just deny so the caller
         // can tell the user to open Settings manually. The Settings button text
         // itself is the navigation cue.
         return false;
     }
 
+    qDebug() << "[DEBUG] AIPermissions::requestAccess decision" << (clicked == allowBtn);
     return (clicked == allowBtn);
 }
 
@@ -85,6 +94,7 @@ bool AIPermissions::requestAccess(const QString &filePath, Operation op, QWidget
 
 bool PermissionGuard::canAccess(const QString &filePath, const QString &workspaceRoot)
 {
+    qDebug() << "[DEBUG] PermissionGuard::canAccess" << filePath << workspaceRoot;
     if (workspaceRoot.isEmpty()) return false;
 
     QString canonical = QFileInfo(filePath).canonicalFilePath();
@@ -107,13 +117,16 @@ bool PermissionGuard::canAccess(const QString &filePath, const QString &workspac
 bool PermissionGuard::shouldPrompt()
 {
     QSettings s("CodeClarity", "CodeClarity");
-    return !s.value("permissions/disablePrompts", false).toBool();
+    bool prompt = !s.value("permissions/disablePrompts", false).toBool();
+    qDebug() << "[DEBUG] PermissionGuard::shouldPrompt" << prompt;
+    return prompt;
 }
 
 bool PermissionGuard::requestPermission(QWidget *parent,
                                         const QString &action,
                                         const QString &filePath)
 {
+    qDebug() << "[DEBUG] PermissionGuard::requestPermission" << action << filePath;
     if (!shouldPrompt())
         return true;
 
@@ -202,5 +215,6 @@ bool PermissionGuard::requestPermission(QWidget *parent,
     });
 
     dlg.exec();
+    qDebug() << "[DEBUG] PermissionGuard::requestPermission granted" << granted;
     return granted;
 }

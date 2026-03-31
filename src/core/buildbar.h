@@ -22,9 +22,13 @@ public:
     void clearResults();
     void showResults();   // show results pane (without replacing content)
     void applyTheme(bool isDark);
+    void updatePredictVisibility();
 
     // Direct access to the output text edit for streaming output
     QTextEdit* resultsContent() const { return m_resultsContent; }
+
+    // Build chain selection
+    QString currentChainName() const;
 
     // Update the error badge text and visibility
     void setErrorBadge(int count);
@@ -36,6 +40,7 @@ signals:
     void debugRequested();
     void predictToggled(bool on);
     void errorJournalRequested();
+    void customizeLayoutRequested();
 
 private:
     QPushButton* m_runBtn;
@@ -45,7 +50,11 @@ private:
     QPushButton* m_predictToggle = nullptr;
     QPushButton* m_errorBadge    = nullptr;
     QComboBox*   m_targetCombo;
+    QLabel*      m_chainLabel = nullptr;
+    QComboBox*   m_chainCombo = nullptr;
+    QPushButton* m_chainEditBtn = nullptr;
     QPushButton* m_outputToggle;
+    QPushButton* m_customizeLayoutBtn = nullptr;
 
     // Results pane
     QWidget*     m_resultsPane;

@@ -49,6 +49,8 @@ class ClarityPanel : public QWidget {
     Q_OBJECT
 public:
     explicit ClarityPanel(QWidget *parent = nullptr);
+    void toggleCollapsed();
+    bool isCollapsed() const { return m_collapsed; }
 
     // Set the verbosity level (1=Beginner, 2=Intermediate, 3=Developer, 4=No Assist)
     void setLevel(int level);
@@ -77,10 +79,12 @@ private:
     QVBoxLayout *m_entriesLayout;
     QScrollArea *m_scrollArea;
     QLabel *m_headerLabel;
-    QLabel *m_titleLabel;
     QWidget *m_columnHeader;
-    QPushButton *m_closeButton;
+    QPushButton *m_hideButton;
+    QLabel *m_plusLabel = nullptr;
     QVector<ClarityEntry*> m_entries;
+    QWidget *m_contentWidget = nullptr;
+    bool m_collapsed = false;
 
     // Prebuilt sample entries per level (ported from prototype)
     static QVector<ClarityEntryData> sampleEntries(int level);

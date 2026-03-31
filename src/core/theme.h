@@ -45,70 +45,70 @@ inline QString colorStr(const QColor& c) {
 // Usage: QString ss = QString("background: %1;").arg(Theme::Colors::bg());
 struct Colors {
     static bool isDark; // set by MainWindow::applyTheme
-    static const char* bg()     { return isDark ? "#1e1e2e" : "#ffffff"; }
-    static const char* bg2()    { return isDark ? "#2a2a3c" : "#f5f5f5"; }
-    static const char* bg3()    { return isDark ? "#333348" : "#e8e8e8"; }
-    static const char* bg4()    { return isDark ? "#3c3c54" : "#e0e0e0"; }
-    static const char* fg()     { return isDark ? "#cdd6f4" : "#1e1e2e"; }
-    static const char* fg2()    { return isDark ? "#a6adc8" : "#555555"; }
-    static const char* fg3()    { return isDark ? "#6c7086" : "#999999"; }
-    static const char* accent() { return isDark ? "#89b4fa" : "#2563eb"; }
-    static const char* border() { return isDark ? "#45475a" : "#d0d0d0"; }
-    static const char* green()  { return isDark ? "#a6e3a1" : "#22c55e"; }
-    static const char* red()    { return isDark ? "#f38ba8" : "#dc2626"; }
-    static const char* yellow() { return isDark ? "#f9e2af" : "#d97706"; }
+    static const char* bg()     { return isDark ? "#1e1e2e" : "#f1f3f6"; }
+    static const char* bg2()    { return isDark ? "#2a2a3c" : "#e7eaef"; }
+    static const char* bg3()    { return isDark ? "#333348" : "#f7f8fa"; }
+    static const char* bg4()    { return isDark ? "#3c3c54" : "#dde2ea"; }
+    static const char* fg()     { return isDark ? "#cdd6f4" : "#2f343b"; }
+    static const char* fg2()    { return isDark ? "#a6adc8" : "#4b515a"; }
+    static const char* fg3()    { return isDark ? "#6c7086" : "#7a808a"; }
+    static const char* accent() { return isDark ? "#89b4fa" : "#4f5b6a"; }
+    static const char* border() { return isDark ? "#45475a" : "#c7ccd6"; }
+    static const char* green()  { return isDark ? "#a6e3a1" : "#3a915c"; }
+    static const char* red()    { return isDark ? "#f38ba8" : "#c94f5e"; }
+    static const char* yellow() { return isDark ? "#f9e2af" : "#b07a2a"; }
 };
 
 // Unified theme stylesheet — pass isDark=true for Catppuccin Mocha, false for light
 inline QString themeStyleSheet(bool isDark) {
     // Color variables selected per theme
-    const char* cBase        = isDark ? "#1e1e2e" : "#ffffff";
-    const char* cFg          = isDark ? "#cdd6f4" : "#333333";
-    const char* cPanel       = isDark ? "#2a2a3c" : "#f0f0f0";
-    const char* cPanelFg     = isDark ? "#a6adc8" : "#333333";
-    const char* cBorder      = isDark ? "#313244" : "#e0e0e0";
-    const char* cBorder2     = isDark ? "#45475a" : "#d0d0d0";
-    const char* cHover       = isDark ? "#313244" : "#e0e0e0";
-    const char* cHoverFg     = isDark ? "#cdd6f4" : "#1e1e2e";
-    const char* cHover2      = isDark ? "#3c3c54" : "#e4e4e4";  // button/item hover
-    const char* cPressed     = isDark ? "#45475a" : "#d8d8d8";
-    const char* cStatusBg    = isDark ? "#181825" : "#f0f0f0";
-    const char* cStatusFg    = isDark ? "#a6adc8" : "#555555";
-    const char* cMenuBg      = isDark ? "#2a2a3c" : "#ffffff";
-    const char* cMenuFg      = isDark ? "#a6adc8" : "#1e1e2e";
-    const char* cMenuSelBg   = isDark ? "#e0e8ff" : "#e0e8ff";  // same both — overridden below
-    const char* cScrollTrack = isDark ? "transparent" : "#f0f0f0";
-    const char* cScrollThumb = isDark ? "#45475a"    : "#cccccc";
-    const char* cScrollHover = isDark ? "#585b70"    : "#aaaaaa";
-    const char* cScrollPage  = isDark ? "transparent": "#f0f0f0";
-    const char* cAccent      = isDark ? "#89b4fa"    : "#2563eb";
-    const char* cInput       = isDark ? "#2a2a3c"    : "#ffffff";
-    const char* cInputFg     = isDark ? "#cdd6f4"    : "#333333";
-    const char* cTabInactive = isDark ? "#2a2a3c"    : "#f0f0f0";
-    const char* cTabInactFg  = isDark ? "#a6adc8"    : "#555555";
-    const char* cTabActive   = isDark ? "#1e1e2e"    : "#ffffff";
-    const char* cTabActiveFg = isDark ? "#cdd6f4"    : "#1e1e2e";
-    const char* cTabHoverBg  = isDark ? "#313244"    : "#e8e8e8";
-    const char* cTabHoverFg  = isDark ? "#cdd6f4"    : "#333333";
-    const char* cTabBorder   = isDark ? "#313244"    : "transparent";
-    const char* cTree        = isDark ? "#2a2a3c"    : "#fafafa";
-    const char* cTreeFg      = isDark ? "#a6adc8"    : "#333333";
-    const char* cTreeHover   = isDark ? "#313244"    : "#f0f0f0";
-    const char* cTreeSelFg   = isDark ? "#cdd6f4"    : "#2563eb";
-    const char* cHeaderBg    = isDark ? "#2a2a3c"    : "#fafafa";
-    const char* cHeaderFg    = isDark ? "#a6adc8"    : "#333333";
-    const char* cTextEdit    = isDark ? "#1e1e2e"    : "#ffffff";
-    const char* cTextEditFg  = isDark ? "#cdd6f4"    : "#1e1e2e";
-    const char* cDialogBg    = isDark ? "#1e1e2e"    : "#ffffff";
-    const char* cDialogFg    = isDark ? "#cdd6f4"    : "#333333";
-    const char* cArrow       = isDark ? "#cdd6f4"    : "#333333";
-    const char* cMenuItemSel = isDark ? "#3c3c54"    : "#e0e8ff";
-    const char* cBtnBg       = isDark ? "transparent": "#f0f0f0";
-    const char* cBtnDisFg    = isDark ? "#45475a"    : "#aaaaaa";
-    const char* cBtnDisBg    = isDark ? "transparent": "#f0f0f0";
-    const char* cScrollArea  = isDark ? "#1e1e2e"    : "#fafafa";
-    const char* cTabPane     = isDark ? "#1e1e2e"    : "#ffffff";
-    const char* cLabelFg     = isDark ? "#cdd6f4"    : "#333333";
+    const char* cBase        = isDark ? "#1e1e2e" : "#f1f3f6";
+    const char* cFg          = isDark ? "#cdd6f4" : "#2f343b";
+    const char* cPanel       = isDark ? "#2a2a3c" : "#e7eaef";
+    const char* cPanelFg     = isDark ? "#a6adc8" : "#4b515a";
+    const char* cBorder      = isDark ? "#313244" : "#d1d6df";
+    const char* cBorder2     = isDark ? "#45475a" : "#c7ccd6";
+    const char* cHover       = isDark ? "#313244" : "#dde2ea";
+    const char* cHoverFg     = isDark ? "#cdd6f4" : "#1f2328";
+    const char* cHover2      = isDark ? "#3c3c54" : "#d7dbe3";  // button/item hover
+    const char* cPressed     = isDark ? "#45475a" : "#cfd4de";
+    const char* cStatusBg    = isDark ? "#181825" : "#e3e7ee";
+    const char* cStatusFg    = isDark ? "#a6adc8" : "#4b515a";
+    const char* cMenuBg      = isDark ? "#2a2a3c" : "#f3f5f9";
+    const char* cMenuFg      = isDark ? "#a6adc8" : "#2f343b";
+    const char* cMenuSelBg   = isDark ? "#e0e8ff" : "#d7dbe3";
+    const char* cScrollTrack = isDark ? "transparent" : "#e6e9ef";
+    const char* cScrollThumb = isDark ? "#45475a"    : "#b8bec8";
+    const char* cScrollHover = isDark ? "#585b70"    : "#a8afba";
+    const char* cScrollPage  = isDark ? "transparent": "#e6e9ef";
+    const char* cAccent      = isDark ? "#89b4fa"    : "#4f5b6a";
+    const char* cInput       = isDark ? "#2a2a3c"    : "#f7f8fa";
+    const char* cInputFg     = isDark ? "#cdd6f4"    : "#2f343b";
+    const char* cTabInactive = isDark ? "#2a2a3c"    : "#e7eaef";
+    const char* cTabInactFg  = isDark ? "#a6adc8"    : "#4b515a";
+    const char* cTabActive   = isDark ? "#1e1e2e"    : "#f4f6f9";
+    const char* cTabActiveFg = isDark ? "#cdd6f4"    : "#2f343b";
+    const char* cTabHoverBg  = isDark ? "#313244"    : "#dde2ea";
+    const char* cTabHoverFg  = isDark ? "#cdd6f4"    : "#2f343b";
+    const char* cTabBorder   = isDark ? "#313244"    : "#cfd4de";
+    const char* cTree        = isDark ? "#2a2a3c"    : "#eef1f5";
+    const char* cTreeFg      = isDark ? "#a6adc8"    : "#2f343b";
+    const char* cTreeHover   = isDark ? "#313244"    : "#dde2ea";
+    const char* cTreeSelFg   = isDark ? "#cdd6f4"    : "#2f343b";
+    const char* cHeaderBg    = isDark ? "#2a2a3c"    : "#e7eaef";
+    const char* cHeaderFg    = isDark ? "#a6adc8"    : "#4b515a";
+    const char* cTextEdit    = isDark ? "#1e1e2e"    : "#f7f8fa";
+    const char* cTextEditFg  = isDark ? "#cdd6f4"    : "#1f2328";
+    const char* cDialogBg    = isDark ? "#1e1e2e"    : "#f1f3f6";
+    const char* cDialogFg    = isDark ? "#cdd6f4"    : "#2f343b";
+    const char* cArrow       = isDark ? "#cdd6f4"    : "#3a414b";
+    const char* cMenuItemSel = isDark ? "#3c3c54"    : "#d7dbe3";
+    const char* cBtnBg       = isDark ? "transparent": "#e7eaef";
+    const char* cBtnDisFg    = isDark ? "#45475a"    : "#9aa1ab";
+    const char* cBtnDisBg    = isDark ? "transparent": "#e7eaef";
+    const char* cScrollArea  = isDark ? "#1e1e2e"    : "#eef1f5";
+    const char* cTabPane     = isDark ? "#1e1e2e"    : "#f4f6f9";
+    const char* cLabelFg     = isDark ? "#cdd6f4"    : "#2f343b";
 
     QString ss;
     ss.reserve(4096);
@@ -180,16 +180,19 @@ inline QString themeStyleSheet(bool isDark) {
                   " border-radius: 4px; padding: 4px 24px 4px 8px; font-size: 11px; }")
               .arg(cInput, cInputFg, cBorder2);
     ss += QString("QComboBox:focus { border-color: %1; }").arg(cAccent);
-    ss += "QComboBox::drop-down { border: none; width: 20px;"
+    ss += "QComboBox::drop-down { border: none; width: 18px; background: transparent;"
           " subcontrol-position: right; subcontrol-origin: padding; }";
-    ss += QString("QComboBox::down-arrow { image: none; width: 0; height: 0;"
-                  " border-left: 5px solid transparent; border-right: 5px solid transparent;"
-                  " border-top: 6px solid %1; }").arg(cArrow);
+    ss += QString("QComboBox::down-arrow { image: none; width: 8px; height: 6px;"
+                  " border-left: 4px solid transparent; border-right: 4px solid transparent;"
+                  " border-top: 6px solid %1; margin-top: 1px; }").arg(cArrow);
     ss += QString("QComboBox QAbstractItemView { background: %1; color: %2;"
-                  " border: none; outline: none; margin: 0; padding: 0;"
-                  " selection-background-color: %3; }")
-              .arg(cInput, cInputFg, cMenuItemSel);
+                  " border: none; outline: none; margin: 0; padding: 0; }")
+              .arg(cInput, cInputFg);
     ss += "QComboBox QAbstractItemView::item { border: none; padding: 4px 8px; }";
+    ss += QString("QComboBox QAbstractItemView::item:hover { background: %1; color: %2; }")
+              .arg(cHover2, cHoverFg);
+    ss += QString("QComboBox QAbstractItemView::item:selected { background: %1; color: %2; }")
+              .arg(cMenuItemSel, cHoverFg);
     ss += "QComboBox QFrame { border: none; }";
 
     // Line edits
@@ -272,7 +275,7 @@ inline QString themeStyleSheet(bool isDark) {
                   .arg(cMenuItemSel, cHoverFg);
         ss += QString("QListView { background: %1; color: %2; border: 1px solid %3; }")
                   .arg(cBase, cFg, cBorder);
-        ss += "QListView::item:hover { background: #f5f5f5; }";
+    ss += "QListView::item:hover { background: #dde2ea; }";
         ss += QString("QListView::item:selected { background: %1; color: %2; }")
                   .arg(cMenuItemSel, cHoverFg);
     }
@@ -309,10 +312,10 @@ namespace Css {
     inline constexpr const char* BORDER  = "#45475a";
 
     // Light theme equivalents
-    inline constexpr const char* L_BG     = "#e8e8e8";
-    inline constexpr const char* L_FG     = "#1e1e2e";
-    inline constexpr const char* L_FG2    = "#555555";
-    inline constexpr const char* L_BORDER = "#d0d0d0";
+    inline constexpr const char* L_BG     = "#e7eaef";
+    inline constexpr const char* L_FG     = "#2f343b";
+    inline constexpr const char* L_FG2    = "#4b515a";
+    inline constexpr const char* L_BORDER = "#c7ccd6";
 } // namespace Css
 
 } // namespace Theme

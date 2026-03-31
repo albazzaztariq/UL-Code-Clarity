@@ -297,6 +297,14 @@ void SettingsPanel::buildGeneralTab(QTabWidget *tabs)
     fontSizeLayout->addStretch();
     form->addRow("Font Size:", fontSizeWidget);
 
+    m_didYouKnowChk = new QCheckBox("Show \"Did You Know?\" banner", page);
+    m_didYouKnowChk->setToolTip("Displays short tutorial tips below the news ticker");
+    form->addRow("", m_didYouKnowChk);
+
+    m_predictEnabledChk = new QCheckBox("Enable Predict button", page);
+    m_predictEnabledChk->setToolTip("Shows the Predict toggle in the build bar");
+    form->addRow("", m_predictEnabledChk);
+
     layout->addLayout(form);
     layout->addStretch();
 
@@ -375,6 +383,10 @@ void SettingsPanel::buildAIBehaviorTab(QTabWidget *tabs)
 
     m_webSearchChk = new QCheckBox("Enable web search (costs extra tokens)", page);
     layout->addWidget(m_webSearchChk);
+
+    m_rubberDuckChk = new QCheckBox("Enable Rubber Duck Mode (prompt before sending to AI)", page);
+    m_rubberDuckChk->setToolTip("Opens a short prompt to clarify the problem before sending.");
+    layout->addWidget(m_rubberDuckChk);
 
     auto *promptLabel = new QLabel("Custom system prompt (appended to the default):", page);
     layout->addWidget(promptLabel);
@@ -588,10 +600,15 @@ void SettingsPanel::loadSettings()
     QString fontFamily = s.value("ui/fontFamily", "Consolas").toString();
     int idx = m_fontFamilyCombo->findText(fontFamily);
     if (idx >= 0) m_fontFamilyCombo->setCurrentIndex(idx);
+    if (m_didYouKnowChk)
+        m_didYouKnowChk->setChecked(s.value("ui/didYouKnowEnabled", true).toBool());
+    if (m_predictEnabledChk)
+        m_predictEnabledChk->setChecked(s.value("ui/predictEnabled", false).toBool());
 
     // AI Behavior
     m_webSearchChk->setChecked(s.value("ai/webSearch", false).toBool());
     m_systemPromptEdit->setPlainText(s.value("ai/customSystemPrompt", "").toString());
+    m_rubberDuckChk->setChecked(s.value("ai/rubberDuckEnabled", false).toBool());
 
     // Permissions
     m_disablePromptsChk->setChecked(s.value("permissions/disablePrompts", false).toBool());
@@ -629,9 +646,14 @@ void SettingsPanel::applySettings()
     s.setValue("ui/theme",      m_themeCombo->currentText());
     s.setValue("ui/fontSize",   m_fontSizeEdit->text().toInt());
     s.setValue("ui/fontFamily", m_fontFamilyCombo->currentText());
+    if (m_didYouKnowChk)
+        s.setValue("ui/didYouKnowEnabled", m_didYouKnowChk->isChecked());
+    if (m_predictEnabledChk)
+        s.setValue("ui/predictEnabled", m_predictEnabledChk->isChecked());
 
     s.setValue("ai/webSearch",          m_webSearchChk->isChecked());
     s.setValue("ai/customSystemPrompt", m_systemPromptEdit->toPlainText());
+    s.setValue("ai/rubberDuckEnabled",  m_rubberDuckChk->isChecked());
 
     s.setValue("permissions/disablePrompts", m_disablePromptsChk->isChecked());
 

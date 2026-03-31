@@ -33,9 +33,9 @@ ChatBubble::ChatBubble(Role role, const QString &text, QWidget *parent)
 
     if (role == User) {
         bubble->setStyleSheet(QString(
-            "background: %1; color: " BG "; padding: 7px 12px; "
+            "background: %1; color: %2; padding: 7px 12px; "
             "border-radius: 12px 12px 2px 12px; font-size: 11px; line-height: 1.4;"
-        ).arg(ACCENT));
+        ).arg(ACCENT, BG));
         layout->addStretch();
         layout->addWidget(bubble);
     } else {
@@ -63,34 +63,37 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Column header bar: "AI Chat" title + X close button
+    // Column header bar: +/− buttons top-right
     m_columnHeader = new QWidget(this);
     m_columnHeader->setStyleSheet(QString(
         "background: %1; border-bottom: 1px solid %2;"
     ).arg(BG2, BORDER));
     auto *headerBarLayout = new QHBoxLayout(m_columnHeader);
-    headerBarLayout->setContentsMargins(12, 8, 12, 8);
+    headerBarLayout->setContentsMargins(8, 4, 8, 4);
 
-    m_titleLabel = new QLabel("AI Chat", m_columnHeader);
-    m_titleLabel->setStyleSheet(QString(
-        "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
-    ).arg(ACCENT));
-    headerBarLayout->addWidget(m_titleLabel);
     headerBarLayout->addStretch();
 
-    // Rubber Duck Mode toggle
-    m_rubberDuckToggle = new RubberDuckToggle(m_columnHeader);
-    headerBarLayout->addWidget(m_rubberDuckToggle);
+    // Faded + (non-functional when expanded)
+    m_plusLabel = new QLabel("+", m_columnHeader);
+    m_plusLabel->setFixedSize(26, 26);
+    m_plusLabel->setAlignment(Qt::AlignCenter);
+    m_plusLabel->setStyleSheet(QString(
+        "font-size: 18px; font-weight: bold; color: #45475a; background: transparent;"));
+    m_plusLabel->setToolTip("Panel is already open");
+    headerBarLayout->addWidget(m_plusLabel);
 
-    m_closeButton = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"), m_columnHeader);
-    m_closeButton->setFixedSize(16, 16);
-    m_closeButton->setCursor(Qt::PointingHandCursor);
-    m_closeButton->setStyleSheet(QString(
-        "QPushButton { background: none; color: %1; font-size: 12px; border: none; }"
-        "QPushButton:hover { color: %2; }"
-    ).arg(FG3, FG));
-    connect(m_closeButton, &QPushButton::clicked, this, &AIChatPanel::closeRequested);
-    headerBarLayout->addWidget(m_closeButton);
+    // − button (collapse)
+    m_hideButton = new QPushButton(QString::fromUtf8("\xe2\x88\x92"), m_columnHeader);
+    m_hideButton->setFixedSize(26, 26);
+    m_hideButton->setCursor(Qt::PointingHandCursor);
+    m_hideButton->setStyleSheet(QString(
+        "QPushButton { color: %1; background: transparent;"
+        " font-size: 18px; font-weight: bold; border: none; padding: 0; }"
+        "QPushButton:hover { color: %2; background: %3; border-radius: 4px; }")
+        .arg(FG, FG, BG4));
+    m_hideButton->setToolTip("Collapse panel");
+    connect(m_hideButton, &QPushButton::clicked, this, &AIChatPanel::closeRequested);
+    headerBarLayout->addWidget(m_hideButton);
 
     mainLayout->addWidget(m_columnHeader);
 
@@ -128,6 +131,7 @@ AIChatPanel::AIChatPanel(QWidget *parent)
 
     // Chat content area with padding
     auto *contentWidget = new QWidget(this);
+    m_contentWidget = contentWidget;
     auto *contentLayout = new QVBoxLayout(contentWidget);
     contentLayout->setContentsMargins(8, 8, 8, 8);
     contentLayout->setSpacing(4);
@@ -150,10 +154,10 @@ AIChatPanel::AIChatPanel(QWidget *parent)
         "QComboBox::drop-down { border: none; }"
         "QComboBox QAbstractItemView { background: %1; color: %2;"
         " border: none; outline: none; margin: 0; padding: 0;"
-        " selection-background-color: " BG4 "; }"
+        " selection-background-color: %4; }"
         "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
         "QComboBox QFrame { border: none; }"
-    ).arg(BG3, FG, BORDER));
+    ).arg(BG3, FG, BORDER, BG4));
     connect(m_modelSelector, &QComboBox::currentTextChanged,
             this, &AIChatPanel::modelChanged);
     headerRow->addWidget(m_modelSelector);
@@ -176,11 +180,11 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     m_scrollArea = new QScrollArea(contentWidget);
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_scrollArea->setStyleSheet(
+    m_scrollArea->setStyleSheet(QString(
         "QScrollArea { border: none; background: transparent; }"
         "QScrollBar:vertical { width: 7px; background: transparent; }"
-        "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
-    );
+        "QScrollBar::handle:vertical { background: %1; border-radius: 4px; }")
+        .arg(BG4));
 
     m_messagesContainer = new QWidget;
     m_messagesLayout = new QVBoxLayout(m_messagesContainer);
@@ -219,11 +223,11 @@ AIChatPanel::AIChatPanel(QWidget *parent)
 
     m_sendButton = new QPushButton("Send", contentWidget);
     m_sendButton->setStyleSheet(QString(
-        "QPushButton { background: %1; color: " BG "; font-weight: 600; "
+        "QPushButton { background: %1; color: %2; font-weight: 600; "
         "padding: 7px 12px; font-size: 11px; border-radius: 4px; }"
         "QPushButton:hover { filter: brightness(1.15); }"
         "QPushButton:disabled { background: %2; color: %3; }"
-    ).arg(ACCENT, BG3, FG3));
+    ).arg(ACCENT, BG, BG3));
     connect(m_sendButton, &QPushButton::clicked, this, &AIChatPanel::onSendClicked);
     inputRow->addWidget(m_sendButton);
 
@@ -251,20 +255,41 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     // Load model display from saved settings on startup
     reloadModelFromConfig();
 
-    // Show example messages on first launch only
-    QSettings s("CodeClarity", "CodeClarity");
-    if (!s.value("hasSeenExamples", false).toBool()) {
-        addMessage(ChatBubble::AI,
-            "<b>Welcome to Code Clarity!</b><br><br>"
-            "This is an example of how the AI Chat works. You can ask questions about your code, "
-            "request changes, or get explanations. Try opening a file and asking me to explain it."
-        );
-        addMessage(ChatBubble::User, "Can you add a function to calculate the total price with tax?");
-        addMessage(ChatBubble::AI,
-            "Sure! I've added a <code>calculate_total(prices, tax_rate=0.10)</code> function. "
-            "It sums the list of prices and multiplies by <code>(1 + tax_rate)</code>. "
-            "Check the <b>Clarity</b> panel on the left to see what changed and why."
-        );
+    // Show example conversation when chat is empty
+    if (m_bubbles.isEmpty())
+        showExampleConversation();
+}
+
+void AIChatPanel::toggleCollapsed()
+{
+    m_collapsed = !m_collapsed;
+
+    if (m_contentWidget)
+        m_contentWidget->setVisible(!m_collapsed);
+
+    auto *headerLayout = qobject_cast<QHBoxLayout*>(m_columnHeader->layout());
+
+    if (m_collapsed) {
+        m_hideButton->setText("+");
+        m_hideButton->setToolTip("Expand panel");
+        if (m_plusLabel) m_plusLabel->hide();
+        if (headerLayout) headerLayout->setContentsMargins(4, 4, 4, 4);
+    } else {
+        m_hideButton->setText(QString::fromUtf8("\xe2\x88\x92"));  // −
+        m_hideButton->setToolTip("Collapse panel");
+        if (m_plusLabel) m_plusLabel->show();
+        if (headerLayout) headerLayout->setContentsMargins(8, 4, 8, 4);
+    }
+
+    QWidget *container = parentWidget();
+    if (container) {
+        if (m_collapsed) {
+            container->setMinimumWidth(36);
+            container->setMaximumWidth(36);
+        } else {
+            container->setMinimumWidth(180);
+            container->setMaximumWidth(600);
+        }
     }
 }
 
@@ -352,8 +377,31 @@ void AIChatPanel::updatePlaceholderVisibility()
     m_placeholderLabel->setVisible(m_bubbles.isEmpty());
 }
 
+void AIChatPanel::showExampleConversation()
+{
+    clearChat();
+    m_showingExamples = true;
+
+    addMessage(ChatBubble::User,
+        "Can you add a function that calculates the total price?");
+    addMessage(ChatBubble::AI,
+        "Done. I added a <code>calculate_total(prices)</code> helper and wired it into the flow. "
+        "See the <b>Change Log</b> for the exact edits.");
+
+    addMessage(ChatBubble::User,
+        "The loop is skipping the last item in the list.");
+    addMessage(ChatBubble::AI,
+        "Fixed the off-by-one. The loop now includes the final element and the results match expectations.");
+
+    addMessage(ChatBubble::User,
+        "Please handle empty price lists without errors.");
+    addMessage(ChatBubble::AI,
+        "Added a guard clause to return 0 for empty input and documented it in the Change Log.");
+}
+
 void AIChatPanel::setBuildFromScratchWelcome()
 {
+    m_showingExamples = false;
     clearChat();
     addMessage(ChatBubble::AI,
         "<b>Welcome to Build from Scratch!</b><br><br>"
@@ -371,6 +419,7 @@ void AIChatPanel::setBuildFromScratchWelcome()
 
 void AIChatPanel::setStandardMode()
 {
+    m_showingExamples = false;
     clearChat();
     addMessage(ChatBubble::AI,
         "Back to standard mode. I'll work on code automatically and explain "
@@ -387,9 +436,10 @@ QString AIChatPanel::selectedModel() const
 void AIChatPanel::markExamplesSeen()
 {
     QSettings s("CodeClarity", "CodeClarity");
-    if (!s.value("hasSeenExamples", false).toBool()) {
-        s.setValue("hasSeenExamples", true);
+    s.setValue("hasSeenExamples", true);
+    if (m_showingExamples) {
         clearChat();
+        m_showingExamples = false;
     }
 }
 
@@ -399,7 +449,8 @@ void AIChatPanel::onSendClicked()
     if (text.isEmpty()) return;
 
     // ── Rubber Duck Mode interception ─────────────────────────────────────
-    if (m_rubberDuckToggle && m_rubberDuckToggle->isEnabled()) {
+    QSettings s("CodeClarity", "CodeClarity");
+    if (s.value("ai/rubberDuckEnabled", false).toBool()) {
         auto* dlg = new RubberDuckDialog(text, this);
         dlg->setAttribute(Qt::WA_DeleteOnClose);
         dlg->applyTheme(m_isDark);
@@ -591,13 +642,11 @@ void AIChatPanel::applyTheme(bool isDark)
         m_columnHeader->setStyleSheet(QString(
             "background: %1; border-bottom: 1px solid %2;"
         ).arg(BG2, BORDER));
-        m_titleLabel->setStyleSheet(QString(
-            "font-size: 12px; font-weight: 700; color: %1; letter-spacing: 0.3px;"
-        ).arg(ACCENT));
-        m_closeButton->setStyleSheet(QString(
-            "QPushButton { background: none; color: %1; font-size: 12px; border: none; }"
-            "QPushButton:hover { color: %2; }"
-        ).arg(FG3, FG));
+        m_hideButton->setStyleSheet(QString(
+            "QPushButton { color: %1; background: transparent;"
+            " font-size: 18px; font-weight: bold; border: none; padding: 0; }"
+            "QPushButton:hover { color: %2; background: %3; border-radius: 4px; }")
+            .arg(FG, FG, BG4));
         m_headerLabel->setStyleSheet(QString(
             "font-size: 10px; font-weight: 700; text-transform: uppercase; "
             "letter-spacing: 1px; color: %1;"
@@ -608,19 +657,19 @@ void AIChatPanel::applyTheme(bool isDark)
             "QComboBox::drop-down { border: none; }"
             "QComboBox QAbstractItemView { background: %1; color: %2;"
             " border: none; outline: none; margin: 0; padding: 0;"
-            " selection-background-color: " BG4 "; }"
+            " selection-background-color: %4; }"
             "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
             "QComboBox QFrame { border: none; }"
-        ).arg(BG3, FG, BORDER));
+        ).arg(BG3, FG, BORDER, BG4));
         m_configButton->setStyleSheet(QString(
             "QPushButton { background: none; color: %1; font-size: 13px; border: none; }"
             "QPushButton:hover { color: %2; }"
         ).arg(FG3, FG));
-        m_scrollArea->setStyleSheet(
+        m_scrollArea->setStyleSheet(QString(
             "QScrollArea { border: none; background: transparent; }"
             "QScrollBar:vertical { width: 7px; background: transparent; }"
-            "QScrollBar::handle:vertical { background: " BG4 "; border-radius: 4px; }"
-        );
+            "QScrollBar::handle:vertical { background: %1; border-radius: 4px; }")
+            .arg(BG4));
         m_placeholderLabel->setStyleSheet(QString(
             "color: %1; font-size: 11px; font-style: italic; padding: 20px;"
         ).arg(FG2));
@@ -629,30 +678,29 @@ void AIChatPanel::applyTheme(bool isDark)
             "color: %2; border: 1px solid %3; border-radius: 4px; }"
         ).arg(BG3, FG, BORDER));
         m_sendButton->setStyleSheet(QString(
-            "QPushButton { background: %1; color: " BG "; font-weight: 600; "
+            "QPushButton { background: %1; color: %2; font-weight: 600; "
             "padding: 7px 12px; font-size: 11px; border-radius: 4px; }"
             "QPushButton:hover { filter: brightness(1.15); }"
             "QPushButton:disabled { background: %2; color: %3; }"
-        ).arg(ACCENT, BG3, FG3));
+        ).arg(ACCENT, BG, BG3));
     } else {
         setStyleSheet("background: #fafafa;");
         m_columnHeader->setStyleSheet(
             "background: #fafafa; border-bottom: 1px solid #e0e0e0;");
-        m_titleLabel->setStyleSheet(
-            "font-size: 12px; font-weight: 700; color: #333333; letter-spacing: 0.3px;");
-        m_closeButton->setStyleSheet(
-            "QPushButton { background: none; color: #999999; font-size: 12px; border: none; }"
-            "QPushButton:hover { color: #333333; }");
+        m_hideButton->setStyleSheet(
+            "QPushButton { color: #4b515a; background: transparent;"
+            " font-size: 18px; font-weight: bold; border: none; padding: 0; }"
+            "QPushButton:hover { color: #2f343b; background: #d6dbe3; border-radius: 4px; }");
         m_headerLabel->setStyleSheet(
             "font-size: 10px; font-weight: 700; text-transform: uppercase; "
             "letter-spacing: 1px; color: #666666;");
         m_modelSelector->setStyleSheet(
-            "QComboBox { font-size: 10px; background: #fafafa; color: #333333; "
-            "border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px 6px; }"
+            "QComboBox { font-size: 10px; background: #f7f8fa; color: #2f343b; "
+            "border: 1px solid #c7ccd6; border-radius: 4px; padding: 2px 6px; }"
             "QComboBox::drop-down { border: none; }"
-            "QComboBox QAbstractItemView { background: #ffffff; color: #333333;"
+            "QComboBox QAbstractItemView { background: #f7f8fa; color: #2f343b;"
             " border: none; outline: none; margin: 0; padding: 0;"
-            " selection-background-color: #e0e8ff; selection-color: #1e1e2e; }"
+            " selection-background-color: #d7dbe3; selection-color: #2f343b; }"
             "QComboBox QAbstractItemView::item { border: none; padding: 3px 6px; }"
             "QComboBox QFrame { border: none; }");
         m_configButton->setStyleSheet(
@@ -669,9 +717,9 @@ void AIChatPanel::applyTheme(bool isDark)
             "QLineEdit { padding: 7px 10px; font-size: 11px; background: #ffffff; "
             "color: #1e1e2e; border: 1px solid #e0e0e0; border-radius: 4px; }");
         m_sendButton->setStyleSheet(
-            "QPushButton { background: #2563eb; color: #ffffff; font-weight: 600; "
+            "QPushButton { background: #4f5b6a; color: #ffffff; font-weight: 600; "
             "padding: 7px 12px; font-size: 11px; border-radius: 4px; }"
-            "QPushButton:hover { background: #1d4ed8; }"
-            "QPushButton:disabled { background: #d0d0d0; color: #999999; }");
+            "QPushButton:hover { background: #434e5c; }"
+            "QPushButton:disabled { background: #d0d4dc; color: #7a808a; }");
     }
 }

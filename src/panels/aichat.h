@@ -33,6 +33,8 @@ class AIChatPanel : public QWidget {
     Q_OBJECT
 public:
     explicit AIChatPanel(QWidget *parent = nullptr);
+    void toggleCollapsed();
+    bool isCollapsed() const { return m_collapsed; }
 
     // Add a message to the chat
     void addMessage(ChatBubble::Role role, const QString &text);
@@ -96,11 +98,10 @@ private:
     QLineEdit *m_input;
     QPushButton *m_sendButton;
     QLabel *m_headerLabel;
-    QLabel *m_titleLabel;
     QWidget *m_columnHeader;
-    QPushButton *m_closeButton;
+    QPushButton *m_hideButton;
+    QLabel *m_plusLabel = nullptr;
     QWidget    *m_noModelBanner;  // shown when no AI model is configured
-    RubberDuckToggle *m_rubberDuckToggle = nullptr;  // in header bar
     QNetworkAccessManager *m_networkManager;
     QVector<ChatBubble*> m_bubbles;
     AIBackend *m_aiBackend;
@@ -119,8 +120,12 @@ private:
 
     void scrollToBottom();
     void updatePlaceholderVisibility();
+    void showExampleConversation();
     void checkModelConfigured();  // show/hide banner and enable/disable Send
     bool m_isDark = true;
+    QWidget *m_contentWidget = nullptr;
+    bool m_collapsed = false;
+    bool m_showingExamples = false;
 
     // Create a new AI bubble that can be updated while streaming
     void beginStreamBubble();

@@ -90,6 +90,8 @@ private:
     QComboBox  *m_themeCombo    = nullptr;
     QLineEdit  *m_fontSizeEdit  = nullptr;  // custom spin: number field
     QComboBox  *m_fontFamilyCombo = nullptr;
+    QCheckBox  *m_didYouKnowChk = nullptr;
+    QCheckBox  *m_predictEnabledChk = nullptr;
 
     // Models
     QListWidget *m_modelList    = nullptr;
@@ -102,6 +104,7 @@ private:
     // AI Behavior
     QCheckBox  *m_webSearchChk  = nullptr;
     QTextEdit  *m_systemPromptEdit = nullptr;
+    QCheckBox  *m_rubberDuckChk = nullptr;
 
     // Permissions
     QCheckBox  *m_disablePromptsChk = nullptr;

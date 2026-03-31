@@ -145,6 +145,22 @@ void MainWindow::createMenuBar()
         input->setFocus();
     });
 
+    // ── View ─────────────────────────────────────────────────────────────
+    auto* viewMenu = mb->addMenu("&View");
+    m_viewClarityAct = viewMenu->addAction("Show Clarity Panel");
+    m_viewClarityAct->setCheckable(true);
+    m_viewClarityAct->setChecked(true);
+    connect(m_viewClarityAct, &QAction::toggled, this, [this](bool on) {
+        if (m_clarityColumn) m_clarityColumn->setVisible(on);
+    });
+
+    m_viewAIChatAct = viewMenu->addAction("Show AI Chat Panel");
+    m_viewAIChatAct->setCheckable(true);
+    m_viewAIChatAct->setChecked(true);
+    connect(m_viewAIChatAct, &QAction::toggled, this, [this](bool on) {
+        if (m_chatColumn) m_chatColumn->setVisible(on);
+    });
+
     addSimple(editMenu, "Replace", "Ctrl+H", [this]() {
         if (!m_editor) return;
         auto *dlg = new QDialog(this);

@@ -59,6 +59,7 @@ private:
     CodeFileProxyModel*   m_proxyModel;
     QStandardItemModel*   m_multiModel;
     QWidget*              m_header;
+    QLabel*               m_plusLabel = nullptr;
     QPushButton*          m_collapseBtn;
     QLabel*               m_headerLabel;
 

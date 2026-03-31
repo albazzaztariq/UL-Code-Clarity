@@ -36,6 +36,7 @@
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <dwmapi.h>
+#include <windowsx.h>
 #endif
 
 #include <QApplication>
@@ -46,11 +47,19 @@
 #include <QDialog>
 #include <QCloseEvent>
 #include <QMessageBox>
+#include <QMouseEvent>
+#include <QShowEvent>
+#include <QWindow>
+#include <QPainter>
+#include <QPainterPath>
+#include <QRegion>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
     setWindowTitle("Code Clarity");
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+    setAttribute(Qt::WA_TranslucentBackground, true);
     resize(1280, 800);
 
     // Window icon (taskbar + title bar) — load from file next to executable
@@ -175,6 +184,8 @@ void MainWindow::connectFrameToggle(QAction* action, QWidget* frame,
 void MainWindow::applyTheme()
 {
     qApp->setStyleSheet(Theme::themeStyleSheet(m_isDarkTheme));
+    applyTitleBarTheme();
+    updateDidYouKnowBanner();
 
     // Re-apply per-widget stylesheets that hardcode colors and override the global sheet
     if (m_fileTree)
@@ -257,6 +268,155 @@ void MainWindow::applyTheme()
         DwmSetWindowAttribute(hwnd, 19, &useDark, sizeof(useDark));
     }
 #endif
+    update();
+}
+
+bool MainWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == m_titleBar && event->type() == QEvent::MouseButtonDblClick) {
+        if (isMaximized())
+            showNormal();
+        else
+            showMaximized();
+        return true;
+    }
+
+    if (watched == m_titleBar && event->type() == QEvent::MouseButtonPress) {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        if (mouseEvent->button() == Qt::LeftButton && windowHandle()) {
+            windowHandle()->startSystemMove();
+            return true;
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::WindowStateChange && m_maximizeBtn) {
+        m_maximizeBtn->setText(isMaximized()
+            ? QString::fromUtf8("\xe2\x9d\x90")  // ❐
+            : QString::fromUtf8("\xe2\x96\xa1")); // □
+    }
+    QMainWindow::changeEvent(event);
+}
+
+void MainWindow::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+    applyWin32Frameless();
+}
+
+void MainWindow::resizeEvent(QResizeEvent* event)
+{
+    QMainWindow::resizeEvent(event);
+
+    const int radius = 8;
+    QRect r = rect();
+    r.adjust(0, 0, -1, -1);
+    QPainterPath path;
+    path.addRoundedRect(r, radius, radius);
+    setMask(QRegion(path.toFillPolygon().toPolygon()));
+}
+
+void MainWindow::paintEvent(QPaintEvent* event)
+{
+    Q_UNUSED(event);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+
+    const int radius = 8;
+    const int borderWidth = 2;
+    QRect r = rect();
+    r.adjust(borderWidth - 1, borderWidth - 1, -(borderWidth - 1), -(borderWidth - 1));
+
+    const QColor bg = m_isDarkTheme ? QColor("#1e1e2e") : QColor("#f1f3f6");
+    const QColor border = m_isDarkTheme ? QColor("#3c3c54") : QColor("#b8bec8");
+
+    painter.setPen(QPen(border, borderWidth));
+    painter.setBrush(bg);
+    painter.drawRoundedRect(r, radius, radius);
+}
+
+void MainWindow::applyWin32Frameless()
+{
+#ifdef Q_OS_WIN
+    if (!isVisible())
+        return;
+
+    HWND hwnd = reinterpret_cast<HWND>(winId());
+    if (!hwnd)
+        return;
+
+    LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
+    style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZE | WS_MAXIMIZE | WS_SYSMENU);
+    SetWindowLongPtr(hwnd, GWL_STYLE, style);
+
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+#endif
+}
+
+bool MainWindow::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
+{
+#ifdef Q_OS_WIN
+    Q_UNUSED(eventType);
+    MSG* msg = static_cast<MSG*>(message);
+
+    switch (msg->message) {
+    case WM_NCCALCSIZE:
+        *result = 0;
+        return true;
+    case WM_NCHITTEST: {
+        const LONG border = 8;
+        RECT winRect;
+        GetWindowRect(msg->hwnd, &winRect);
+
+        const LONG x = GET_X_LPARAM(msg->lParam);
+        const LONG y = GET_Y_LPARAM(msg->lParam);
+
+        const bool resizeWidth = minimumWidth() != maximumWidth();
+        const bool resizeHeight = minimumHeight() != maximumHeight();
+
+        if (resizeWidth) {
+            if (x >= winRect.left && x < winRect.left + border) {
+                *result = HTLEFT;
+                return true;
+            }
+            if (x < winRect.right && x >= winRect.right - border) {
+                *result = HTRIGHT;
+                return true;
+            }
+        }
+        if (resizeHeight) {
+            if (y >= winRect.top && y < winRect.top + border) {
+                *result = HTTOP;
+                return true;
+            }
+            if (y < winRect.bottom && y >= winRect.bottom - border) {
+                *result = HTBOTTOM;
+                return true;
+            }
+        }
+
+        const QPoint localPos = mapFromGlobal(QPoint(x, y));
+        if (m_titleBar && m_titleBar->rect().contains(localPos)) {
+            QWidget* child = childAt(localPos);
+            if (child == m_minimizeBtn || child == m_maximizeBtn || child == m_closeBtn) {
+                *result = HTCLIENT;
+                return true;
+            }
+            *result = HTCAPTION;
+            return true;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+#endif
+    return QMainWindow::nativeEvent(eventType, message, result);
 }
 
 // ── Session Persistence ─────────────────────────────────────────────────
@@ -511,7 +671,7 @@ void MainWindow::runBuildChain()
     }
     m_editor->saveCurrentFile();
 
-    QString chainName = m_chainCombo ? m_chainCombo->currentText() : "Default";
+    QString chainName = m_buildBar ? m_buildBar->currentChainName() : "Default";
     QStringList savedNames = BuildChainConfig::savedChainNames();
     BuildChainConfig cfg = savedNames.contains(chainName)
         ? BuildChainConfig::load(chainName)

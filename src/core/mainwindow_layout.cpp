@@ -1,7 +1,6 @@
 #include "core/mainwindow.h"
 #include "core/newsticker.h"
 #include "core/favoritesbar.h"
-#include "core/buildchain.h"
 #include "core/securitytesting.h"
 #include "core/runtimeanalysis.h"
 #include "core/memoryanalysis.h"
@@ -17,6 +16,7 @@
 #include "core/buildbar.h"
 #include "core/buildsystem.h"
 #include "core/runtimestrip.h"
+#include "core/jsonloader.h"
 #include "editor/editor.h"
 #include "editor/filetree.h"
 #include "panels/clarity.h"
@@ -44,6 +44,34 @@
 #include <QProcess>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QMenuBar>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QPainter>
+#include <QRandomGenerator>
+#include <QTextDocument>
+#include <QTimer>
+#include <QRegularExpression>
+
+namespace {
+QPixmap tintPixmap(const QPixmap& src, const QColor& color)
+{
+    if (src.isNull())
+        return src;
+
+    QPixmap tinted(src.size());
+    tinted.fill(Qt::transparent);
+
+    QPainter painter(&tinted);
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.drawPixmap(0, 0, src);
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.fillRect(tinted.rect(), color);
+    painter.end();
+
+    return tinted;
+}
+} // namespace
 
 // ── Status Bar ──────────────────────────────────────────────────────────
 void MainWindow::createStatusBar()
@@ -115,6 +143,8 @@ void MainWindow::createStatusBar()
         });
         dlg.exec();
         if (m_aiChatPanel) m_aiChatPanel->reloadModelFromConfig();
+        updateDidYouKnowBanner();
+        if (m_buildBar) m_buildBar->updatePredictVisibility();
     });
     sb->addPermanentWidget(settingsGearBtn);
 
@@ -166,86 +196,254 @@ void MainWindow::createStatusBar()
         });
 }
 
+void MainWindow::applyTitleBarTheme()
+{
+    if (!m_titleBar)
+        return;
+
+    if (m_isDarkTheme) {
+        m_titleBar->setStyleSheet(
+            "QWidget#TitleBar { background: #1e1e2e; border-bottom: 1px solid #313244; }");
+        m_windowTitleLabel->setStyleSheet(
+            "QLabel { color: #cdd6f4; font-size: 12px; font-weight: 600; }");
+        m_minimizeBtn->setStyleSheet(
+            "QPushButton { background: transparent; color: #bac2de; font-size: 14px; border: none; }"
+            "QPushButton:hover { background: #313244; color: #ffffff; }");
+        m_maximizeBtn->setStyleSheet(
+            "QPushButton { background: transparent; color: #bac2de; font-size: 14px; border: none; }"
+            "QPushButton:hover { background: #313244; color: #ffffff; }");
+        m_closeBtn->setStyleSheet(
+            "QPushButton { background: transparent; color: #bac2de; font-size: 14px; border: none; }"
+            "QPushButton:hover { background: #f38ba8; color: #1e1e2e; }");
+    } else {
+        m_titleBar->setStyleSheet(
+            "QWidget#TitleBar { background: #e1e4ea; border-bottom: 1px solid #c9ced8; }");
+        m_windowTitleLabel->setStyleSheet(
+            "QLabel { color: #2f343b; font-size: 12px; font-weight: 600; }");
+        m_minimizeBtn->setStyleSheet(
+            "QPushButton { background: transparent; color: #4b515a; font-size: 14px; border: none; }"
+            "QPushButton:hover { background: #d6dbe3; color: #2f343b; }");
+        m_maximizeBtn->setStyleSheet(
+            "QPushButton { background: transparent; color: #4b515a; font-size: 14px; border: none; }"
+            "QPushButton:hover { background: #d6dbe3; color: #2f343b; }");
+        m_closeBtn->setStyleSheet(
+            "QPushButton { background: transparent; color: #4b515a; font-size: 14px; border: none; }"
+            "QPushButton:hover { background: #d86a76; color: #ffffff; }");
+    }
+}
+
+void MainWindow::setupDidYouKnowBanner()
+{
+    if (m_didYouKnowBanner)
+        return;
+
+    m_didYouKnowBanner = new QWidget;
+    m_didYouKnowBanner->setObjectName("DidYouKnowBanner");
+    m_didYouKnowBanner->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    auto* layout = new QHBoxLayout(m_didYouKnowBanner);
+    layout->setContentsMargins(12, 6, 12, 6);
+    layout->setSpacing(8);
+
+    m_didYouKnowLabel = new QLabel;
+    m_didYouKnowLabel->setWordWrap(true);
+    m_didYouKnowLabel->setTextFormat(Qt::RichText);
+    layout->addWidget(m_didYouKnowLabel, 1);
+
+    updateDidYouKnowBanner();
+
+    if (!m_didYouKnowTimer) {
+        m_didYouKnowTimer = new QTimer(this);
+        m_didYouKnowTimer->setInterval(30000);
+        connect(m_didYouKnowTimer, &QTimer::timeout,
+                this, &MainWindow::updateDidYouKnowBanner);
+        m_didYouKnowTimer->start();
+    }
+}
+
+void MainWindow::updateDidYouKnowBanner()
+{
+    if (!m_didYouKnowBanner || !m_didYouKnowLabel)
+        return;
+
+    QSettings s("CodeClarity", "CodeClarity");
+    const bool enabled = s.value("ui/didYouKnowEnabled", true).toBool();
+    m_didYouKnowBanner->setVisible(enabled);
+    if (!enabled) {
+        if (m_didYouKnowTimer) m_didYouKnowTimer->stop();
+        return;
+    }
+    if (m_didYouKnowTimer && !m_didYouKnowTimer->isActive())
+        m_didYouKnowTimer->start();
+
+    m_didYouKnowLabel->setText(buildDidYouKnowHtml(m_isDarkTheme));
+
+    if (m_isDarkTheme) {
+        m_didYouKnowBanner->setStyleSheet(
+            "QWidget#DidYouKnowBanner { background: #11111b; border-bottom: 1px solid #313244; }");
+        m_didYouKnowLabel->setStyleSheet("QLabel { font-size: 12px; }");
+    } else {
+        m_didYouKnowBanner->setStyleSheet(
+            "QWidget#DidYouKnowBanner { background: #e9ecf1; border-bottom: 1px solid #cfd4dd; }");
+        m_didYouKnowLabel->setStyleSheet("QLabel { font-size: 12px; }");
+    }
+}
+
+QString MainWindow::buildDidYouKnowHtml(bool isDark)
+{
+    QJsonObject root = JsonLoader::loadObject("tutorials.json");
+    QList<QPair<QString, QString>> entries;
+
+    for (auto it = root.begin(); it != root.end(); ++it) {
+        if (!it->isArray())
+            continue;
+        const QJsonArray arr = it->toArray();
+        for (const QJsonValue& val : arr) {
+            if (!val.isObject())
+                continue;
+            const QJsonObject obj = val.toObject();
+            const QString title = obj.value("title").toString();
+            const QString html = obj.value("html").toString();
+            if (!title.isEmpty() && !html.isEmpty())
+                entries.append({title, html});
+        }
+    }
+
+    QString title = "Quick Tip";
+    QString body = "Build and run a small sample to verify your pipeline.";
+
+    const int bannerWidth = m_didYouKnowBanner ? m_didYouKnowBanner->width() : 900;
+    const QFontMetrics fm(m_didYouKnowLabel ? m_didYouKnowLabel->font() : QFont());
+    const int avgWidth = qMax(6, fm.averageCharWidth());
+    const int maxChars = qMax(160, (bannerWidth / avgWidth) * 2);
+
+    auto assembleSentences = [&](const QString& text) {
+        QStringList sentences = text.split(QRegularExpression("(?<=[.!?])\\s+"),
+                                           Qt::SkipEmptyParts);
+        QString assembled;
+        for (const QString& s : sentences) {
+            QString next = assembled.isEmpty() ? s : (assembled + " " + s);
+            if (next.size() <= maxChars)
+                assembled = next;
+            else
+                break;
+        }
+        return assembled;
+    };
+
+    if (!entries.isEmpty()) {
+        int start = QRandomGenerator::global()->bounded(entries.size());
+        for (int i = 0; i < entries.size(); ++i) {
+            int idx = (start + i) % entries.size();
+            if (idx == m_lastDidYouKnowIndex && entries.size() > 1)
+                continue;
+            QTextDocument doc;
+            doc.setHtml(entries[idx].second);
+            QString plain = doc.toPlainText().simplified();
+            QString candidate = assembleSentences(plain);
+            if (candidate.isEmpty())
+                continue;
+            title = entries[idx].first;
+            body = candidate;
+            m_lastDidYouKnowIndex = idx;
+            break;
+        }
+    }
+
+    const QString bodyColor = isDark ? "#cdd6f4" : "#333333";
+    return QString(
+        "<span style='color:#38bdf8; font-weight:700;'>Did You Know?</span> "
+        "<span style='color:%1;'><b>%2</b> — %3</span>")
+        .arg(bodyColor, title.toHtmlEscaped(), body.toHtmlEscaped());
+}
+
+// ── Custom Title Bar ─────────────────────────────────────────────────────
+void MainWindow::setupTitleBar()
+{
+    if (m_titleBar)
+        return;
+
+    m_titleBar = new QWidget;
+    m_titleBar->setFixedHeight(38);
+    m_titleBar->setObjectName("TitleBar");
+    m_titleBar->installEventFilter(this);
+
+    auto* titleLayout = new QHBoxLayout(m_titleBar);
+    titleLayout->setContentsMargins(10, 0, 0, 0);
+    titleLayout->setSpacing(8);
+    titleLayout->setAlignment(Qt::AlignVCenter);
+
+    m_windowIconLabel = new QLabel;
+    m_windowIconLabel->setFixedSize(20, 20);
+    m_windowIconLabel->setPixmap(tintPixmap(windowIcon().pixmap(16, 16), QColor("#38bdf8")));
+    m_windowIconLabel->setAlignment(Qt::AlignCenter);
+    m_windowIconLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+    titleLayout->addWidget(m_windowIconLabel);
+
+    m_windowTitleLabel = new QLabel("Code Clarity");
+    m_windowTitleLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+    m_windowTitleLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+    titleLayout->addWidget(m_windowTitleLabel);
+
+    titleLayout->addStretch();
+
+    m_minimizeBtn = new QPushButton(QString::fromUtf8("\xe2\x80\x94")); // —
+    m_maximizeBtn = new QPushButton(QString::fromUtf8("\xe2\x96\xa1")); // □
+    m_closeBtn = new QPushButton(QString::fromUtf8("\xe2\x9c\x95"));    // ✕
+
+    const QSize btnSize(46, 38);
+    m_minimizeBtn->setFixedSize(btnSize);
+    m_maximizeBtn->setFixedSize(btnSize);
+    m_closeBtn->setFixedSize(btnSize);
+
+    titleLayout->addWidget(m_minimizeBtn);
+    titleLayout->addWidget(m_maximizeBtn);
+    titleLayout->addWidget(m_closeBtn);
+
+    connect(m_minimizeBtn, &QPushButton::clicked, this, &QWidget::showMinimized);
+    connect(m_maximizeBtn, &QPushButton::clicked, this, [this]() {
+        if (isMaximized())
+            showNormal();
+        else
+            showMaximized();
+    });
+    connect(m_closeBtn, &QPushButton::clicked, this, &QWidget::close);
+
+    if (menuBar()) {
+        menuBar()->setNativeMenuBar(false);
+        auto* menuContainer = new QWidget;
+        auto* menuLayout = new QVBoxLayout(menuContainer);
+        menuLayout->setContentsMargins(2, 2, 2, 0);
+        menuLayout->setSpacing(0);
+        menuLayout->addWidget(m_titleBar);
+        menuLayout->addWidget(menuBar());
+        setMenuWidget(menuContainer);
+    }
+
+    applyTitleBarTheme();
+}
+
 // ── Central Layout ──────────────────────────────────────────────────────
 void MainWindow::setupCentralLayout()
 {
+    setupTitleBar();
+
     auto* centralWidget = new QWidget;
     auto* mainLayout = new QVBoxLayout(centralWidget);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setContentsMargins(2, 0, 2, 2);
     mainLayout->setSpacing(0);
 
     // News ticker — sits directly below menu bar
     m_newsTicker = new NewsTicker;
     mainLayout->addWidget(m_newsTicker);
 
+    // Did You Know banner — fills the gap below the ticker
+    setupDidYouKnowBanner();
+    mainLayout->addWidget(m_didYouKnowBanner);
+
     // Favorites bar — customizable tool buttons strip
     m_favoritesBar = new FavoritesBar;
     mainLayout->addWidget(m_favoritesBar);
-
-    // Build chain bar — "Build Chain: [Default ▾]  [Edit...]  [Run Chain]"
-    {
-        auto* chainBar = new QWidget;
-        chainBar->setFixedHeight(32);
-        chainBar->setStyleSheet(
-            "QWidget { background: #1e1e2e; border-bottom: 1px solid #313244; }"
-            "QLabel { color: #a6adc8; font-size: 11px; background: transparent; }"
-            "QComboBox { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-            " border-radius: 3px; padding: 0 6px; font-size: 11px; min-width: 120px; }"
-            "QPushButton { background: #313244; color: #cdd6f4; border: 1px solid #45475a;"
-            " border-radius: 3px; padding: 0 10px; font-size: 11px; }"
-            "QPushButton:hover { background: #45475a; }");
-        auto* chainLay = new QHBoxLayout(chainBar);
-        chainLay->setContentsMargins(8, 4, 8, 4);
-        chainLay->setSpacing(6);
-
-        auto* chainLbl = new QLabel("Build Chain:");
-        chainLay->addWidget(chainLbl);
-
-        m_chainCombo = new QComboBox;
-        m_chainCombo->setToolTip("Active build chain");
-        // Populate from saved chains
-        QStringList chainNames = BuildChainConfig::savedChainNames();
-        if (chainNames.isEmpty()) chainNames << "Default";
-        for (const QString& n : chainNames)
-            m_chainCombo->addItem(n);
-        chainLay->addWidget(m_chainCombo);
-
-        auto* editChainBtn = new QPushButton("Edit...");
-        editChainBtn->setToolTip("Open build chain editor");
-        connect(editChainBtn, &QPushButton::clicked, this, [this]() {
-            auto* dlg = new BuildChainDialog(this);
-            dlg->setAttribute(Qt::WA_DeleteOnClose);
-            // Load current chain
-            QString currentName = m_chainCombo ? m_chainCombo->currentText() : "Default";
-            QStringList names = BuildChainConfig::savedChainNames();
-            if (names.contains(currentName))
-                dlg->loadChain(BuildChainConfig::load(currentName));
-            connect(dlg, &BuildChainDialog::chainSaved, this, [this](const QString& name) {
-                if (!m_chainCombo) return;
-                // Refresh combo
-                QStringList names = BuildChainConfig::savedChainNames();
-                m_chainCombo->clear();
-                if (names.isEmpty()) names << "Default";
-                for (const QString& n : names) m_chainCombo->addItem(n);
-                int idx = m_chainCombo->findText(name);
-                if (idx >= 0) m_chainCombo->setCurrentIndex(idx);
-            });
-            dlg->exec();
-        });
-        chainLay->addWidget(editChainBtn);
-
-        auto* runChainBtn = new QPushButton("Run Chain");
-        runChainBtn->setToolTip("Run the active build chain");
-        runChainBtn->setStyleSheet(
-            "QPushButton { background: #89b4fa; color: #1e1e2e; border: none;"
-            " border-radius: 3px; padding: 0 10px; font-size: 11px; font-weight: bold; }"
-            "QPushButton:hover { background: #b4d0fb; }");
-        connect(runChainBtn, &QPushButton::clicked, this, &MainWindow::runBuildChain);
-        chainLay->addWidget(runChainBtn);
-
-        chainLay->addStretch();
-        mainLayout->addWidget(chainBar);
-    }
 
     // CVE notification bar — yellow, hidden by default
     m_cveBar = new QWidget;
@@ -442,10 +640,6 @@ void MainWindow::setupCentralLayout()
         }
     });
 
-    connect(m_editor, &EditorWidget::fileOpened, this, [this](const QString&) {
-        if (m_aiChatPanel) m_aiChatPanel->markExamplesSeen();
-        if (m_clarityPanel) m_clarityPanel->markExamplesSeen();
-    });
 
     // ── Build system wiring ──────────────────────────────────────────────
     connect(m_buildSystem, &BuildSystem::outputReady, this,
@@ -562,20 +756,32 @@ void MainWindow::setupCentralLayout()
         m_buildSystem->runFile(filePath, currentLangKey(), level);
     });
 
-    connect(m_buildBar, &BuildBar::buildRequested, this, [this]() {
-        if (!m_editor) return;
-        QString filePath = m_editor->currentFilePath();
-        if (filePath.isEmpty()) {
-            QMessageBox::information(this, "Save First",
-                "Please save your file before building.");
-            return;
-        }
-        m_editor->saveCurrentFile();
-        m_buildBar->clearResults();
-        m_buildBar->showResults();
-        int level = m_levelSelector ? m_levelSelector->currentLevel() : 1;
-        m_buildSystem->buildFile(filePath, currentLangKey(), level);
-    });
+    connect(m_buildBar, &BuildBar::buildRequested, this, &MainWindow::runBuildChain);
+
+    auto openSettingsDialog = [this]() {
+        SettingsPanel dlg(this);
+        connect(&dlg, &SettingsPanel::modelsChanged, this, [this]() {
+            if (m_aiChatPanel) m_aiChatPanel->reloadModelFromConfig();
+        });
+        connect(&dlg, &SettingsPanel::menuVisibilityChanged, this, [this]() {
+            applyToolsMenuVisibility();
+        });
+        connect(&dlg, &SettingsPanel::tickerSettingsChanged, this, [this]() {
+            if (m_newsTicker) m_newsTicker->applySettings();
+        });
+        connect(&dlg, &SettingsPanel::cveSettingsChanged, this, [this]() {
+            if (m_cveMonitor) {
+                m_cveMonitor->setFrequencyMs(CVEMonitor::loadFrequencyMs());
+                m_cveMonitor->setEnabled(CVEMonitor::loadEnabled());
+            }
+            if (m_securityFrame) m_securityFrame->reloadCVESettings();
+        });
+        dlg.exec();
+        if (m_aiChatPanel) m_aiChatPanel->reloadModelFromConfig();
+        updateDidYouKnowBanner();
+        if (m_buildBar) m_buildBar->updatePredictVisibility();
+    };
+    connect(m_buildBar, &BuildBar::customizeLayoutRequested, this, openSettingsDialog);
 
     // Register all tools with the favorites bar (after all widgets are created)
     setupFavoritesBar();

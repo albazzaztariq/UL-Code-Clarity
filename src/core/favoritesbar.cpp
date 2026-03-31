@@ -120,6 +120,10 @@ void FavoritesBar::rebuildButtons()
     }
 
     m_layout->addStretch();
+
+    const bool hasButtons = !m_buttons.isEmpty();
+    setVisible(hasButtons);
+    setFixedHeight(hasButtons ? 32 : 0);
 }
 
 // ── Context menu on a button ──────────────────────────────────────────────────
