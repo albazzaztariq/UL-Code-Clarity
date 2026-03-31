@@ -252,6 +252,37 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     connect(m_aiBackend, &AIBackend::responseComplete,this, &AIChatPanel::onResponseComplete);
     connect(m_aiBackend, &AIBackend::errorOccurred,   this, &AIChatPanel::onAIError);
 
+    // Claude Code Bridge — subprocess integration with real Claude CLI
+    m_claudeBridge = new ClaudeBridge(this);
+    connect(m_claudeBridge, &ClaudeBridge::thinkingDelta, this, [this](const QString &text) {
+        if (!m_thinkingBubble) beginThinkingBubble();
+        appendToThinkingBubble(text);
+    });
+    connect(m_claudeBridge, &ClaudeBridge::thinkingComplete, this, [this](const QString &) {
+        finalizeThinkingBubble();
+    });
+    connect(m_claudeBridge, &ClaudeBridge::textDelta, this, &AIChatPanel::onResponseChunk);
+    connect(m_claudeBridge, &ClaudeBridge::textComplete, this, [this](const QString &) {
+        finalizeStreamBubble();
+    });
+    connect(m_claudeBridge, &ClaudeBridge::toolUseStarted, this,
+        [this](const ClaudeBridge::ToolUseEvent &event) {
+        // Show tool usage in chat
+        QString toolMsg = QString("<b>%1</b>").arg(event.name.toHtmlEscaped());
+        addMessage(ChatBubble::AI, toolMsg);
+    });
+    connect(m_claudeBridge, &ClaudeBridge::sessionEnded, this, [this](double cost, int turns) {
+        Q_UNUSED(turns);
+        if (cost > 0) {
+            addMessage(ChatBubble::AI,
+                QString("<i style='color: gray; font-size: 9px;'>Cost: $%1</i>")
+                .arg(cost, 0, 'f', 4));
+        }
+        setInputEnabled(true);
+        m_input->setFocus();
+    });
+    connect(m_claudeBridge, &ClaudeBridge::errorOccurred, this, &AIChatPanel::onAIError);
+
     // Load model display from saved settings on startup
     reloadModelFromConfig();
 
@@ -485,6 +516,17 @@ void AIChatPanel::onSendClicked()
     m_input->setEnabled(false);
     m_sendButton->setEnabled(false);
 
+    // Route to Claude Code or standard AI backend
+    if (m_claudeCodeMode) {
+        // Start session if not running
+        if (!m_claudeBridge->isRunning()) {
+            // Use the file tree root as working directory if available
+            m_claudeBridge->startSession({}, {});
+        }
+        m_claudeBridge->sendMessage(text);
+        return;
+    }
+
     // Emit messageSent — mainwindow checks BFS mode and either routes to BFS
     // or calls m_aiBackend->sendMessage() directly via sendAIMessage().
     emit messageSent(text);
@@ -556,6 +598,77 @@ void AIChatPanel::finalizeStreamBubble()
     m_streamBubble = nullptr;
     m_streamLabel  = nullptr;
     m_streamText.clear();
+}
+
+// ── Claude Code mode ───────────────────────────────────────────────────
+
+void AIChatPanel::setClaudeCodeMode(bool enabled)
+{
+    m_claudeCodeMode = enabled;
+    if (enabled) {
+        m_headerLabel->setText("CLAUDE CODE");
+        m_modelSelector->setVisible(false);
+        m_configButton->setVisible(false);
+        m_noModelBanner->setVisible(false);
+        m_sendButton->setEnabled(true);
+        m_input->setPlaceholderText("Talk to Claude Code...");
+    } else {
+        m_headerLabel->setText("AI CHAT");
+        m_modelSelector->setVisible(true);
+        m_configButton->setVisible(true);
+        m_input->setPlaceholderText("Describe what you want...");
+        reloadModelFromConfig();
+    }
+}
+
+// ── Thinking bubble (Claude Code extended thinking) ────────────────────
+
+void AIChatPanel::beginThinkingBubble()
+{
+    m_thinkingText.clear();
+    m_thinkingBubble = new ChatBubble(ChatBubble::AI, "", m_messagesContainer);
+    m_thinkingLabel = m_thinkingBubble->findChild<QLabel*>();
+
+    // Style the thinking bubble differently — dimmed, italic
+    if (m_thinkingLabel) {
+        m_thinkingLabel->setStyleSheet(
+            m_thinkingLabel->styleSheet() +
+            " font-style: italic; opacity: 0.7; font-size: 10px;");
+    }
+
+    if (m_placeholderLabel->isVisible())
+        m_placeholderLabel->hide();
+
+    m_bubbles.append(m_thinkingBubble);
+    m_messagesLayout->insertWidget(m_messagesLayout->count() - 1, m_thinkingBubble);
+    scrollToBottom();
+}
+
+void AIChatPanel::appendToThinkingBubble(const QString &text)
+{
+    m_thinkingText += text;
+    // Show only last ~200 chars of thinking to avoid overwhelming the UI
+    QString display = m_thinkingText;
+    if (display.length() > 200)
+        display = "..." + display.right(200);
+    if (m_thinkingLabel)
+        m_thinkingLabel->setText(display);
+    scrollToBottom();
+}
+
+void AIChatPanel::finalizeThinkingBubble()
+{
+    // Collapse the thinking bubble to a single summary line
+    if (m_thinkingLabel && !m_thinkingText.isEmpty()) {
+        QString summary = m_thinkingText.left(80);
+        if (m_thinkingText.length() > 80) summary += "...";
+        m_thinkingLabel->setText(
+            QString("<i style='color: gray; font-size: 9px;'>Thinking: %1</i>")
+            .arg(summary.toHtmlEscaped()));
+    }
+    m_thinkingBubble = nullptr;
+    m_thinkingLabel  = nullptr;
+    m_thinkingText.clear();
 }
 
 // ── AIBackend signal handlers ───────────────────────────────────────────

@@ -15,6 +15,7 @@
 #include <QVector>
 #include <QSettings>
 #include "core/aibackend.h"
+#include "core/claudebridge.h"
 #include "core/rubberduck.h"
 
 // A single chat message bubble
@@ -63,6 +64,11 @@ public:
     // Trigger a real AI API call (called by mainwindow when not in BFS mode)
     void sendAIMessage(const QString &text);
 
+    // Claude Code integration
+    ClaudeBridge* claudeBridge() const { return m_claudeBridge; }
+    void setClaudeCodeMode(bool enabled);
+    bool isClaudeCodeMode() const { return m_claudeCodeMode; }
+
     // Set the current assist level (1=Beginner … 4=NoAssist) for AI calls
     void setAssistLevel(int level);
 
@@ -105,6 +111,16 @@ private:
     QNetworkAccessManager *m_networkManager;
     QVector<ChatBubble*> m_bubbles;
     AIBackend *m_aiBackend;
+    ClaudeBridge *m_claudeBridge;
+    bool m_claudeCodeMode = false;
+
+    // Thinking bubble (collapsible, for Claude Code thinking output)
+    ChatBubble  *m_thinkingBubble = nullptr;
+    QLabel      *m_thinkingLabel  = nullptr;
+    QString      m_thinkingText;
+    void beginThinkingBubble();
+    void appendToThinkingBubble(const QString &text);
+    void finalizeThinkingBubble();
 
     // Streaming AI bubble (built incrementally)
     ChatBubble  *m_streamBubble = nullptr;

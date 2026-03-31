@@ -46,6 +46,7 @@ void MainWindow::wireSignals()
         m_clarityPanel->setLevel(level);
         if (m_aiChatPanel) m_aiChatPanel->setAssistLevel(level);
         if (m_runtimeAnalysis) m_runtimeAnalysis->setAssistLevel(level);
+        buildToolsMenu();  // Rebuild tools menu with level-appropriate items
     });
     if (m_runtimeAnalysis && m_levelSelector)
         m_runtimeAnalysis->setAssistLevel(m_levelSelector->currentLevel());

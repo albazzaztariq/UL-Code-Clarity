@@ -45,6 +45,7 @@ class TypeFlowFrame;
 class MachineViewPanel;
 class CVEMonitor;
 class NewsTicker;
+class EditorTracker;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -139,6 +140,9 @@ private:
     CostVisualizerPanel*  m_costPanel      = nullptr;
     TypeFlowFrame*        m_typeFlow       = nullptr;
     MachineViewPanel*     m_machineView    = nullptr;
+
+    // Claude Code integration
+    EditorTracker* m_editorTracker = nullptr;
 
     // News ticker
     NewsTicker*   m_newsTicker    = nullptr;

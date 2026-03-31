@@ -62,6 +62,8 @@ set(SOURCES
     core/jsonloader.cpp
     core/analysisframe.cpp
     core/fullreport.cpp
+    core/claudebridge.cpp
+    core/editortracker.cpp
 )
 
 
@@ -115,6 +117,8 @@ set(HEADERS
     core/jsonloader.h
     core/analysisframe.h
     core/fullreport.h
+    core/claudebridge.h
+    core/editortracker.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@
 #include "core/machineview.h"
 #include "core/settingspanel.h"
 #include "core/custompipeline.h"
+#include "core/editortracker.h"
 #include "editor/editor.h"
 #include "editor/filetree.h"
 #include "panels/clarity.h"
@@ -161,6 +162,20 @@ void MainWindow::createMenuBar()
         if (m_chatColumn) m_chatColumn->setVisible(on);
     });
 
+    viewMenu->addSeparator();
+    auto *claudeCodeAct = viewMenu->addAction("Claude Code Mode");
+    claudeCodeAct->setCheckable(true);
+    claudeCodeAct->setChecked(false);
+    connect(claudeCodeAct, &QAction::toggled, this, [this](bool on) {
+        if (m_aiChatPanel) {
+            m_aiChatPanel->setClaudeCodeMode(on);
+            if (on && !m_editorTracker) {
+                m_editorTracker = new EditorTracker(m_editor,
+                    m_aiChatPanel->claudeBridge(), this);
+            }
+        }
+    });
+
     addSimple(editMenu, "Replace", "Ctrl+H", [this]() {
         if (!m_editor) return;
         auto *dlg = new QDialog(this);
@@ -263,14 +278,34 @@ void MainWindow::buildToolsMenu()
 
     QSettings s("CodeClarity", "CodeClarity");
 
+    // Current assist level (1=Beginner, 2=Intermediate, 3=Developer, 4=Expert)
+    int level = m_levelSelector ? m_levelSelector->currentLevel() : 4;
+
+    // Minimum level required for each tool key
+    static const QMap<QString, int> toolMinLevel = {
+        // Level 1: Beginner essentials
+        {"langGuide",      1}, {"expander",        1}, {"debugger",    1},
+        {"runtimeInfo",    1}, {"codeHealth",      1}, {"explainCodebase", 1},
+        // Level 2: Intermediate
+        {"errorJournal",   2}, {"typeFlow",        2},
+        // Level 3: Developer
+        {"securityTesting",3}, {"memoryAnalysis",   3}, {"depAnalysis", 3},
+        {"runtimeAnalysis",3}, {"traceVar",         3},
+        // Level 4: Expert / All
+        {"securityLabs",   4}, {"machineView",      4}, {"execCost",   4},
+        {"customPipeline", 4},
+    };
+
     // Helper: register a visible/hidden tool action with optional shortcut.
+    // Respects both menu visibility settings AND the current assist level.
     auto addToolAction = [&](const QString& name, const QString& key,
                               std::function<void()> handler,
                               const QString& shortcut = {}) -> QAction* {
         bool visible = s.value("menuvis/" + key, true).toBool();
+        int minLevel = toolMinLevel.value(key, 1);
         auto* act = m_toolsMenu->addAction(name);
         if (!shortcut.isEmpty()) act->setShortcut(QKeySequence(shortcut));
-        act->setVisible(visible);
+        act->setVisible(visible && level >= minLevel);
         m_toolsActions[key] = act;
         connect(act, &QAction::triggered, this, [handler]() { handler(); });
         return act;
@@ -488,7 +523,8 @@ void MainWindow::buildToolsMenu()
         auto* machineViewAction = m_toolsMenu->addAction("Machine View");
         machineViewAction->setShortcut(QKeySequence("Ctrl+Shift+W"));
         machineViewAction->setCheckable(true);
-        machineViewAction->setVisible(s.value("menuvis/machineView", true).toBool());
+        machineViewAction->setVisible(s.value("menuvis/machineView", true).toBool()
+                                      && level >= toolMinLevel.value("machineView", 4));
         m_toolsActions["machineView"] = machineViewAction;
         connect(machineViewAction, &QAction::triggered, this,
             [this, machineViewAction](bool checked) {
@@ -512,7 +548,8 @@ void MainWindow::buildToolsMenu()
         auto* costAction = m_toolsMenu->addAction("Show Execution Cost");
         costAction->setShortcut(QKeySequence("Ctrl+Shift+C"));
         costAction->setCheckable(true);
-        costAction->setVisible(s.value("menuvis/execCost", true).toBool());
+        costAction->setVisible(s.value("menuvis/execCost", true).toBool()
+                               && level >= toolMinLevel.value("execCost", 4));
         m_toolsActions["execCost"] = costAction;
         connect(costAction, &QAction::triggered, this,
             [this, costAction](bool checked) {
@@ -569,8 +606,9 @@ void MainWindow::buildToolsMenu()
 
     m_toolsMenu->addSeparator();
 
-    // ── Custom Pipeline ────────────────────────────────────────────────────
+    // ── Custom Pipeline (Level 4 only) ──────────────────────────────────────
     auto* runPipelineAction = m_toolsMenu->addAction("Run Custom Pipeline...");
+    runPipelineAction->setVisible(level >= toolMinLevel.value("customPipeline", 4));
     m_toolsActions["customPipeline"] = runPipelineAction;
     connect(runPipelineAction, &QAction::triggered, this, [this]() {
         auto* dlg = new CustomPipelineDialog(this);
@@ -581,6 +619,7 @@ void MainWindow::buildToolsMenu()
     });
 
     m_savedPipelinesMenu = m_toolsMenu->addMenu("Saved Pipelines");
+    m_savedPipelinesMenu->menuAction()->setVisible(level >= toolMinLevel.value("customPipeline", 4));
     rebuildSavedPipelinesMenu();
 }
 
