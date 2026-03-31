@@ -64,6 +64,7 @@ set(SOURCES
     core/fullreport.cpp
     core/claudebridge.cpp
     core/editortracker.cpp
+    core/ttsnarrator.cpp
 )
 
 
@@ -119,6 +120,7 @@ set(HEADERS
     core/fullreport.h
     core/claudebridge.h
     core/editortracker.h
+    core/ttsnarrator.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────

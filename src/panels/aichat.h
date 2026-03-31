@@ -16,6 +16,7 @@
 #include <QSettings>
 #include "core/aibackend.h"
 #include "core/claudebridge.h"
+#include "core/ttsnarrator.h"
 #include "core/rubberduck.h"
 
 // A single chat message bubble
@@ -113,6 +114,8 @@ private:
     QVector<ChatBubble*> m_bubbles;
     AIBackend *m_aiBackend;
     ClaudeBridge *m_claudeBridge;
+    TTSNarrator *m_ttsNarrator;
+    QPushButton *m_speakerBtn = nullptr;
     bool m_claudeCodeMode = false;
     QString m_workingDir;
 

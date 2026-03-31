@@ -174,6 +174,27 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     connect(m_configButton, &QPushButton::clicked, this, &AIChatPanel::onConfigClicked);
     headerRow->addWidget(m_configButton);
 
+    // Speaker toggle for TTS narration (Claude Code mode)
+    m_speakerBtn = new QPushButton(QString::fromUtf8("\xf0\x9f\x94\x87"), contentWidget); // muted speaker
+    m_speakerBtn->setFixedSize(22, 22);
+    m_speakerBtn->setCursor(Qt::PointingHandCursor);
+    m_speakerBtn->setToolTip("Enable voice narration");
+    m_speakerBtn->setCheckable(true);
+    m_speakerBtn->setStyleSheet(QString(
+        "QPushButton { background: none; color: %1; font-size: 13px; border: none; }"
+        "QPushButton:hover { color: %2; }"
+        "QPushButton:checked { color: %3; }"
+    ).arg(FG3, FG, ACCENT));
+    m_speakerBtn->setVisible(false);  // only shown in Claude Code mode
+    connect(m_speakerBtn, &QPushButton::toggled, this, [this](bool on) {
+        m_ttsNarrator->setEnabled(on);
+        m_speakerBtn->setText(on ? QString::fromUtf8("\xf0\x9f\x94\x8a") // loud speaker
+                                 : QString::fromUtf8("\xf0\x9f\x94\x87")); // muted
+        m_speakerBtn->setToolTip(on ? "Disable voice narration"
+                                    : "Enable voice narration");
+    });
+    headerRow->addWidget(m_speakerBtn);
+
     contentLayout->addLayout(headerRow);
 
     // Messages scroll area
@@ -252,14 +273,19 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     connect(m_aiBackend, &AIBackend::responseComplete,this, &AIChatPanel::onResponseComplete);
     connect(m_aiBackend, &AIBackend::errorOccurred,   this, &AIChatPanel::onAIError);
 
+    // TTS Narrator — voice narration for Claude Code thinking
+    m_ttsNarrator = new TTSNarrator(this);
+
     // Claude Code Bridge — subprocess integration with real Claude CLI
     m_claudeBridge = new ClaudeBridge(this);
     connect(m_claudeBridge, &ClaudeBridge::thinkingDelta, this, [this](const QString &text) {
         if (!m_thinkingBubble) beginThinkingBubble();
         appendToThinkingBubble(text);
+        m_ttsNarrator->feedText(text);  // narrate thinking
     });
     connect(m_claudeBridge, &ClaudeBridge::thinkingComplete, this, [this](const QString &) {
         finalizeThinkingBubble();
+        m_ttsNarrator->flush();  // speak any remaining buffered text
     });
     connect(m_claudeBridge, &ClaudeBridge::textDelta, this, &AIChatPanel::onResponseChunk);
     connect(m_claudeBridge, &ClaudeBridge::textComplete, this, [this](const QString &) {
@@ -611,11 +637,14 @@ void AIChatPanel::setClaudeCodeMode(bool enabled)
         m_noModelBanner->setVisible(false);
         m_sendButton->setEnabled(true);
         m_input->setPlaceholderText("Talk to Claude Code...");
+        if (m_speakerBtn) m_speakerBtn->setVisible(true);
     } else {
         m_headerLabel->setText("AI CHAT");
         m_modelSelector->setVisible(true);
         m_configButton->setVisible(true);
         m_input->setPlaceholderText("Describe what you want...");
+        if (m_speakerBtn) m_speakerBtn->setVisible(false);
+        m_ttsNarrator->setEnabled(false);
         reloadModelFromConfig();
     }
 }

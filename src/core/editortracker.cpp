@@ -18,7 +18,7 @@ EditorTracker::EditorTracker(EditorWidget *editor, ClaudeBridge *bridge,
 
     // Clear highlight after a brief flash
     m_highlightTimer.setSingleShot(true);
-    m_highlightTimer.setInterval(1500);
+    m_highlightTimer.setInterval(600);  // quick flash — just enough to see what changed
     connect(&m_highlightTimer, &QTimer::timeout, this, &EditorTracker::clearHighlight);
 }
 
