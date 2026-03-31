@@ -45,6 +45,7 @@ class TypeFlowFrame;
 class MachineViewPanel;
 class CVEMonitor;
 class NewsTicker;
+class LspManager;
 class EditorTracker;
 
 class MainWindow : public QMainWindow {
@@ -140,6 +141,9 @@ private:
     CostVisualizerPanel*  m_costPanel      = nullptr;
     TypeFlowFrame*        m_typeFlow       = nullptr;
     MachineViewPanel*     m_machineView    = nullptr;
+
+    // LSP integration
+    LspManager*   m_lspManager    = nullptr;
 
     // News ticker
     NewsTicker*   m_newsTicker    = nullptr;

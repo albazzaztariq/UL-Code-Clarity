@@ -1,4 +1,5 @@
 #include "core/mainwindow.h"
+#include "core/lspmanager.h"
 #include "core/newsticker.h"
 #include "core/favoritesbar.h"
 #include "core/securitytesting.h"
@@ -639,6 +640,7 @@ void MainWindow::setupCentralLayout()
             addToRecentWorkspaces(dir);
             m_aiPermissions.setWorkspaceRoot(dir);
             if (m_aiChatPanel) m_aiChatPanel->setWorkingDirectory(dir);
+            if (m_lspManager) m_lspManager->setWorkspaceRoot(dir);
         }
     });
 

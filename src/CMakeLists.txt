@@ -65,6 +65,8 @@ set(SOURCES
     core/claudebridge.cpp
     core/editortracker.cpp
     core/ttsnarrator.cpp
+    core/lspclient.cpp
+    core/lspmanager.cpp
 )
 
 
@@ -121,6 +123,8 @@ set(HEADERS
     core/claudebridge.h
     core/editortracker.h
     core/ttsnarrator.h
+    core/lspclient.h
+    core/lspmanager.h
 )
 
 # ── Resources ────────────────────────────────────────────────────────────

@@ -314,14 +314,17 @@ AIChatPanel::AIChatPanel(QWidget *parent)
     reloadModelFromConfig();
 
     // Handle model selector changes — detect "Claude Code" selection
-    connect(m_modelSelector, &QComboBox::currentTextChanged, this, [this](const QString &text) {
-        bool wantsClaude = text.startsWith("Claude Code");
-        if (wantsClaude && !m_claudeCodeMode) {
+    auto checkClaudeMode = [this]() {
+        bool wantsClaude = m_modelSelector->currentText().startsWith("Claude Code");
+        if (wantsClaude && !m_claudeCodeMode)
             setClaudeCodeMode(true);
-        } else if (!wantsClaude && m_claudeCodeMode) {
+        else if (!wantsClaude && m_claudeCodeMode)
             setClaudeCodeMode(false);
-        }
-    });
+    };
+    connect(m_modelSelector, &QComboBox::currentTextChanged, this,
+            [checkClaudeMode](const QString &) { checkClaudeMode(); });
+    // Trigger on startup to match initial selection
+    QTimer::singleShot(0, this, checkClaudeMode);
 
     // Show example conversation when chat is empty
     if (m_bubbles.isEmpty())

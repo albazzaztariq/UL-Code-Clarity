@@ -24,6 +24,7 @@
 #include "panels/expander.h"
 #include "core/whatif.h"
 #include "core/editortracker.h"
+#include "core/lspmanager.h"
 
 #include <QMenu>
 #include <QTextCursor>
@@ -488,4 +489,61 @@ void MainWindow::wireSignals()
                 m_clarityPanel->addEntry(entry);
             }
         });
+
+    // ── LSP Integration ────────────────────────────────────────────────────
+    m_lspManager = new LspManager(m_editor, this);
+
+    // When a file is opened, notify LSP
+    connect(m_editor, &EditorWidget::fileOpened, this, [this](const QString &filePath) {
+        if (m_lspManager) {
+            m_lspManager->fileOpened(filePath, m_editor->currentLanguage(),
+                                     m_editor->currentContent());
+        }
+    });
+
+    // When editor content changes, notify LSP
+    connect(m_editor->codeEditor(), &QPlainTextEdit::textChanged, this, [this]() {
+        if (m_lspManager && !m_editor->currentFilePath().isEmpty()) {
+            m_lspManager->fileChanged(m_editor->currentFilePath(),
+                                       m_editor->currentContent());
+        }
+    });
+
+    // When workspace is opened, set LSP root
+    // (also handled in openFolderRequested handler in mainwindow_layout.cpp)
+
+    // Diagnostics → show as underlines in the editor (for future: red squiggles)
+    connect(m_lspManager, &LspManager::diagnosticsReady, this,
+        [this](const QString &filePath, const QList<LspDiagnostic> &diags) {
+        if (m_editor->currentFilePath() != filePath) return;
+        // Show diagnostic count in status bar
+        int errors = 0, warnings = 0;
+        for (const auto &d : diags) {
+            if (d.severity == 1) errors++;
+            else if (d.severity == 2) warnings++;
+        }
+        if (m_statusReady && (errors > 0 || warnings > 0)) {
+            m_statusReady->setText(QString("%1 error(s), %2 warning(s)")
+                .arg(errors).arg(warnings));
+        } else if (m_statusReady) {
+            m_statusReady->setText("Ready");
+        }
+    });
+
+    // Goto definition → open the target file and jump to line
+    connect(m_lspManager, &LspManager::gotoDefinitionReady, this,
+        [this](const LspLocation &loc) {
+        QString path = QUrl(loc.uri).toLocalFile();
+        if (!path.isEmpty()) {
+            m_editor->openFile(path);
+            QTextBlock block = m_editor->codeEditor()->document()
+                ->findBlockByNumber(loc.line);
+            if (block.isValid()) {
+                QTextCursor cursor(block);
+                cursor.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, loc.col);
+                m_editor->codeEditor()->setTextCursor(cursor);
+                m_editor->codeEditor()->centerCursor();
+            }
+        }
+    });
 }
