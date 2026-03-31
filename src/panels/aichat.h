@@ -68,6 +68,7 @@ public:
     ClaudeBridge* claudeBridge() const { return m_claudeBridge; }
     void setClaudeCodeMode(bool enabled);
     bool isClaudeCodeMode() const { return m_claudeCodeMode; }
+    void setWorkingDirectory(const QString &dir) { m_workingDir = dir; }
 
     // Set the current assist level (1=Beginner … 4=NoAssist) for AI calls
     void setAssistLevel(int level);
@@ -113,6 +114,7 @@ private:
     AIBackend *m_aiBackend;
     ClaudeBridge *m_claudeBridge;
     bool m_claudeCodeMode = false;
+    QString m_workingDir;
 
     // Thinking bubble (collapsible, for Claude Code thinking output)
     ChatBubble  *m_thinkingBubble = nullptr;

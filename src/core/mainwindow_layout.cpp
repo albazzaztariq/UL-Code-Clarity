@@ -637,6 +637,7 @@ void MainWindow::setupCentralLayout()
             m_fileTree->setRootFolder(dir);
             addToRecentWorkspaces(dir);
             m_aiPermissions.setWorkspaceRoot(dir);
+            if (m_aiChatPanel) m_aiChatPanel->setWorkingDirectory(dir);
         }
     });
 

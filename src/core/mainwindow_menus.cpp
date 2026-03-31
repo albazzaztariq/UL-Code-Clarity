@@ -14,6 +14,7 @@
 #include "core/settingspanel.h"
 #include "core/custompipeline.h"
 #include "core/editortracker.h"
+#include <QTime>
 #include "editor/editor.h"
 #include "editor/filetree.h"
 #include "panels/clarity.h"
@@ -169,9 +170,24 @@ void MainWindow::createMenuBar()
     connect(claudeCodeAct, &QAction::toggled, this, [this](bool on) {
         if (m_aiChatPanel) {
             m_aiChatPanel->setClaudeCodeMode(on);
+            // Pass current workspace as working directory
+            if (m_fileTree && !m_fileTree->rootPath().isEmpty())
+                m_aiChatPanel->setWorkingDirectory(m_fileTree->rootPath());
             if (on && !m_editorTracker) {
                 m_editorTracker = new EditorTracker(m_editor,
                     m_aiChatPanel->claudeBridge(), this);
+                // Wire changelog to Clarity panel
+                connect(m_editorTracker, &EditorTracker::fileModified, this,
+                    [this](const QString &filePath, const QString &desc) {
+                    if (m_clarityPanel) {
+                        ClarityEntryData entry;
+                        entry.title = desc;
+                        entry.time = QTime::currentTime().toString("h:mm ap");
+                        entry.detailHtml = QString("<b>File:</b> %1")
+                            .arg(filePath.toHtmlEscaped());
+                        m_clarityPanel->addEntry(entry);
+                    }
+                });
             }
         }
     });

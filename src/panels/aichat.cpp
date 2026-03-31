@@ -520,8 +520,7 @@ void AIChatPanel::onSendClicked()
     if (m_claudeCodeMode) {
         // Start session if not running
         if (!m_claudeBridge->isRunning()) {
-            // Use the file tree root as working directory if available
-            m_claudeBridge->startSession({}, {});
+            m_claudeBridge->startSession({}, m_workingDir);
         }
         m_claudeBridge->sendMessage(text);
         return;

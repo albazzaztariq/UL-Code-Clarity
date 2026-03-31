@@ -2,6 +2,7 @@
 #include "editor/editor.h"
 #include <QTextBlock>
 #include <QTextCursor>
+#include <QFile>
 #include <QFileInfo>
 #include <QScrollBar>
 #include <QDebug>
@@ -46,20 +47,26 @@ void EditorTracker::onToolUseReady(const ClaudeBridge::ToolUseEvent &event)
 
 void EditorTracker::onToolResult(const ClaudeBridge::ToolResultEvent &event)
 {
-    // After a tool completes, reload the file from disk if it was modified
+    // After a tool completes, reload/open the file from disk
     QString filePath = m_toolFileMap.take(event.toolUseId);
     if (filePath.isEmpty()) return;
 
-    // If the file is currently open, reload its content from disk
-    // (The editor's openFile re-reads from disk if already open)
-    QStringList openFiles = m_editor->openFilePaths();
-    if (openFiles.contains(filePath)) {
-        // Save cursor position, reload, restore position
-        int cursorPos = m_editor->codeEditor()->textCursor().position();
+    // Always open the file (handles both new files from Write and existing from Edit)
+    if (QFile::exists(filePath)) {
+        int cursorPos = -1;
+        QStringList openFiles = m_editor->openFilePaths();
+        if (openFiles.contains(filePath))
+            cursorPos = m_editor->codeEditor()->textCursor().position();
+
         m_editor->openFile(filePath);
-        QTextCursor cursor = m_editor->codeEditor()->textCursor();
-        cursor.setPosition(qMin(cursorPos, m_editor->codeEditor()->document()->characterCount() - 1));
-        m_editor->codeEditor()->setTextCursor(cursor);
+
+        // Restore cursor if file was already open
+        if (cursorPos >= 0) {
+            QTextCursor cursor = m_editor->codeEditor()->textCursor();
+            cursor.setPosition(qMin(cursorPos,
+                m_editor->codeEditor()->document()->characterCount() - 1));
+            m_editor->codeEditor()->setTextCursor(cursor);
+        }
     }
 }
 

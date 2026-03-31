@@ -23,6 +23,7 @@
 #include "panels/basics.h"
 #include "panels/expander.h"
 #include "core/whatif.h"
+#include "core/editortracker.h"
 
 #include <QMenu>
 #include <QTextCursor>
