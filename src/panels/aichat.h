@@ -70,6 +70,8 @@ public:
     void setClaudeCodeMode(bool enabled);
     bool isClaudeCodeMode() const { return m_claudeCodeMode; }
     void setWorkingDirectory(const QString &dir) { m_workingDir = dir; }
+    void setSessionId(const QString &id) { m_sessionId = id; }
+    QString sessionId() const;
 
     // Set the current assist level (1=Beginner … 4=NoAssist) for AI calls
     void setAssistLevel(int level);
@@ -118,6 +120,7 @@ private:
     QPushButton *m_speakerBtn = nullptr;
     bool m_claudeCodeMode = false;
     QString m_workingDir;
+    QString m_sessionId;
 
     // Thinking bubble (collapsible, for Claude Code thinking output)
     ChatBubble  *m_thinkingBubble = nullptr;

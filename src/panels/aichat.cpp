@@ -546,7 +546,7 @@ void AIChatPanel::onSendClicked()
     if (m_claudeCodeMode) {
         // Start session if not running
         if (!m_claudeBridge->isRunning()) {
-            m_claudeBridge->startSession({}, m_workingDir);
+            m_claudeBridge->startSession(m_sessionId, m_workingDir);
         }
         m_claudeBridge->sendMessage(text);
         return;
@@ -623,6 +623,13 @@ void AIChatPanel::finalizeStreamBubble()
     m_streamBubble = nullptr;
     m_streamLabel  = nullptr;
     m_streamText.clear();
+}
+
+QString AIChatPanel::sessionId() const
+{
+    if (m_claudeBridge && !m_claudeBridge->sessionId().isEmpty())
+        return m_claudeBridge->sessionId();
+    return m_sessionId;
 }
 
 // ── Claude Code mode ───────────────────────────────────────────────────
